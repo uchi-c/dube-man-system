@@ -22,6 +22,7 @@ import {
   Wifi, History, Menu, X, Users, ShieldAlert, Loader
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Analytics } from '@vercel/analytics/react';
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -450,7 +451,7 @@ export default function App() {
           Certified Audit Period &bull; Year 2026 Audit Complete
         </p>
       </footer>
+      <Analytics />
     </div>
   );
 }
-
