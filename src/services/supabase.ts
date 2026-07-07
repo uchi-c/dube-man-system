@@ -14,20 +14,21 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
 
-// Initialize Supabase Client with fallbacks to avoid crashes
-
 // Helper error handler
 const handleDbError = (error: any, fallbackMessage: string) => {
   console.warn(`Supabase action warning: ${error?.message || error}. Falling back to storage system.`);
-}; if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(
-    'Missing Supabase configuration. Check your .env file.'
-  );
+};
+
+if (!isSupabaseConfigured) {
+  console.warn('Missing Supabase configuration — running in local demo mode. Check your .env file.');
 }
 
+// Initialize Supabase Client with fallbacks to avoid crashes when unconfigured.
+// Every exported function below checks `isSupabaseConfigured` before touching
+// this client, so a placeholder URL/key here is inert, not a live connection.
 export const supabase = createClient(
-  supabaseUrl,
-  supabaseAnonKey
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-anon-key'
 );
 
 // ==========================================
@@ -1319,3 +1320,558 @@ export async function saveRouterSettings(
 }
 
 
+
+
+// ==========================================
+// 10. PRINT MANAGER MODULE
+// ==========================================
+
+import type {
+  Printer, PrintJob, PaperInventory, PrintPricingSettings,
+  PrintDashboardStats, DailyPrintTrend, PrintReportRow,
+  PrinterStatus, PrintJobStatus, PaperSize, ColorMode
+} from '../types';
+
+// ---- helpers ----------------------------------------------------------------
+
+const mapPrinter = (r: any): Printer => ({
+  id: r.id,
+  printer_name: r.printer_name,
+  windows_printer_name: r.windows_printer_name,
+  location: r.location ?? '',
+  branch: r.branch ?? '',
+  status: r.status as PrinterStatus,
+  cost_per_bw_page: Number(r.cost_per_bw_page),
+  cost_per_colour_page: Number(r.cost_per_colour_page),
+  paper_sizes: r.paper_sizes ?? ['A4'],
+  is_active: r.is_active ?? true,
+  created_at: r.created_at,
+  updated_at: r.updated_at
+});
+
+const mapPrintJob = (r: any): PrintJob => ({
+  id: r.id,
+  printer_id: r.printer_id,
+  printer_name: r.printers?.printer_name ?? r.printer_name ?? '',
+  computer_id: r.computer_id ?? null,
+  computer_name: r.computers?.computer_name ?? r.computer_name ?? '',
+  employee_id: r.employee_id ?? null,
+  employee_name: r.users?.name ?? r.employee_name ?? '',
+  customer_id: r.customer_id ?? null,
+  customer_name: r.customers?.name ?? r.customer_name ?? '',
+  session_id: r.session_id ?? null,
+  document_name: r.document_name ?? null,
+  page_count: r.page_count,
+  color_mode: r.color_mode as ColorMode,
+  paper_size: r.paper_size as PaperSize,
+  cost: Number(r.cost),
+  revenue: Number(r.revenue),
+  profit: Number(r.profit ?? 0),
+  status: r.status as PrintJobStatus,
+  print_time: r.print_time,
+  created_at: r.created_at
+});
+
+const mapPaperInventory = (r: any): PaperInventory => ({
+  id: r.id,
+  paper_size: r.paper_size as PaperSize,
+  description: r.description ?? '',
+  reams_purchased: Number(r.reams_purchased),
+  reams_remaining: Number(r.reams_remaining),
+  pages_per_ream: r.pages_per_ream,
+  cost_per_ream: Number(r.cost_per_ream),
+  min_stock_reams: Number(r.min_stock_reams),
+  created_at: r.created_at,
+  updated_at: r.updated_at
+});
+
+// ---- PRINTERS ---------------------------------------------------------------
+
+export async function fetchPrinters(): Promise<Printer[]> {
+  if (!isSupabaseConfigured) return [];
+  try {
+    const { data, error } = await supabase
+      .from('printers')
+      .select('*')
+      .eq('is_active', true)
+      .order('printer_name', { ascending: true });
+    if (error) throw error;
+    return (data ?? []).map(mapPrinter);
+  } catch (err) {
+    handleDbError(err, 'Failed fetching printers');
+    return [];
+  }
+}
+
+export async function fetchAllPrinters(): Promise<Printer[]> {
+  if (!isSupabaseConfigured) return [];
+  try {
+    const { data, error } = await supabase
+      .from('printers')
+      .select('*')
+      .order('printer_name', { ascending: true });
+    if (error) throw error;
+    return (data ?? []).map(mapPrinter);
+  } catch (err) {
+    handleDbError(err, 'Failed fetching all printers');
+    return [];
+  }
+}
+
+export async function insertPrinter(
+  p: Omit<Printer, 'id' | 'created_at' | 'updated_at'>
+): Promise<Printer | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await supabase
+      .from('printers')
+      .insert([p])
+      .select()
+      .single();
+    if (error) throw error;
+    const user = localDb.getCurrentUser();
+    await insertLog(user.id, `Registered printer: ${p.printer_name}`);
+    return mapPrinter(data);
+  } catch (err) {
+    handleDbError(err, 'Failed inserting printer');
+    return null;
+  }
+}
+
+export async function updatePrinter(p: Printer): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase
+      .from('printers')
+      .update({
+        printer_name: p.printer_name,
+        windows_printer_name: p.windows_printer_name,
+        location: p.location,
+        branch: p.branch,
+        status: p.status,
+        cost_per_bw_page: p.cost_per_bw_page,
+        cost_per_colour_page: p.cost_per_colour_page,
+        paper_sizes: p.paper_sizes,
+        is_active: p.is_active
+      })
+      .eq('id', p.id);
+    if (error) throw error;
+    const user = localDb.getCurrentUser();
+    await insertLog(user.id, `Updated printer: ${p.printer_name}`);
+    return true;
+  } catch (err) {
+    handleDbError(err, 'Failed updating printer');
+    return false;
+  }
+}
+
+export async function disablePrinter(printerId: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase
+      .from('printers')
+      .update({ is_active: false })
+      .eq('id', printerId);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    handleDbError(err, 'Failed disabling printer');
+    return false;
+  }
+}
+
+// ---- PRINT JOBS -------------------------------------------------------------
+
+export async function fetchPrintJobs(opts?: {
+  from?: string;
+  to?: string;
+  printerId?: string;
+  computerId?: string;
+  employeeId?: string;
+  customerId?: string;
+  limit?: number;
+}): Promise<PrintJob[]> {
+  if (!isSupabaseConfigured) return [];
+  try {
+    let q = supabase
+      .from('print_jobs')
+      .select(`
+        *,
+        printers(printer_name),
+        computers(computer_name),
+        users(name),
+        customers(name)
+      `)
+      .order('print_time', { ascending: false });
+
+    if (opts?.from) q = q.gte('print_time', opts.from);
+    if (opts?.to)   q = q.lte('print_time', opts.to);
+    if (opts?.printerId)  q = q.eq('printer_id', opts.printerId);
+    if (opts?.computerId) q = q.eq('computer_id', opts.computerId);
+    if (opts?.employeeId) q = q.eq('employee_id', opts.employeeId);
+    if (opts?.customerId) q = q.eq('customer_id', opts.customerId);
+    q = q.limit(opts?.limit ?? 500);
+
+    const { data, error } = await q;
+    if (error) throw error;
+    return (data ?? []).map(mapPrintJob);
+  } catch (err) {
+    handleDbError(err, 'Failed fetching print jobs');
+    return [];
+  }
+}
+
+/** Called by the pc-agent and the manual-entry form */
+export async function insertPrintJob(
+  job: Omit<PrintJob, 'id' | 'profit' | 'created_at'>
+): Promise<PrintJob | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await supabase
+      .from('print_jobs')
+      .insert([{
+        printer_id: job.printer_id,
+        computer_id: job.computer_id,
+        employee_id: job.employee_id,
+        customer_id: job.customer_id,
+        session_id: job.session_id,
+        document_name: job.document_name,
+        page_count: job.page_count,
+        color_mode: job.color_mode,
+        paper_size: job.paper_size,
+        cost: job.cost,
+        revenue: job.revenue,
+        status: job.status,
+        print_time: job.print_time
+      }])
+      .select(`
+        *,
+        printers(printer_name),
+        computers(computer_name),
+        users(name),
+        customers(name)
+      `)
+      .single();
+    if (error) throw error;
+    return mapPrintJob(data);
+  } catch (err) {
+    handleDbError(err, 'Failed inserting print job');
+    return null;
+  }
+}
+
+// ---- PAPER INVENTORY --------------------------------------------------------
+
+export async function fetchPaperInventory(): Promise<PaperInventory[]> {
+  if (!isSupabaseConfigured) return [];
+  try {
+    const { data, error } = await supabase
+      .from('paper_inventory')
+      .select('*')
+      .order('paper_size', { ascending: true });
+    if (error) throw error;
+    return (data ?? []).map(mapPaperInventory);
+  } catch (err) {
+    handleDbError(err, 'Failed fetching paper inventory');
+    return [];
+  }
+}
+
+export async function upsertPaperInventory(
+  item: Omit<PaperInventory, 'id' | 'created_at' | 'updated_at'>
+): Promise<PaperInventory | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await supabase
+      .from('paper_inventory')
+      .upsert([item], { onConflict: 'paper_size' })
+      .select()
+      .single();
+    if (error) throw error;
+    const user = localDb.getCurrentUser();
+    await insertLog(user.id, `Updated paper inventory: ${item.paper_size}`);
+    return mapPaperInventory(data);
+  } catch (err) {
+    handleDbError(err, 'Failed upserting paper inventory');
+    return null;
+  }
+}
+
+export async function addPaperStock(
+  inventoryId: string,
+  reamsDelta: number
+): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    // Use a raw RPC approach: read then update atomically
+    const { data: current, error: readErr } = await supabase
+      .from('paper_inventory')
+      .select('reams_purchased, reams_remaining')
+      .eq('id', inventoryId)
+      .single();
+    if (readErr || !current) throw readErr ?? new Error('Row not found');
+
+    const { error } = await supabase
+      .from('paper_inventory')
+      .update({
+        reams_purchased: Number(current.reams_purchased) + reamsDelta,
+        reams_remaining: Number(current.reams_remaining) + reamsDelta
+      })
+      .eq('id', inventoryId);
+    if (error) throw error;
+    const user = localDb.getCurrentUser();
+    await insertLog(user.id, `Added ${reamsDelta} reams to inventory ID ${inventoryId}`);
+    return true;
+  } catch (err) {
+    handleDbError(err, 'Failed adding paper stock');
+    return false;
+  }
+}
+
+// ---- PRICING SETTINGS -------------------------------------------------------
+
+export async function fetchPrintPricingSettings(): Promise<PrintPricingSettings | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const { data, error } = await supabase
+      .from('print_pricing_settings')
+      .select('*')
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    return {
+      id: data.id,
+      bw_price_per_page: Number(data.bw_price_per_page),
+      colour_price_per_page: Number(data.colour_price_per_page),
+      paper_cost_per_page: Number(data.paper_cost_per_page),
+      created_at: data.created_at,
+      updated_at: data.updated_at
+    };
+  } catch (err) {
+    handleDbError(err, 'Failed fetching print pricing settings');
+    return null;
+  }
+}
+
+/** Single organization-wide pricing row — updates it if present, otherwise creates it. */
+export async function upsertPrintPricingSettings(
+  s: Pick<PrintPricingSettings, 'bw_price_per_page' | 'colour_price_per_page' | 'paper_cost_per_page'>
+): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { data: existing } = await supabase
+      .from('print_pricing_settings')
+      .select('id')
+      .limit(1)
+      .maybeSingle();
+
+    const { error } = existing
+      ? await supabase.from('print_pricing_settings').update(s).eq('id', existing.id)
+      : await supabase.from('print_pricing_settings').insert([s]);
+    if (error) throw error;
+    const user = localDb.getCurrentUser();
+    await insertLog(user.id, 'Updated print pricing settings');
+    return true;
+  } catch (err) {
+    handleDbError(err, 'Failed saving print pricing settings');
+    return false;
+  }
+}
+
+// ---- DASHBOARD STATS --------------------------------------------------------
+
+export async function fetchPrintDashboardStats(): Promise<PrintDashboardStats> {
+  const empty: PrintDashboardStats = {
+    pages_today: 0, bw_pages_today: 0, colour_pages_today: 0,
+    revenue_today: 0, cost_today: 0, estimated_paper_used: 0,
+    most_used_printer: '—', most_active_computer: '—',
+    most_active_employee: '—', top_customer: '—',
+    offline_printers: 0, total_printers: 0, daily_trend: []
+  };
+
+  if (!isSupabaseConfigured) return empty;
+
+  try {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    // Today's jobs
+    const { data: todayJobs } = await supabase
+      .from('print_jobs')
+      .select(`
+        page_count, color_mode, revenue, cost, status,
+        printer_id, printers(printer_name),
+        computer_id, computers(computer_name),
+        employee_id, users(name),
+        customer_id, customers(name)
+      `)
+      .eq('status', 'Completed')
+      .gte('print_time', todayStart.toISOString())
+      .lte('print_time', todayEnd.toISOString());
+
+    // Printers summary
+    const { data: printerRows } = await supabase
+      .from('printers')
+      .select('id, status')
+      .eq('is_active', true);
+
+    // 7-day trend
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    const { data: trendJobs } = await supabase
+      .from('print_jobs')
+      .select('print_time, page_count, color_mode, revenue')
+      .eq('status', 'Completed')
+      .gte('print_time', sevenDaysAgo.toISOString());
+
+    // Aggregate today
+    const jobs = todayJobs ?? [];
+    let pages = 0, bwPages = 0, colourPages = 0, revenue = 0, cost = 0;
+    const printerFreq: Record<string, number> = {};
+    const computerFreq: Record<string, number> = {};
+    const employeeFreq: Record<string, number> = {};
+    const customerFreq: Record<string, number> = {};
+
+    jobs.forEach((j: any) => {
+      pages += j.page_count;
+      if (j.color_mode === 'Colour') colourPages += j.page_count;
+      else bwPages += j.page_count;
+      revenue += Number(j.revenue);
+      cost += Number(j.cost);
+
+      const pName = (j as any).printers?.printer_name ?? 'Unknown';
+      const cName = (j as any).computers?.computer_name ?? '';
+      const eName = (j as any).users?.name ?? '';
+      const custName = (j as any).customers?.name ?? '';
+
+      printerFreq[pName] = (printerFreq[pName] ?? 0) + j.page_count;
+      if (cName) computerFreq[cName] = (computerFreq[cName] ?? 0) + j.page_count;
+      if (eName) employeeFreq[eName] = (employeeFreq[eName] ?? 0) + j.page_count;
+      if (custName) customerFreq[custName] = (customerFreq[custName] ?? 0) + j.page_count;
+    });
+
+    const topKey = (freq: Record<string, number>) => {
+      const entries = Object.entries(freq);
+      if (!entries.length) return '—';
+      return entries.sort((a, b) => b[1] - a[1])[0][0];
+    };
+
+    // Build 7-day trend
+    const dayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const trendMap: Record<string, DailyPrintTrend> = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      trendMap[key] = {
+        date: dayLabels[d.getDay()],
+        bw: 0, colour: 0, revenue: 0
+      };
+    }
+
+    (trendJobs ?? []).forEach((j: any) => {
+      const key = (j.print_time as string).slice(0, 10);
+      if (trendMap[key]) {
+        if (j.color_mode === 'Colour') trendMap[key].colour += j.page_count;
+        else trendMap[key].bw += j.page_count;
+        trendMap[key].revenue += Number(j.revenue);
+      }
+    });
+
+    const totalPrinters = printerRows?.length ?? 0;
+    const offlinePrinters = (printerRows ?? []).filter(
+      (p: any) => p.status === 'Offline' || p.status === 'Error'
+    ).length;
+
+    return {
+      pages_today: pages,
+      bw_pages_today: bwPages,
+      colour_pages_today: colourPages,
+      revenue_today: revenue,
+      cost_today: cost,
+      estimated_paper_used: pages,
+      most_used_printer: topKey(printerFreq),
+      most_active_computer: topKey(computerFreq),
+      most_active_employee: topKey(employeeFreq),
+      top_customer: topKey(customerFreq),
+      offline_printers: offlinePrinters,
+      total_printers: totalPrinters,
+      daily_trend: Object.values(trendMap)
+    };
+  } catch (err) {
+    handleDbError(err, 'Failed fetching print dashboard stats');
+    return empty;
+  }
+}
+
+// ---- REPORTS ----------------------------------------------------------------
+
+export async function fetchPrintReportByPrinter(from: string, to: string): Promise<PrintReportRow[]> {
+  return _aggregatePrintReport('printer_id', 'printers(printer_name)', 'printers', from, to);
+}
+
+export async function fetchPrintReportByEmployee(from: string, to: string): Promise<PrintReportRow[]> {
+  return _aggregatePrintReport('employee_id', 'users(name)', 'users', from, to);
+}
+
+export async function fetchPrintReportByCustomer(from: string, to: string): Promise<PrintReportRow[]> {
+  return _aggregatePrintReport('customer_id', 'customers(name)', 'customers', from, to);
+}
+
+export async function fetchPrintReportByComputer(from: string, to: string): Promise<PrintReportRow[]> {
+  return _aggregatePrintReport('computer_id', 'computers(computer_name)', 'computers', from, to);
+}
+
+async function _aggregatePrintReport(
+  groupKey: string,
+  joinSelect: string,
+  joinTable: string,
+  from: string,
+  to: string
+): Promise<PrintReportRow[]> {
+  if (!isSupabaseConfigured) return [];
+  try {
+    const { data, error } = await supabase
+      .from('print_jobs')
+      .select(`id, ${groupKey}, page_count, color_mode, revenue, cost, profit, status, ${joinSelect}`)
+      .eq('status', 'Completed')
+      .gte('print_time', from)
+      .lte('print_time', to);
+
+    if (error) throw error;
+
+    // Group in JS
+    const grouped: Record<string, PrintReportRow> = {};
+    (data ?? []).forEach((j: any) => {
+      let rawId = j[groupKey];
+      if (!rawId) rawId = '_unknown';
+
+      let label = '—';
+      if (joinTable === 'printers') label = j.printers?.printer_name ?? '—';
+      else if (joinTable === 'users') label = j.users?.name ?? '—';
+      else if (joinTable === 'customers') label = j.customers?.name ?? '—';
+      else if (joinTable === 'computers') label = j.computers?.computer_name ?? '—';
+
+      if (!grouped[rawId]) {
+        grouped[rawId] = { label, jobs: 0, pages: 0, bw_pages: 0, colour_pages: 0, revenue: 0, cost: 0, profit: 0 };
+      }
+      grouped[rawId].jobs++;
+      grouped[rawId].pages += j.page_count;
+      if (j.color_mode === 'Colour') grouped[rawId].colour_pages += j.page_count;
+      else grouped[rawId].bw_pages += j.page_count;
+      grouped[rawId].revenue += Number(j.revenue);
+      grouped[rawId].cost += Number(j.cost);
+      grouped[rawId].profit += Number(j.profit ?? 0);
+    });
+
+    return Object.values(grouped).sort((a, b) => b.pages - a.pages);
+  } catch (err) {
+    handleDbError(err, `Failed generating print report by ${groupKey}`);
+    return [];
+  }
+}

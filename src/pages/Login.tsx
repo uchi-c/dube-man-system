@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Compass, KeyRound, ShieldAlert, Mail, BadgeCheck, Loader, Info, User as UserIcon } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Loader2, AlertCircle, ChevronRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { isSupabaseConfigured, loginUser } from '../services/supabase';
 import { User } from '../types';
@@ -8,230 +8,513 @@ interface LoginProps {
   onLoginSuccess: (user: User) => void;
 }
 
+// ---- African business illustration (pure SVG — no external assets) ----------
+
+function AfricanBusinessIllustration() {
+  return (
+    <svg
+      viewBox="0 0 480 480"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      className="w-full max-w-sm mx-auto opacity-90"
+    >
+      <defs>
+        <linearGradient id="bg-grad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#1e3a8a" stopOpacity="0.15" />
+          <stop offset="100%" stopColor="#2563eb" stopOpacity="0.05" />
+        </linearGradient>
+        <linearGradient id="blue-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#3b82f6" />
+          <stop offset="100%" stopColor="#1d4ed8" />
+        </linearGradient>
+        <linearGradient id="gold-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#fbbf24" />
+          <stop offset="100%" stopColor="#d97706" />
+        </linearGradient>
+        <linearGradient id="emerald-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#34d399" />
+          <stop offset="100%" stopColor="#059669" />
+        </linearGradient>
+      </defs>
+
+      {/* Background geo pattern — subtle African-inspired diamond grid */}
+      {[0,1,2,3,4].map(col => [0,1,2,3,4].map(row => (
+        <rect
+          key={`${col}-${row}`}
+          x={col * 96 + (row % 2 === 0 ? 0 : 48)}
+          y={row * 72}
+          width={28}
+          height={28}
+          rx={4}
+          fill="#2563eb"
+          opacity={0.04 + (col + row) * 0.003}
+          transform={`rotate(45 ${col * 96 + (row % 2 === 0 ? 0 : 48) + 14} ${row * 72 + 14})`}
+        />
+      )))}
+
+      {/* Connection lines between business nodes */}
+      <g stroke="#3b82f6" strokeWidth="1.5" strokeDasharray="4 4" opacity="0.25">
+        <line x1="120" y1="200" x2="240" y2="150" />
+        <line x1="240" y1="150" x2="360" y2="200" />
+        <line x1="120" y1="200" x2="200" y2="310" />
+        <line x1="360" y1="200" x2="280" y2="310" />
+        <line x1="200" y1="310" x2="240" y2="370" />
+        <line x1="280" y1="310" x2="240" y2="370" />
+      </g>
+
+      {/* Central hub — Dube Man node */}
+      <circle cx="240" cy="150" r="42" fill="url(#blue-grad)" opacity="0.12" />
+      <circle cx="240" cy="150" r="30" fill="url(#blue-grad)" />
+      <text x="240" y="153" textAnchor="middle" fill="white" fontSize="9" fontWeight="800" fontFamily="Manrope,Inter,sans-serif">DUBE</text>
+      <text x="240" y="164" textAnchor="middle" fill="white" fontSize="8" fontWeight="600" fontFamily="Manrope,Inter,sans-serif" opacity="0.8">MAN</text>
+
+      {/* Business node 1 — POS / Retail sales */}
+      <circle cx="120" cy="200" r="28" fill="white" stroke="#e2e8f0" strokeWidth="1.5" />
+      <rect x="108" y="192" width="24" height="16" rx="3" fill="#dbeafe" />
+      <rect x="113" y="192" width="4" height="4" rx="1" fill="#2563eb" />
+      <rect x="119" y="192" width="4" height="4" rx="1" fill="#2563eb" />
+      <rect x="125" y="192" width="4" height="4" rx="1" fill="#2563eb" />
+      <rect x="112" y="200" width="16" height="8" rx="1" fill="#bfdbfe" />
+
+      {/* Business node 2 — Printing */}
+      <circle cx="360" cy="200" r="28" fill="white" stroke="#e2e8f0" strokeWidth="1.5" />
+      <rect x="348" y="192" width="24" height="14" rx="2" fill="#d1fae5" />
+      <rect x="352" y="196" width="16" height="6" rx="1" fill="#ffffff" />
+      <rect x="352" y="206" width="16" height="8" rx="1" fill="#a7f3d0" />
+
+      {/* Business node 3 — Cyber café */}
+      <circle cx="200" cy="310" r="28" fill="white" stroke="#e2e8f0" strokeWidth="1.5" />
+      <rect x="187" y="300" width="26" height="18" rx="3" fill="#ede9fe" />
+      <rect x="189" y="302" width="22" height="12" rx="1" fill="#c4b5fd" />
+      <rect x="195" y="316" width="10" height="2" rx="1" fill="#7c3aed" />
+
+      {/* Business node 4 — Inventory */}
+      <circle cx="280" cy="310" r="28" fill="white" stroke="#e2e8f0" strokeWidth="1.5" />
+      <rect x="269" y="299" width="22" height="16" rx="2" fill="#fef3c7" stroke="#fbbf24" strokeWidth="1" />
+      <line x1="269" y1="307" x2="291" y2="307" stroke="#d97706" strokeWidth="1" />
+      <line x1="280" y1="299" x2="280" y2="315" stroke="#d97706" strokeWidth="1" opacity="0.5" />
+
+      {/* Bottom anchor — mobile device */}
+      <circle cx="240" cy="370" r="28" fill="white" stroke="#e2e8f0" strokeWidth="1.5" />
+      <rect x="230" y="360" width="20" height="28" rx="4" fill="#0f172a" />
+      <rect x="232" y="362" width="16" height="20" rx="2" fill="#2563eb" />
+      <rect x="237" y="384" width="6" height="2" rx="1" fill="#475569" />
+
+      {/* Floating data packets (small animated dots) */}
+      <circle cx="180" cy="175" r="4" fill="#fbbf24" opacity="0.8" />
+      <circle cx="300" cy="175" r="3" fill="#10b981" opacity="0.8" />
+      <circle cx="155" cy="255" r="3.5" fill="#3b82f6" opacity="0.7" />
+      <circle cx="320" cy="255" r="3" fill="#fbbf24" opacity="0.7" />
+      <circle cx="240" cy="340" r="3.5" fill="#10b981" opacity="0.8" />
+
+      {/* Stat bubble — "Revenue Up" */}
+      <g transform="translate(52, 270)">
+        <rect width="88" height="32" rx="10" fill="white" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.10))" />
+        <circle cx="16" cy="16" r="10" fill="#d1fae5" />
+        <text x="16" y="20" textAnchor="middle" fontSize="10" fill="#059669">↑</text>
+        <text x="54" y="13" textAnchor="middle" fontSize="8" fill="#94a3b8" fontFamily="Inter,sans-serif">Revenue</text>
+        <text x="54" y="24" textAnchor="middle" fontSize="9" fill="#0f172a" fontWeight="700" fontFamily="Manrope,Inter,sans-serif">+24%</text>
+      </g>
+
+      {/* Stat bubble — "Online" */}
+      <g transform="translate(338, 270)">
+        <rect width="90" height="32" rx="10" fill="white" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.10))" />
+        <circle cx="16" cy="16" r="10" fill="#dbeafe" />
+        <circle cx="16" cy="16" r="4" fill="#2563eb" />
+        <text x="56" y="13" textAnchor="middle" fontSize="8" fill="#94a3b8" fontFamily="Inter,sans-serif">Stations</text>
+        <text x="56" y="24" textAnchor="middle" fontSize="9" fill="#0f172a" fontWeight="700" fontFamily="Manrope,Inter,sans-serif">All Online</text>
+      </g>
+    </svg>
+  );
+}
+
+// ---- Demo accounts ----------------------------------------------------------
+
+const DEMO_ACCOUNTS = [
+  {
+    role: 'ADMIN',
+    email: 'admin@dubeman.com',
+    password: 'admin123',
+    label: 'Owner — Full Access',
+    color: '#2563eb',
+  },
+  {
+    role: 'STAFF',
+    email: 'staff@dubeman.com',
+    password: 'admin123',
+    label: 'Staff Operator',
+    color: '#059669',
+  },
+  {
+    role: 'CAFE_OPERATOR',
+    email: 'cafe@dubeman.com',
+    password: 'admin123',
+    label: 'Café Desk',
+    color: '#7c3aed',
+  },
+];
+
+// ---- Main component ---------------------------------------------------------
+
 export default function Login({ onLoginSuccess }: LoginProps) {
-  const [emailInput, setEmailInput] = useState('');
-  const [passwordInput, setPasswordInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [errorText, setErrorText] = useState('');
+  const [email, setEmail]       = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
 
-  const demoAccounts = [
-    {
-      role: 'ADMIN',
-      email: 'admin@dubeman.com',
-      password: 'admin123',
-      label: 'Dube Man (Owner)',
-      color: 'from-rose-500 to-amber-500',
-      description: 'Full system management'
-    },
-    {
-      role: 'STAFF',
-      email: 'staff@dubeman.com',
-      password: 'admin123',
-      label: 'Sarah Phiri (Operator)',
-      color: 'from-blue-500 to-indigo-500',
-      description: 'POS, customers, inventory'
-    },
-    {
-      role: 'CAFE_OPERATOR',
-      email: 'cafe@dubeman.com',
-      password: 'admin123',
-      label: 'John Banda (Desk Operator)',
-      color: 'from-emerald-500 to-teal-500',
-      description: 'Café terminals & session lock only'
-    }
-  ];
-
-  const handleFormLoginSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!emailInput.trim() || !passwordInput.trim()) {
-      setErrorText('Please enter both email and password.');
+    if (!email.trim() || !password.trim()) {
+      setError('Please enter your email and password.');
       return;
     }
-
     setLoading(true);
-    setErrorText('');
-
+    setError('');
     try {
-      const user = await loginUser(emailInput.trim(), passwordInput);
-
+      const user = await loginUser(email.trim(), password);
       if (user) {
         onLoginSuccess(user);
       } else {
-        setErrorText('Invalid credentials. Please verify your email and password.');
+        setError('Incorrect email or password. Please try again.');
       }
     } catch (err: any) {
-      setErrorText(err?.message || 'Failed to authenticate. Please check your network connection.');
+      setError(err?.message || 'Authentication failed. Check your connection.');
     } finally {
       setLoading(false);
     }
   };
 
-  const autofillAccount = (email: string, pass: string) => {
-    setEmailInput(email);
-    setPasswordInput(pass);
-    setErrorText('');
+  const autofill = (acc: typeof DEMO_ACCOUNTS[number]) => {
+    setEmail(acc.email);
+    setPassword(acc.password);
+    setError('');
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 selection:bg-rose-500 selection:text-white" id="login-page">
-      {/* Brand logo container */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="w-full max-w-lg text-center mb-6"
+    <div
+      className="min-h-screen flex"
+      style={{ fontFamily: "'Inter','Manrope',sans-serif" }}
+      id="login-page"
+    >
+      {/* ---- Left panel — illustration ---- */}
+      <motion.div
+        initial={{ opacity: 0, x: -24 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+        className="hidden lg:flex flex-col justify-between w-1/2 relative overflow-hidden"
+        style={{ background: 'linear-gradient(145deg, #0f172a 0%, #1e3a8a 60%, #1e293b 100%)' }}
       >
-        <div className="inline-flex items-center justify-center p-3.5 bg-gradient-to-br from-rose-500 to-amber-500 rounded-2xl shadow-xl shadow-rose-950/40 mb-3 animate-pulse">
-          <Compass className="w-8 h-8 text-white" />
+        {/* Geometric background texture */}
+        <div className="absolute inset-0 opacity-5" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+        }} />
+
+        {/* Top brand mark */}
+        <div className="relative z-10 p-10">
+          <div className="flex items-center space-x-3">
+            {/* Logo mark */}
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}
+            >
+              <span style={{ color: 'white', fontFamily: 'Manrope', fontWeight: 800, fontSize: '14px' }}>DM</span>
+            </div>
+            <div>
+              <div style={{ color: 'white', fontFamily: 'Manrope', fontWeight: 800, fontSize: '18px', letterSpacing: '-0.02em' }}>
+                Dube Man
+              </div>
+              <div style={{ color: 'rgba(148,163,184,0.8)', fontSize: '10px', fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                Innovation
+              </div>
+            </div>
+          </div>
         </div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-white font-sans">
-          DUBE MAN <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-amber-300">GENERAL DEALERS</span>
-        </h1>
-        <p className="text-xs text-rose-200/60 font-mono tracking-widest mt-1.5 uppercase">
-          Enterprise Management System
-        </p>
+
+        {/* Central illustration */}
+        <div className="relative z-10 flex-1 flex items-center justify-center px-10">
+          <div>
+            <AfricanBusinessIllustration />
+            <div className="text-center mt-6 space-y-2">
+              <h2 style={{
+                color: 'white',
+                fontFamily: 'Manrope',
+                fontWeight: 800,
+                fontSize: 'clamp(1.4rem, 2.5vw, 1.9rem)',
+                letterSpacing: '-0.025em',
+                lineHeight: 1.2,
+              }}>
+                Run Your Cyber Café<br />
+                <span style={{ background: 'linear-gradient(90deg, #60a5fa, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                  & Business Centre
+                </span>
+              </h2>
+              <p style={{ color: 'rgba(148,163,184,0.75)', fontSize: '0.875rem', maxWidth: '320px', margin: '0 auto', lineHeight: 1.6 }}>
+                One platform. Every module. Run your business from anywhere.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom trust signals */}
+        <div className="relative z-10 p-10">
+          <div className="flex items-center gap-6 text-xs" style={{ color: 'rgba(148,163,184,0.55)' }}>
+            <span>🔒 End-to-end encrypted</span>
+            <span>☁️ Real-time sync</span>
+            <span>📱 Mobile-ready</span>
+          </div>
+        </div>
+
+        {/* Decorative glow orbs */}
+        <div className="absolute top-1/4 right-0 w-72 h-72 rounded-full blur-3xl pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(37,99,235,0.20) 0%, transparent 70%)' }} />
+        <div className="absolute bottom-1/4 left-0 w-48 h-48 rounded-full blur-3xl pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(124,58,237,0.18) 0%, transparent 70%)' }} />
       </motion.div>
 
-      <div className="w-full max-w-lg grid grid-cols-1 gap-6">
-        {/* Core Auth Panel */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.4, delay: 0.15 }}
-          className="w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl shadow-black relative overflow-hidden"
-        >
-          <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-rose-500 via-amber-500 to-rose-500"></div>
-
-          <div className="mb-6 text-left">
-            <h2 className="text-xl font-bold text-slate-100 font-sans">Secure Authorization</h2>
-            <p className="text-xs text-slate-400 mt-1">Please authenticate with your corporate credentials to gain access.</p>
+      {/* ---- Right panel — login form ---- */}
+      <div
+        className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 overflow-y-auto"
+        style={{ background: '#f8fafc' }}
+      >
+        {/* Mobile brand (shown only when left panel is hidden) */}
+        <div className="lg:hidden flex items-center space-x-3 mb-8">
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}
+          >
+            <span style={{ color: 'white', fontFamily: 'Manrope', fontWeight: 800, fontSize: '14px' }}>DM</span>
           </div>
+          <span style={{ fontFamily: 'Manrope', fontWeight: 800, fontSize: '20px', color: '#0f172a' }}>Dube Man</span>
+        </div>
 
-          <form onSubmit={handleFormLoginSubmit} className="space-y-4 text-left">
-            {/* USER EMAIL */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold text-slate-300 font-mono tracking-wider uppercase block">
-                Email Address
-              </label>
-              <div className="relative">
-                <input
-                  type="email"
-                  required
-                  placeholder="operator@dubeman.com"
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 text-slate-100 pl-10 pr-4 py-2.5 rounded-xl outline-none text-xs transition-all"
-                />
-                <Mail className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-              </div>
-            </div>
-
-            {/* PASSWORD */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold text-slate-300 font-mono tracking-wider uppercase block">
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type="password"
-                  required
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 text-slate-100 pl-10 pr-4 py-2.5 rounded-xl outline-none font-mono text-xs transition-all"
-                />
-                <KeyRound className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-              </div>
-            </div>
-
-            {/* Secure Handshake Notice */}
-            <div className="bg-slate-950/60 border border-slate-850 rounded-2xl p-3 flex items-start space-x-2.5 text-[11px] text-slate-405">
-              <ShieldAlert className="w-4 h-4 text-rose-550 shrink-0 mt-0.5 animate-pulse" />
-              <div>
-                <span className="font-semibold text-slate-200">Protected Handshake Protocol</span>
-                <p className="mt-0.5 text-slate-400">Role bindings restrict active system features. Sessions are validated and cryptographically verified.</p>
-              </div>
-            </div>
-
-            {/* Error text */}
-            {errorText && (
-              <div className="bg-rose-950/40 border border-rose-900/40 text-rose-300 text-xs p-3 rounded-xl flex items-center space-x-2 font-mono">
-                <ShieldAlert className="w-4 h-4 text-rose-500 shrink-0" />
-                <span>{errorText}</span>
-              </div>
-            )}
-
-            {/* Action button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-600 hover:to-amber-600 disabled:opacity-50 text-white font-bold py-3 rounded-xl shadow-xl shadow-rose-950/30 transition-all transform active:scale-98 flex items-center justify-center space-x-2 cursor-pointer"
-            >
-              {loading ? (
-                <Loader className="w-4 h-4 animate-spin text-white" />
-              ) : (
-                <BadgeCheck className="w-4 h-4 text-white" />
-              )}
-              <span>{loading ? 'Authenticating Credentials...' : 'Sign In'}</span>
-            </button>
-          </form>
-        </motion.div>
-
-        {/* Dynamic demo access selector card */}
         <motion.div
-          initial={{ opacity: 0, y: 15 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.25 }}
-          className="bg-slate-900 border border-slate-800 rounded-3xl p-5 text-left"
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="w-full max-w-[400px] space-y-6"
         >
-          <div className="flex items-center space-x-2 mb-3.5 text-amber-400">
-            <Info className="w-4 h-4 shrink-0" />
-            <h3 className="font-bold text-xs uppercase tracking-wider text-slate-200">Demo Access Accounts</h3>
+          {/* Header */}
+          <div>
+            <h1 style={{
+              fontFamily: 'Manrope',
+              fontWeight: 800,
+              fontSize: '1.75rem',
+              letterSpacing: '-0.03em',
+              color: '#0f172a',
+              lineHeight: 1.2,
+            }}>
+              Welcome back
+            </h1>
+            <p style={{ color: '#64748b', fontSize: '0.9rem', marginTop: '6px' }}>
+              Sign in to your workspace.
+            </p>
           </div>
-          <p className="text-[11px] text-slate-400 mb-4 leading-relaxed">
-            {isSupabaseConfigured ? 'Use real Supabase Auth credentials. Demo buttons only autofill known account emails.' : <>Select one of the local simulator profiles below to autofill credentials. Local simulator mode accepts the seeded demo password (e.g. <strong>admin123</strong>).</>}
-          </p>
 
-          <div className="space-y-2.5">
-            {demoAccounts.map((account) => (
+          {/* Glass login card */}
+          <div
+            className="rounded-2xl p-6 space-y-4"
+            style={{
+              background: 'white',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 4px 24px rgba(15,23,42,0.08)',
+            }}
+          >
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Email */}
+              <div className="space-y-1.5">
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#374151', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                  Email Address
+                </label>
+                <div className="relative">
+                  <Mail
+                    className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                    style={{ width: 15, height: 15, color: '#94a3b8' }}
+                  />
+                  <input
+                    type="email"
+                    required
+                    autoComplete="email"
+                    placeholder="you@company.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.625rem 0.875rem 0.625rem 2.25rem',
+                      background: '#f8fafc',
+                      border: '1.5px solid #e2e8f0',
+                      borderRadius: '10px',
+                      fontSize: '0.875rem',
+                      color: '#0f172a',
+                      outline: 'none',
+                      transition: 'border-color 0.15s, box-shadow 0.15s',
+                    }}
+                    onFocus={e => {
+                      e.target.style.borderColor = '#2563eb';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.12)';
+                    }}
+                    onBlur={e => {
+                      e.target.style.borderColor = '#e2e8f0';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#374151', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                <div className="relative">
+                  <Lock
+                    className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                    style={{ width: 15, height: 15, color: '#94a3b8' }}
+                  />
+                  <input
+                    type="password"
+                    required
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.625rem 0.875rem 0.625rem 2.25rem',
+                      background: '#f8fafc',
+                      border: '1.5px solid #e2e8f0',
+                      borderRadius: '10px',
+                      fontSize: '0.875rem',
+                      color: '#0f172a',
+                      outline: 'none',
+                      transition: 'border-color 0.15s, box-shadow 0.15s',
+                      fontFamily: 'monospace',
+                    }}
+                    onFocus={e => {
+                      e.target.style.borderColor = '#2563eb';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.12)';
+                    }}
+                    onBlur={e => {
+                      e.target.style.borderColor = '#e2e8f0';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Error */}
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center space-x-2 px-3 py-2.5 rounded-xl"
+                  style={{ background: '#fff1f2', border: '1px solid #fecdd3', fontSize: '0.8125rem', color: '#be123c' }}
+                >
+                  <AlertCircle style={{ width: 14, height: 14, flexShrink: 0 }} />
+                  <span>{error}</span>
+                </motion.div>
+              )}
+
+              {/* Sign in button */}
               <button
-                key={account.role}
-                type="button"
-                onClick={() => autofillAccount(account.email, account.password)}
-                className="w-full bg-slate-950/85 hover:bg-slate-950 border border-slate-800/80 hover:border-slate-700/80 p-3 rounded-2xl flex items-center justify-between text-left transition-all cursor-pointer group"
+                type="submit"
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2"
+                style={{
+                  padding: '0.75rem',
+                  background: loading ? '#93c5fd' : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '0.875rem',
+                  fontWeight: 700,
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  boxShadow: loading ? 'none' : '0 4px 16px rgba(37,99,235,0.30)',
+                  transition: 'all 0.15s',
+                }}
+                onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)'; }}
               >
-                <div className="flex items-center space-x-3 truncate">
-                  <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${account.color} flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-sm`}>
-                    <UserIcon className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="truncate">
-                    <div className="text-xs font-bold text-slate-200 group-hover:text-white transition-colors">{account.label}</div>
-                    <div className="text-[10px] text-slate-500 font-mono truncate">{account.email}</div>
-                  </div>
-                </div>
-
-                <div className="text-right shrink-0 pl-2">
-                  <span className="inline-block text-[9px] font-mono font-extrabold uppercase tracking-widest px-2.5 py-1 bg-slate-900 border border-slate-800 text-slate-305 group-hover:border-slate-700 rounded-lg group-hover:text-rose-450 transition-all">
-                    {account.role}
-                  </span>
-                  <div className="text-[9px] text-slate-500 mt-0.5 font-sans italic">{account.description}</div>
-                </div>
+                {loading
+                  ? <Loader2 style={{ width: 16, height: 16 }} className="animate-spin" />
+                  : <ArrowRight style={{ width: 16, height: 16 }} />
+                }
+                {loading ? 'Signing in…' : 'Sign In'}
               </button>
-            ))}
+            </form>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3">
+              <div style={{ flex: 1, height: '1px', background: '#f1f5f9' }} />
+              <span style={{ fontSize: '0.6875rem', color: '#94a3b8', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                DEMO ACCOUNTS
+              </span>
+              <div style={{ flex: 1, height: '1px', background: '#f1f5f9' }} />
+            </div>
+
+            {/* Demo quick-fill */}
+            <div className="space-y-2">
+              {DEMO_ACCOUNTS.map(acc => (
+                <button
+                  key={acc.role}
+                  type="button"
+                  onClick={() => autofill(acc)}
+                  className="w-full flex items-center justify-between group"
+                  style={{
+                    padding: '0.5rem 0.75rem',
+                    background: '#f8fafc',
+                    border: '1.5px solid #e2e8f0',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = acc.color;
+                    (e.currentTarget as HTMLButtonElement).style.background = '#ffffff';
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = '#e2e8f0';
+                    (e.currentTarget as HTMLButtonElement).style.background = '#f8fafc';
+                  }}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div style={{
+                      width: 28, height: 28, borderRadius: 8,
+                      background: acc.color + '1a',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0,
+                    }}>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: acc.color }}>
+                        {acc.role.charAt(0)}
+                      </span>
+                    </div>
+                    <div className="text-left">
+                      <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#0f172a' }}>{acc.label}</div>
+                      <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontFamily: 'monospace' }}>{acc.email}</div>
+                    </div>
+                  </div>
+                  <ChevronRight style={{ width: 14, height: 14, color: '#cbd5e1' }} />
+                </button>
+              ))}
+            </div>
           </div>
+
+          {/* Footer */}
+          <p style={{ textAlign: 'center', fontSize: '0.75rem', color: '#94a3b8' }}>
+            {isSupabaseConfigured
+              ? 'Connected to your Supabase workspace'
+              : 'Running in local demo mode'
+            }
+          </p>
         </motion.div>
       </div>
-
-      {/* Corporate signature */}
-      <motion.p 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="text-[11px] text-slate-600 font-mono mt-8 text-center"
-      >
-        Designed & Maintained for Dube Man General Dealers &bull; 2026 Audit Certified
-      </motion.p>
     </div>
   );
 }
-
