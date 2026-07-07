@@ -1,5 +1,5 @@
 import React from 'react';
-import { LucideIcon } from 'lucide-react';
+import { LucideIcon, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface DashboardCardProps {
@@ -9,6 +9,7 @@ interface DashboardCardProps {
   subValue?: string | number;
   icon: LucideIcon;
   colorScheme: 'rose' | 'amber' | 'blue' | 'emerald' | 'slate' | 'violet';
+  trend?: 'up' | 'down' | 'neutral';
   actionLabel?: string;
   onActionClick?: () => void;
 }
@@ -20,6 +21,7 @@ export default function DashboardCard({
   subValue,
   icon: IconComp,
   colorScheme,
+  trend,
   actionLabel,
   onActionClick
 }: DashboardCardProps) {
@@ -82,9 +84,23 @@ export default function DashboardCard({
 
         {/* Primary Value */}
         <div className="space-y-1">
-          <h3 className={`text-2xl font-black tracking-tight ${choice.valueClr}`}>
-            {value}
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3 className={`text-2xl font-black tracking-tight ${choice.valueClr}`}>
+              {value}
+            </h3>
+            {trend && trend !== 'neutral' && (
+              <span
+                className={`flex items-center justify-center w-5 h-5 rounded-full shrink-0 ${
+                  trend === 'up' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'
+                }`}
+              >
+                {trend === 'up'
+                  ? <ArrowUpRight className="w-3 h-3" />
+                  : <ArrowDownRight className="w-3 h-3" />
+                }
+              </span>
+            )}
+          </div>
           {subValue && (
             <p className="text-[11px] font-mono text-slate-400">
               {subValue}

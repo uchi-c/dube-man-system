@@ -177,3 +177,113 @@ export interface RouterSetting {
   created_at: string;
 }
 
+// ============================================================
+// PRINT MANAGER — Types
+// ============================================================
+
+export type PrinterStatus = 'Online' | 'Offline' | 'Paused' | 'Error';
+export type PrintJobStatus = 'Completed' | 'Cancelled' | 'Failed';
+export type PaperSize = 'A4' | 'A3' | 'A5' | 'Letter' | 'Legal' | 'Custom';
+export type ColorMode = 'BW' | 'Colour';
+
+/** A physical or virtual printer registered in the system */
+export interface Printer {
+  id: string;
+  printer_name: string;
+  /** Exact name as shown in Windows Devices & Printers */
+  windows_printer_name: string;
+  location: string;
+  branch: string;
+  status: PrinterStatus;
+  cost_per_bw_page: number;
+  cost_per_colour_page: number;
+  paper_sizes: PaperSize[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** A single print job captured by the pc-agent */
+export interface PrintJob {
+  id: string;
+  printer_id: string;
+  printer_name?: string;
+  computer_id: string | null;
+  computer_name?: string;
+  employee_id: string | null;
+  employee_name?: string;
+  customer_id: string | null;
+  customer_name?: string;
+  session_id: string | null;
+  document_name: string | null;
+  page_count: number;
+  color_mode: ColorMode;
+  paper_size: PaperSize;
+  cost: number;
+  revenue: number;
+  profit: number;
+  status: PrintJobStatus;
+  print_time: string;       // ISO timestamp when job completed
+  created_at: string;
+}
+
+/** Paper stock for a specific paper type / size */
+export interface PaperInventory {
+  id: string;
+  paper_size: PaperSize;
+  description: string;
+  reams_purchased: number;   // 1 ream = 500 sheets
+  reams_remaining: number;
+  pages_per_ream: number;    // default 500
+  cost_per_ream: number;
+  min_stock_reams: number;   // alert threshold
+  created_at: string;
+  updated_at: string;
+}
+
+/** Organization-wide print pricing configuration */
+export interface PrintPricingSettings {
+  id: string;
+  bw_price_per_page: number;
+  colour_price_per_page: number;
+  paper_cost_per_page: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// ---- aggregated view types used by dashboard/reports ----
+
+export interface PrintDashboardStats {
+  pages_today: number;
+  bw_pages_today: number;
+  colour_pages_today: number;
+  revenue_today: number;
+  cost_today: number;
+  estimated_paper_used: number; // pages
+  most_used_printer: string;
+  most_active_computer: string;
+  most_active_employee: string;
+  top_customer: string;
+  offline_printers: number;
+  total_printers: number;
+  daily_trend: DailyPrintTrend[];
+}
+
+export interface DailyPrintTrend {
+  date: string;        // 'Mon', 'Tue' etc or 'DD/MM'
+  bw: number;
+  colour: number;
+  revenue: number;
+}
+
+export interface PrintReportRow {
+  label: string;       // printer name / employee / customer / computer
+  jobs: number;
+  pages: number;
+  bw_pages: number;
+  colour_pages: number;
+  revenue: number;
+  cost: number;
+  profit: number;
+}
+

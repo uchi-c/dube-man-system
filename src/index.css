@@ -1,1 +1,406 @@
 @import "tailwindcss";
+
+/* ============================================================
+   Dube Man Innovation — Global Design System
+   Version 1.0
+   ============================================================ */
+
+/* ---- Font imports ----------------------------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+/* ---- CSS custom properties (design tokens) ---------------- */
+:root {
+  /* Brand */
+  --uruu-primary:        #0f172a;   /* Deep Navy */
+  --uruu-primary-light:  #1e293b;
+  --uruu-accent:         #2563eb;   /* Electric Blue */
+  --uruu-accent-light:   #3b82f6;
+  --uruu-accent-glow:    rgba(37, 99, 235, 0.18);
+
+  /* Semantic */
+  --uruu-success:        #10b981;
+  --uruu-success-light:  #d1fae5;
+  --uruu-warning:        #f59e0b;
+  --uruu-warning-light:  #fef3c7;
+  --uruu-error:          #dc2626;
+  --uruu-error-light:    #fee2e2;
+
+  /* Neutrals — warm grays */
+  --uruu-surface:        #ffffff;
+  --uruu-surface-2:      #f8fafc;
+  --uruu-surface-3:      #f1f5f9;
+  --uruu-border:         #e2e8f0;
+  --uruu-border-strong:  #cbd5e1;
+
+  /* Text */
+  --uruu-text-primary:   #0f172a;
+  --uruu-text-secondary: #475569;
+  --uruu-text-muted:     #94a3b8;
+  --uruu-text-inverse:   #ffffff;
+
+  /* Shadows */
+  --uruu-shadow-sm:      0 1px 2px 0 rgb(15 23 42 / 0.06);
+  --uruu-shadow-md:      0 4px 16px -2px rgb(15 23 42 / 0.10), 0 2px 4px -1px rgb(15 23 42 / 0.06);
+  --uruu-shadow-lg:      0 10px 40px -4px rgb(15 23 42 / 0.14), 0 4px 8px -2px rgb(15 23 42 / 0.08);
+  --uruu-shadow-xl:      0 20px 60px -8px rgb(15 23 42 / 0.18), 0 8px 16px -4px rgb(15 23 42 / 0.10);
+  --uruu-shadow-accent:  0 8px 32px -4px rgba(37, 99, 235, 0.30);
+
+  /* Radius */
+  --uruu-radius-sm:      8px;
+  --uruu-radius-md:      12px;
+  --uruu-radius-lg:      16px;
+  --uruu-radius-xl:      20px;
+  --uruu-radius-2xl:     24px;
+  --uruu-radius-full:    9999px;
+
+  /* Transitions */
+  --uruu-transition:     all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  --uruu-transition-lg:  all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Layout */
+  --uruu-sidebar-width:  248px;
+  --uruu-topbar-height:  60px;
+}
+
+/* ---- Base reset + typography ------------------------------ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', 'Manrope', system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--uruu-text-primary);
+  background: var(--uruu-surface-2);
+}
+
+/* ---- Typography scale ------------------------------------- */
+.uruu-display {
+  font-family: 'Manrope', sans-serif;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.uruu-h1 {
+  font-family: 'Manrope', sans-serif;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.uruu-h2 {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.uruu-h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.uruu-body { font-size: 0.875rem; font-weight: 400; }
+.uruu-body-sm { font-size: 0.8125rem; font-weight: 400; }
+.uruu-caption { font-size: 0.75rem; font-weight: 500; color: var(--uruu-text-muted); }
+.uruu-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.uruu-mono {
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 0.75rem;
+}
+
+/* ---- Surface cards ---------------------------------------- */
+.uruu-card {
+  background: var(--uruu-surface);
+  border: 1px solid var(--uruu-border);
+  border-radius: var(--uruu-radius-2xl);
+  box-shadow: var(--uruu-shadow-sm);
+  transition: var(--uruu-transition);
+}
+
+.uruu-card:hover {
+  box-shadow: var(--uruu-shadow-md);
+  border-color: var(--uruu-border-strong);
+  transform: translateY(-1px);
+}
+
+.uruu-card-glass {
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.5);
+  border-radius: var(--uruu-radius-2xl);
+  box-shadow: var(--uruu-shadow-lg);
+}
+
+/* ---- Buttons ---------------------------------------------- */
+.uruu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--uruu-radius-md);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--uruu-transition);
+  border: none;
+  outline: none;
+  text-decoration: none;
+}
+
+.uruu-btn:focus-visible {
+  outline: 2px solid var(--uruu-accent);
+  outline-offset: 2px;
+}
+
+.uruu-btn-primary {
+  background: var(--uruu-accent);
+  color: white;
+  box-shadow: 0 2px 12px rgba(37, 99, 235, 0.28);
+}
+
+.uruu-btn-primary:hover {
+  background: #1d4ed8;
+  box-shadow: var(--uruu-shadow-accent);
+  transform: translateY(-1px);
+}
+
+.uruu-btn-primary:active { transform: translateY(0); }
+
+.uruu-btn-ghost {
+  background: transparent;
+  color: var(--uruu-text-secondary);
+  border: 1px solid var(--uruu-border);
+}
+
+.uruu-btn-ghost:hover {
+  background: var(--uruu-surface-3);
+  color: var(--uruu-text-primary);
+}
+
+/* ---- Form inputs ------------------------------------------ */
+.uruu-input {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  background: var(--uruu-surface);
+  border: 1.5px solid var(--uruu-border);
+  border-radius: var(--uruu-radius-md);
+  font-size: 0.875rem;
+  color: var(--uruu-text-primary);
+  transition: var(--uruu-transition);
+  outline: none;
+}
+
+.uruu-input:focus {
+  border-color: var(--uruu-accent);
+  box-shadow: 0 0 0 3px var(--uruu-accent-glow);
+}
+
+.uruu-input::placeholder { color: var(--uruu-text-muted); }
+
+/* ---- Badge / status chips --------------------------------- */
+.uruu-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--uruu-radius-full);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.uruu-badge-success { background: var(--uruu-success-light); color: #065f46; }
+.uruu-badge-warning { background: var(--uruu-warning-light); color: #92400e; }
+.uruu-badge-error   { background: var(--uruu-error-light);   color: #991b1b; }
+.uruu-badge-info    { background: #dbeafe; color: #1e40af; }
+.uruu-badge-neutral { background: var(--uruu-surface-3); color: var(--uruu-text-secondary); }
+
+/* ---- Navigation ------------------------------------------- */
+.uruu-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--uruu-radius-lg);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--uruu-text-secondary);
+  transition: var(--uruu-transition);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  text-decoration: none;
+}
+
+.uruu-nav-item:hover {
+  background: var(--uruu-surface-3);
+  color: var(--uruu-text-primary);
+}
+
+.uruu-nav-item.active {
+  background: var(--uruu-accent);
+  color: white;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.24);
+}
+
+.uruu-nav-item.active svg { color: white; }
+
+/* ---- Scrollbar styling ------------------------------------ */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--uruu-border-strong);
+  border-radius: var(--uruu-radius-full);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--uruu-text-muted); }
+
+/* ---- Animations ------------------------------------------- */
+@keyframes uruu-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes uruu-slide-in-left {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes uruu-scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes uruu-pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.15); }
+  50%       { box-shadow: 0 0 0 6px rgba(37, 99, 235, 0); }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+
+.uruu-animate-in       { animation: uruu-fade-in 0.24s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.uruu-slide-in         { animation: uruu-slide-in-left 0.22s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.uruu-scale-in         { animation: uruu-scale-in 0.20s cubic-bezier(0.4, 0, 0.2, 1) both; }
+
+/* Loading skeleton */
+.uruu-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--uruu-surface-3) 25%,
+    var(--uruu-surface-2) 37%,
+    var(--uruu-surface-3) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: var(--uruu-radius-md);
+}
+
+/* ---- KPI number display ----------------------------------- */
+.uruu-kpi-value {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.uruu-kpi-value-lg {
+  font-family: 'Manrope', sans-serif;
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+/* ---- Section divider -------------------------------------- */
+.uruu-section-label {
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--uruu-text-muted);
+  padding: 0.25rem 0.875rem;
+  margin-bottom: 0.25rem;
+}
+
+/* ---- Status dot ------------------------------------------- */
+.uruu-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.uruu-dot-online  { background: var(--uruu-success); animation: uruu-pulse-glow 2s infinite; }
+.uruu-dot-offline { background: var(--uruu-text-muted); }
+.uruu-dot-warning { background: var(--uruu-warning); }
+.uruu-dot-error   { background: var(--uruu-error); }
+
+/* ---- Gradient text utility -------------------------------- */
+.uruu-gradient-text {
+  background: linear-gradient(135deg, var(--uruu-accent) 0%, #7c3aed 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ---- Page overlay for mobile drawer ----------------------- */
+.uruu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 40;
+}
+
+/* ---- Focus ring ------------------------------------------- */
+*:focus-visible {
+  outline: 2px solid var(--uruu-accent);
+  outline-offset: 2px;
+}
+
+/* ---- Print overrides -------------------------------------- */
+@media print {
+  .uruu-sidebar, .uruu-topbar { display: none !important; }
+  body { background: white; }
+}
+
+/* ---- High-contrast mode support --------------------------- */
+@media (forced-colors: active) {
+  .uruu-btn-primary { background: ButtonText; color: ButtonFace; }
+  .uruu-card { border: 2px solid ButtonText; }
+}
+
+/* ---- Reduced motion ---------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

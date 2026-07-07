@@ -3,7 +3,7 @@ import { User, UserRole } from './types';
 import { initializeStore } from './utils/db';
 import { getAuthenticatedUser, logoutUser } from './services/supabase';
 
-// Import real, cloud-connected pages
+// Pages
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
@@ -12,445 +12,635 @@ import PrintingOrders from './pages/PrintingOrders';
 import CafeManagement from './pages/CafeManagement';
 import Customers from './pages/Customers';
 import WifiManagement from './pages/WifiManagement';
+import PrintManager from './pages/PrintManager';
 import PCAgentConsole from './components/PCAgentConsole';
 import ActivityLogs from './components/ActivityLogs';
 
-// Import Lucide icons
-import { 
-  Building, LogOut, Shield, User as UserIcon,
-  LineChart, Package, ShoppingCart, Printer, Monitor, 
-  Wifi, History, Menu, X, Users, ShieldAlert, Loader
+import {
+  LayoutDashboard, Package, ShoppingCart, Printer, Monitor,
+  Wifi, History, Users, Shield, LogOut, Menu, X,
+  RefreshCw, PrinterIcon, ChevronRight, Bell,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Analytics } from '@vercel/analytics/react';
 
-export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<string>('');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
-  const [isUnauthorizedPath, setIsUnauthorizedPath] = useState(false);
-  const [lastSyncTime, setLastSyncTime] = useState<string>('Synced just now');
-  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+// ---- Tab definitions -------------------------------------------------------
+
+interface TabDef {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  group: string;
+  path: string;
+  roles: UserRole[];
+}
+
+const TABS: TabDef[] = [
+  // Home
+  { id: 'dashboard',     label: 'Overview',        icon: LayoutDashboard, group: 'Home',       path: '/dashboard',     roles: ['ADMIN'] },
+  // Operations
+  { id: 'pos',           label: 'POS & Sales',      icon: ShoppingCart,    group: 'Operations', path: '/sales',         roles: ['ADMIN','STAFF'] },
+  { id: 'inventory',     label: 'Inventory',        icon: Package,         group: 'Operations', path: '/inventory',     roles: ['ADMIN','STAFF'] },
+  { id: 'customers',     label: 'Customers',        icon: Users,           group: 'Operations', path: '/customers',     roles: ['ADMIN','STAFF'] },
+  // Printing
+  { id: 'print-manager', label: 'Print Manager',    icon: PrinterIcon,     group: 'Printing',   path: '/print-manager', roles: ['ADMIN'] },
+  { id: 'printing',      label: 'Branding & Orders',icon: Printer,         group: 'Printing',   path: '/printing-orders',roles: ['ADMIN'] },
+  // Connectivity
+  { id: 'cafe',          label: 'Internet Café',    icon: Monitor,         group: 'Connectivity',path: '/cafe-management',roles: ['ADMIN','CAFE_OPERATOR'] },
+  { id: 'wifi',          label: 'WiFi Management',  icon: Wifi,            group: 'Connectivity',path: '/wifi',          roles: ['ADMIN','STAFF','CAFE_OPERATOR'] },
+  // System
+  { id: 'pc-agent',      label: 'PC Agent Hub',     icon: Shield,          group: 'System',     path: '/pc-agent',      roles: ['ADMIN'] },
+  { id: 'logs',          label: 'Security Logs',    icon: History,         group: 'System',     path: '/logs',          roles: ['ADMIN'] },
+];
+
+const PATH_TO_TAB: Record<string, string> = Object.fromEntries(
+  TABS.map(t => [t.path, t.id])
+);
+const TAB_TO_PATH: Record<string, string> = Object.fromEntries(
+  TABS.map(t => [t.id, t.path])
+);
+PATH_TO_TAB['/users'] = 'logs'; // legacy alias
+
+const GROUP_ORDER = ['Home','Operations','Printing','Connectivity','System'];
+
+// ---- Sync indicator --------------------------------------------------------
+
+function SyncIndicator() {
+  const [syncing, setSyncing] = useState(false);
+  const [label, setLabel] = useState('Synced');
 
   useEffect(() => {
-    const syncInterval = setInterval(() => {
-      setIsSyncing(true);
-      const timer = setTimeout(() => {
-        setIsSyncing(false);
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        setLastSyncTime(`Synced at ${timeStr}`);
+    const iv = setInterval(() => {
+      setSyncing(true);
+      setLabel('Syncing…');
+      setTimeout(() => {
+        setSyncing(false);
+        const t = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        setLabel(`Synced ${t}`);
       }, 1200);
-      return () => clearTimeout(timer);
     }, 30000);
-
-    return () => clearInterval(syncInterval);
+    return () => clearInterval(iv);
   }, []);
 
-  // Tab definitions with roles-gating definitions strictly matching user roles
-  const tabs = [
-    { id: 'dashboard', name: 'Overview', icon: LineChart, allowedRoles: ['ADMIN'] },
-    { id: 'pos', name: 'POS Desk', icon: ShoppingCart, allowedRoles: ['ADMIN', 'STAFF'] },
-    { id: 'inventory', name: 'Inventory', icon: Package, allowedRoles: ['ADMIN', 'STAFF'] },
-    { id: 'printing', name: 'Branding & Print', icon: Printer, allowedRoles: ['ADMIN'] },
-    { id: 'cafe', name: 'Internet Cafe', icon: Monitor, allowedRoles: ['ADMIN', 'CAFE_OPERATOR'] },
-    { id: 'customers', name: 'Customer Registry', icon: Users, allowedRoles: ['ADMIN', 'STAFF'] },
-    { id: 'wifi', name: 'WiFi Management', icon: Wifi, allowedRoles: ['ADMIN', 'STAFF', 'CAFE_OPERATOR'] },
-    { id: 'pc-agent', name: 'PC Agent Hub', icon: Shield, allowedRoles: ['ADMIN'] },
-    { id: 'logs', name: 'Security Logs', icon: History, allowedRoles: ['ADMIN'] }
-  ];
+  return (
+    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+      style={{ background: '#f8fafc', border: '1px solid #e2e8f0', fontSize: '0.6875rem', color: '#64748b', fontWeight: 500 }}>
+      <span className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
+        style={{ background: syncing ? '#f59e0b' : '#10b981', animation: 'pulse 2s infinite' }} />
+      <span>{label}</span>
+    </div>
+  );
+}
 
-  // Map tab IDs to pathnames
-  const tabToPathMap: Record<string, string> = {
-    dashboard: '/dashboard',
-    pos: '/sales',
-    inventory: '/inventory',
-    printing: '/printing-orders',
-    cafe: '/cafe-management',
-    customers: '/customers',
-    wifi: '/wifi',
-    'pc-agent': '/pc-agent',
-    logs: '/users', // Mapping '/users' to logs/Security Logs, restricted to ADMIN
+// ---- Sidebar nav section ---------------------------------------------------
+
+interface SidebarSectionProps {
+  group: string;
+  tabs: TabDef[];
+  activeTab: string;
+  onSelect: (id: string) => void;
+}
+
+function SidebarSection({ group, tabs, activeTab, onSelect }: SidebarSectionProps) {
+  if (tabs.length === 0) return null;
+  return (
+    <div className="space-y-0.5">
+      <div style={{
+        fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.1em',
+        textTransform: 'uppercase', color: '#94a3b8',
+        padding: '0.25rem 0.875rem', marginTop: '0.75rem',
+      }}>
+        {group}
+      </div>
+      {tabs.map(tab => {
+        const Icon = tab.icon;
+        const active = activeTab === tab.id;
+        return (
+          <button
+            key={tab.id}
+            onClick={() => onSelect(tab.id)}
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-left transition-all cursor-pointer"
+            style={{
+              fontSize: '0.8125rem',
+              fontWeight: active ? 600 : 500,
+              color: active ? 'white' : '#475569',
+              background: active
+                ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)'
+                : 'transparent',
+              border: 'none',
+              boxShadow: active ? '0 2px 8px rgba(37,99,235,0.22)' : 'none',
+              transition: 'all 0.15s cubic-bezier(0.4,0,0.2,1)',
+            }}
+            onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = '#f1f5f9'; }}
+            onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+            aria-current={active ? 'page' : undefined}
+          >
+            <Icon
+              style={{ width: 15, height: 15, flexShrink: 0, color: active ? 'white' : '#94a3b8' }}
+            />
+            <span>{tab.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ---- Sidebar ---------------------------------------------------------------
+
+interface SidebarProps {
+  user: User;
+  activeTab: string;
+  onSelect: (id: string) => void;
+  onLogout: () => void;
+  mobile?: boolean;
+  onClose?: () => void;
+}
+
+function Sidebar({ user, activeTab, onSelect, onLogout, mobile, onClose }: SidebarProps) {
+  const visibleTabs = TABS.filter(t => t.roles.includes(user.role as UserRole));
+  const grouped = GROUP_ORDER.map(g => ({
+    group: g,
+    tabs: visibleTabs.filter(t => t.group === g),
+  }));
+
+  const roleLabel: Record<string, string> = {
+    ADMIN: 'Administrator',
+    STAFF: 'Staff Operator',
+    CAFE_OPERATOR: 'Café Operator',
   };
 
-  const pathToTabMap: Record<string, string> = {
-    '/dashboard': 'dashboard',
-    '/sales': 'pos',
-    '/inventory': 'inventory',
-    '/printing-orders': 'printing',
-    '/cafe-management': 'cafe',
-    '/customers': 'customers',
-    '/wifi': 'wifi',
-    '/pc-agent': 'pc-agent',
-    '/users': 'logs',
-    '/logs': 'logs',
+  const handleSelect = (id: string) => {
+    onSelect(id);
+    onClose?.();
   };
 
-  const getCurrentUrlPath = () => {
-    // Check hash first (e.g. #/dashboard) for fallback
+  return (
+    <div
+      className="flex flex-col h-full"
+      style={{
+        background: 'white',
+        borderRight: '1px solid #e2e8f0',
+        width: mobile ? '100%' : '248px',
+        minHeight: '100%',
+      }}
+    >
+      {/* Brand slot */}
+      <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid #f1f5f9' }}>
+        <div
+          style={{
+            width: 34, height: 34, borderRadius: 10,
+            background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <span style={{ color: 'white', fontFamily: 'Manrope', fontWeight: 800, fontSize: '13px' }}>DM</span>
+        </div>
+        <div>
+          <div style={{ fontFamily: 'Manrope', fontWeight: 800, fontSize: '15px', color: '#0f172a', letterSpacing: '-0.02em' }}>
+            Dube Man
+          </div>
+          <div style={{ fontSize: '0.625rem', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.05em' }}>
+            Workspace
+          </div>
+        </div>
+        {mobile && (
+          <button onClick={onClose} className="ml-auto p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer" style={{ border: 'none', background: 'transparent' }}>
+            <X style={{ width: 16, height: 16, color: '#94a3b8' }} />
+          </button>
+        )}
+      </div>
+
+      {/* Nav groups */}
+      <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0">
+        {grouped.map(({ group, tabs }) => (
+          <SidebarSection
+            key={group}
+            group={group}
+            tabs={tabs}
+            activeTab={activeTab}
+            onSelect={handleSelect}
+          />
+        ))}
+      </nav>
+
+      {/* User profile footer */}
+      <div className="px-4 py-3" style={{ borderTop: '1px solid #f1f5f9' }}>
+        <div className="flex items-center gap-2.5 mb-3">
+          <div
+            style={{
+              width: 32, height: 32, borderRadius: 10,
+              background: 'linear-gradient(135deg, #dbeafe, #ede9fe)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <span style={{ fontSize: '12px', fontWeight: 800, color: '#2563eb' }}>
+              {user.name.charAt(0).toUpperCase()}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a' }} className="truncate">
+              {user.name}
+            </div>
+            <div style={{ fontSize: '0.6875rem', color: '#94a3b8', fontWeight: 500 }}>
+              {roleLabel[user.role] ?? user.role}
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={onLogout}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all"
+          style={{
+            background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626',
+            transition: 'all 0.15s',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#fee2e2'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#fef2f2'; }}
+        >
+          <LogOut style={{ width: 13, height: 13 }} />
+          Sign Out
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ---- Topbar ----------------------------------------------------------------
+
+interface TopbarProps {
+  user: User;
+  activeTab: string;
+  onMenuToggle: () => void;
+}
+
+function Topbar({ user, activeTab, onMenuToggle }: TopbarProps) {
+  const tab = TABS.find(t => t.id === activeTab);
+  const crumbs = tab ? [tab.group, tab.label] : ['Dube Man'];
+
+  return (
+    <header
+      className="flex items-center justify-between px-5 lg:px-6"
+      style={{
+        height: '60px',
+        background: 'white',
+        borderBottom: '1px solid #e2e8f0',
+        position: 'sticky',
+        top: 0,
+        zIndex: 30,
+        flexShrink: 0,
+      }}
+    >
+      {/* Left: hamburger + breadcrumb */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onMenuToggle}
+          className="lg:hidden p-2 rounded-xl cursor-pointer"
+          style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#475569' }}
+          aria-label="Open navigation"
+        >
+          <Menu style={{ width: 16, height: 16 }} />
+        </button>
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-1.5" aria-label="Breadcrumb">
+          <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 500 }}>{crumbs[0]}</span>
+          {crumbs.length > 1 && (
+            <>
+              <ChevronRight style={{ width: 12, height: 12, color: '#cbd5e1' }} />
+              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a' }}>{crumbs[1]}</span>
+            </>
+          )}
+        </nav>
+      </div>
+
+      {/* Right: sync + notifications + user chip */}
+      <div className="flex items-center gap-3">
+        <SyncIndicator />
+
+        <button
+          className="p-2 rounded-xl cursor-pointer"
+          style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b' }}
+          aria-label="Notifications"
+        >
+          <Bell style={{ width: 15, height: 15 }} />
+        </button>
+
+        {/* User chip — desktop only */}
+        <div
+          className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl"
+          style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}
+        >
+          <div
+            style={{
+              width: 24, height: 24, borderRadius: 6,
+              background: 'linear-gradient(135deg, #dbeafe, #ede9fe)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <span style={{ fontSize: '10px', fontWeight: 800, color: '#2563eb' }}>
+              {user.name.charAt(0).toUpperCase()}
+            </span>
+          </div>
+          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#0f172a' }}>{user.name}</span>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+// ---- Unauthorized screen ---------------------------------------------------
+
+function UnauthorizedScreen({ user, onBack }: { user: User; onBack: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8">
+      <div
+        className="w-14 h-14 rounded-2xl mb-4 flex items-center justify-center"
+        style={{ background: '#fff1f2', border: '1px solid #fecaca' }}
+      >
+        <Shield style={{ width: 24, height: 24, color: '#dc2626' }} />
+      </div>
+      <h2 style={{ fontFamily: 'Manrope', fontWeight: 800, fontSize: '1.25rem', color: '#0f172a', letterSpacing: '-0.01em' }}>
+        Access Restricted
+      </h2>
+      <p style={{ color: '#64748b', fontSize: '0.875rem', marginTop: 8, maxWidth: 360 }}>
+        Your role (<strong>{user.role}</strong>) does not have permission to access this section.
+      </p>
+      <button
+        onClick={onBack}
+        className="mt-6 flex items-center gap-2 cursor-pointer"
+        style={{
+          padding: '0.625rem 1.25rem',
+          background: '#0f172a',
+          color: 'white',
+          border: 'none',
+          borderRadius: '10px',
+          fontSize: '0.875rem',
+          fontWeight: 700,
+        }}
+      >
+        Return to Workspace
+      </button>
+    </div>
+  );
+}
+
+// ---- Loading screen --------------------------------------------------------
+
+function LoadingScreen() {
+  return (
+    <div
+      className="min-h-screen flex flex-col items-center justify-center"
+      style={{ background: '#0f172a' }}
+    >
+      <div
+        style={{
+          width: 48, height: 48, borderRadius: 14,
+          background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          marginBottom: 16,
+        }}
+      >
+        <span style={{ color: 'white', fontFamily: 'Manrope', fontWeight: 800, fontSize: '18px' }}>DM</span>
+      </div>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+        {[0,1,2].map(i => (
+          <div
+            key={i}
+            style={{
+              width: 7, height: 7, borderRadius: '50%', background: '#2563eb',
+              animation: `uruu-fade-in 0.8s ${i * 0.2}s ease-in-out infinite alternate`,
+              opacity: 0.5,
+            }}
+          />
+        ))}
+      </div>
+      <span style={{ color: '#475569', fontSize: '0.75rem', fontWeight: 500, letterSpacing: '0.05em' }}>
+        Starting Dube Man…
+      </span>
+    </div>
+  );
+}
+
+// ---- Root App --------------------------------------------------------------
+
+export default function App() {
+  const [authenticated, setAuthenticated] = useState(false);
+  const [user, setUser]                   = useState<User | null>(null);
+  const [activeTab, setActiveTab]         = useState('dashboard');
+  const [drawerOpen, setDrawerOpen]       = useState(false);
+  const [checking, setChecking]           = useState(true);
+  const [unauthorized, setUnauthorized]   = useState(false);
+
+  // ---- URL helpers ----
+  const getPath = () => {
     const hash = window.location.hash;
-    if (hash && hash.startsWith('#')) {
-      return hash.substring(1);
-    }
-    // Fallback to pathname
+    if (hash?.startsWith('#')) return hash.slice(1);
     return window.location.pathname;
   };
 
-  const setUrlPath = (path: string) => {
-    // Set hash and pathname for complete compatibility
+  const setPath = (path: string) => {
     window.location.hash = path;
     if (window.location.pathname !== path) {
       window.history.pushState(null, '', path);
     }
   };
 
-  const checkAuthAndRoute = (user: User | null) => {
-    if (!user) {
-      setIsAuthenticated(false);
-      setUrlPath('/login');
-      return;
-    }
+  // ---- Role-aware routing ----
+  const route = (u: User | null) => {
+    if (!u) { setPath('/login'); return; }
 
-    const currentPath = getCurrentUrlPath();
-    
-    // Default paths per role
-    const defaultPaths: Record<string, string> = {
+    const defaults: Record<string, string> = {
       ADMIN: '/dashboard',
       STAFF: '/sales',
       CAFE_OPERATOR: '/cafe-management',
     };
+    const defaultPath = defaults[u.role] ?? '/dashboard';
 
-    const defaultPath = defaultPaths[user.role] || '/dashboard';
-
-    // If root, empty, or /login, redirect to default path
-    if (!currentPath || currentPath === '/' || currentPath === '/login') {
-      setActiveTab(pathToTabMap[defaultPath]);
-      setIsUnauthorizedPath(false);
-      setUrlPath(defaultPath);
+    const cur = getPath();
+    if (!cur || cur === '/' || cur === '/login') {
+      const id = PATH_TO_TAB[defaultPath] ?? 'dashboard';
+      setActiveTab(id);
+      setUnauthorized(false);
+      setPath(defaultPath);
       return;
     }
 
-    // Resolve the tab from the path
-    const resolvedTab = pathToTabMap[currentPath];
-    if (!resolvedTab) {
-      // Unknown path - redirect to default
-      setActiveTab(pathToTabMap[defaultPath]);
-      setIsUnauthorizedPath(false);
-      setUrlPath(defaultPath);
+    const tabId = PATH_TO_TAB[cur];
+    if (!tabId) {
+      setActiveTab(PATH_TO_TAB[defaultPath] ?? 'dashboard');
+      setUnauthorized(false);
+      setPath(defaultPath);
       return;
     }
 
-    // Check permissions for the resolved tab
-    const tabDef = tabs.find(t => t.id === resolvedTab);
-    if (tabDef && tabDef.allowedRoles.includes(user.role)) {
-      setActiveTab(resolvedTab);
-      setIsUnauthorizedPath(false);
+    const tabDef = TABS.find(t => t.id === tabId);
+    if (tabDef && tabDef.roles.includes(u.role as UserRole)) {
+      setActiveTab(tabId);
+      setUnauthorized(false);
     } else {
-      // Show Unauthorized Access block
-      setIsUnauthorizedPath(true);
+      setUnauthorized(true);
     }
   };
 
-  // Initialize store and check existing session
+  // ---- Init ----
   useEffect(() => {
     let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-
-    const restoreSession = async () => {
+    (async () => {
       initializeStore();
-      const verifiedUser = await getAuthenticatedUser();
+      const u = await getAuthenticatedUser();
       if (cancelled) return;
-
-      if (verifiedUser) {
-        setUser(verifiedUser);
-        setIsAuthenticated(true);
-        checkAuthAndRoute(verifiedUser);
-      } else {
-        setUser(null);
-        setIsAuthenticated(false);
-        setUrlPath('/login');
-      }
-
-      timer = setTimeout(() => {
-        if (!cancelled) setCheckingAuth(false);
-      }, 600);
-    };
-
-    restoreSession();
-
-    return () => {
-      cancelled = true;
-      if (timer) clearTimeout(timer);
-    };
+      if (u) { setUser(u); setAuthenticated(true); route(u); }
+      else { setAuthenticated(false); setPath('/login'); }
+      setTimeout(() => { if (!cancelled) setChecking(false); }, 500);
+    })();
+    return () => { cancelled = true; };
   }, []);
 
-  // Listen for hash or popstate URL routing events
+  // ---- URL change listener ----
   useEffect(() => {
-    const handleUrlChange = () => {
-      checkAuthAndRoute(currentUser);
-    };
-
-    window.addEventListener('popstate', handleUrlChange);
-    window.addEventListener('hashchange', handleUrlChange);
-
+    const handler = () => route(user);
+    window.addEventListener('popstate', handler);
+    window.addEventListener('hashchange', handler);
     return () => {
-      window.removeEventListener('popstate', handleUrlChange);
-      window.removeEventListener('hashchange', handleUrlChange);
+      window.removeEventListener('popstate', handler);
+      window.removeEventListener('hashchange', handler);
     };
-  }, [currentUser]);
+  }, [user]);
 
-  const handleLogin = (user: User) => {
-    localStorage.setItem('dubeman_current_user', JSON.stringify(user));
-    setUser(user);
-    setIsAuthenticated(true);
-    
-    // Determine landing page on successful login
-    const defaultPaths: Record<string, string> = {
-      ADMIN: '/dashboard',
-      STAFF: '/sales',
-      CAFE_OPERATOR: '/cafe-management',
-    };
-    const landingPath = defaultPaths[user.role] || '/dashboard';
-    
-    setActiveTab(pathToTabMap[landingPath]);
-    setIsUnauthorizedPath(false);
-    setUrlPath(landingPath);
+  const handleLogin = (u: User) => {
+    localStorage.setItem('dubeman_current_user', JSON.stringify(u));
+    setUser(u);
+    setAuthenticated(true);
+    route(u);
+    setChecking(false);
   };
 
   const handleLogout = async () => {
     await logoutUser();
     setUser(null);
-    setIsAuthenticated(false);
-    setIsUnauthorizedPath(false);
-    setUrlPath('/login');
+    setAuthenticated(false);
+    setUnauthorized(false);
+    setPath('/login');
   };
 
-  const handleSetTab = (tabId: string) => {
-    const path = tabToPathMap[tabId];
-    if (path) {
-      const targetTab = tabs.find(t => t.id === tabId);
-      if (currentUser && targetTab && targetTab.allowedRoles.includes(currentUser.role)) {
-        setActiveTab(tabId);
-        setIsUnauthorizedPath(false);
-        setUrlPath(path);
-        setMobileMenuOpen(false);
-      } else {
-        setIsUnauthorizedPath(true);
-        setUrlPath(path);
-      }
+  const handleTabSelect = (id: string) => {
+    const tabDef = TABS.find(t => t.id === id);
+    if (!user || !tabDef) return;
+    if (tabDef.roles.includes(user.role as UserRole)) {
+      setActiveTab(id);
+      setUnauthorized(false);
+      setPath(tabDef.path);
+    } else {
+      setUnauthorized(true);
+      setPath(tabDef.path);
     }
+    setDrawerOpen(false);
   };
 
-  // Allowed tabs for current user
-  const allowedTabs = tabs.filter(tab => currentUser && tab.allowedRoles.includes(currentUser.role));
-
-  // Render highly-polished corporate Unauthorized Access view
-  const renderUnauthorizedScreen = () => {
-    const defaultPaths: Record<string, string> = {
-      ADMIN: '/dashboard',
-      STAFF: '/sales',
-      CAFE_OPERATOR: '/cafe-management',
+  const handleBackToWorkspace = () => {
+    if (!user) return;
+    const defaults: Record<string, string> = {
+      ADMIN: 'dashboard', STAFF: 'pos', CAFE_OPERATOR: 'cafe',
     };
-    const defaultPath = currentUser ? (defaultPaths[currentUser.role] || '/dashboard') : '/login';
-
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[450px] p-8 text-center bg-white border border-rose-150 rounded-3xl shadow-xs text-left animate-fadeIn">
-        <div className="p-4 bg-rose-50 text-rose-600 rounded-2xl mb-4 animate-bounce">
-          <ShieldAlert className="w-12 h-12 stroke-[2.5]" />
-        </div>
-        <h2 className="text-xl font-bold text-slate-800 tracking-tight font-sans">Unauthorized Access</h2>
-        <p className="text-slate-500 text-sm mt-2 max-w-md">
-          Your account role (<strong>{currentUser?.role}</strong>) does not have the required permissions to access this route.
-        </p>
-        <button
-          onClick={() => {
-            if (currentUser) {
-              const defaultTab = pathToTabMap[defaultPath];
-              setActiveTab(defaultTab);
-              setIsUnauthorizedPath(false);
-              setUrlPath(defaultPath);
-            } else {
-              handleLogout();
-            }
-          }}
-          className="mt-6 px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer transition-all"
-        >
-          Return to Authorized Workspace
-        </button>
-      </div>
-    );
+    const id = defaults[user.role] ?? 'dashboard';
+    handleTabSelect(id);
   };
 
-  // 1. Loading Handshake state check
-  if (checkingAuth) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4">
-        <Loader className="w-10 h-10 animate-spin text-rose-500 mb-3" />
-        <span className="text-slate-400 font-mono text-xs tracking-wider">Verifying Corporate Security Session...</span>
-      </div>
-    );
-  }
-
-  // 2. Not authenticated gate
-  if (!isAuthenticated || !currentUser) {
-    return <Login onLoginSuccess={handleLogin} />;
-  }
+  // ---- Render guards ----
+  if (checking) return <LoadingScreen />;
+  if (!authenticated || !user) return <Login onLoginSuccess={handleLogin} />;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans" id="app-wrapper">
-      {/* Header Toolbar */}
-      <header className="bg-slate-900 text-white shadow-md z-30 sticky top-0 border-b border-slate-800" id="global-header">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-gradient-to-br from-rose-500 to-amber-500 rounded-xl flex items-center justify-center shadow-md">
-              <Building className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <span className="font-bold text-sm tracking-tight block">Dube Man General Dealers</span>
-              <span className="text-[10px] text-rose-305 font-mono tracking-widest uppercase">Management Terminal</span>
-            </div>
-            {/* Small status indicator */}
-            <div className="hidden sm:flex items-center space-x-2 bg-slate-950/40 border border-slate-800 rounded-full px-3 py-1 text-[10px] font-mono text-slate-400">
-              <span className={`w-2 h-2 rounded-full ${isSyncing ? 'bg-amber-400 animate-pulse' : 'bg-emerald-500 animate-pulse'}`}></span>
-              <span>{isSyncing ? 'Syncing...' : lastSyncTime}</span>
-            </div>
-          </div>
+    <div className="flex h-screen overflow-hidden" style={{ background: '#f8fafc', fontFamily: "'Inter','Manrope',sans-serif" }}>
+      {/* ---- Desktop sidebar ---- */}
+      <aside className="hidden lg:flex flex-col flex-shrink-0" style={{ width: 248, height: '100vh', position: 'sticky', top: 0 }}>
+        <Sidebar
+          user={user}
+          activeTab={activeTab}
+          onSelect={handleTabSelect}
+          onLogout={handleLogout}
+        />
+      </aside>
 
-          {/* User profile controls & logout */}
-          <div className="hidden md:flex items-center space-x-4">
-            <div className="flex items-center space-x-2.5 bg-slate-950/40 border border-slate-800 rounded-2xl px-3.5 py-1.5">
-              <div className="w-7 h-7 rounded-lg bg-rose-500 text-white text-xs font-bold font-mono flex items-center justify-center shadow-inner">
-                {currentUser.name.charAt(0)}
-              </div>
-              <div className="text-left">
-                <div className="text-xs font-bold text-slate-205 truncate max-w-[120px]">{currentUser.name}</div>
-                <div className="text-[9px] text-slate-400 font-mono font-bold uppercase tracking-wider flex items-center">
-                  <Shield className="w-2.5 h-2.5 mr-0.5 text-rose-500" />
-                  {currentUser.role}
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={handleLogout}
-              className="p-2.5 bg-slate-800 hover:bg-rose-950/20 hover:text-rose-400 rounded-xl border border-slate-700/80 hover:border-rose-900/40 transition-all font-semibold flex items-center space-x-1.5 text-xs text-slate-350 cursor-pointer"
-            >
-              <LogOut className="w-4 h-4 text-slate-400 font-bold" />
-              <span>Sign Out</span>
-            </button>
-          </div>
-
-          {/* Mobile hamburger */}
-          <div className="flex md:hidden">
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 bg-slate-800 border border-slate-700 rounded-xl text-slate-300 hover:bg-slate-700 transition"
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Container Layout with Side Panel */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" id="main-grid">
-        {/* Navigation panel (3 cols on lg) */}
-        <aside className="lg:col-span-3 hidden md:block space-y-2 bg-white border border-slate-200/80 p-4 rounded-3xl shadow-sm z-10">
-          <span className="text-[10px] font-mono font-bold text-slate-400 tracking-wider uppercase pl-3 block mb-2">Systems Console</span>
-          {tabs.map(tab => {
-            const IconComp = tab.icon;
-            const isAllowed = tab.allowedRoles.includes(currentUser.role);
-            const isActive = activeTab === tab.id;
-
-            if (!isAllowed) return null;
-
-            return (
-              <button
-                key={tab.id}
-                onClick={() => handleSetTab(tab.id)}
-                className={`w-full text-left px-4 py-3 text-xs font-semibold rounded-2xl border transition-all flex items-center space-x-3.5 cursor-pointer ${
-                  isActive
-                    ? 'bg-rose-500/10 border-rose-500 text-rose-600 shadow-sm shadow-rose-500/5'
-                    : 'bg-white border-transparent text-slate-550 hover:bg-slate-50 hover:text-slate-700'
-                }`}
-              >
-                <IconComp className={`w-4 h-4 ${isActive ? 'text-rose-500 stroke-[2.5]' : 'text-slate-400'}`} />
-                <span>{tab.name}</span>
-              </button>
-            );
-          })}
-        </aside>
-
-        {/* Dynamic Mobile Slide Menu */}
-        <AnimatePresence>
-          {mobileMenuOpen && (
+      {/* ---- Mobile drawer overlay ---- */}
+      <AnimatePresence>
+        {drawerOpen && (
+          <>
             <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="md:hidden bg-slate-900 border-b border-slate-800 px-4 py-4 space-y-1 sm:px-6 overflow-hidden z-25 shadow-lg"
+              key="overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setDrawerOpen(false)}
+              className="fixed inset-0 z-40 lg:hidden"
+              style={{ background: 'rgba(15,23,42,0.45)', backdropFilter: 'blur(4px)' }}
+            />
+            <motion.div
+              key="drawer"
+              initial={{ x: -280 }}
+              animate={{ x: 0 }}
+              exit={{ x: -280 }}
+              transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+              className="fixed left-0 top-0 bottom-0 z-50 w-64 lg:hidden shadow-2xl"
             >
-              {allowedTabs.map(tab => {
-                const IconComp = tab.icon;
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => handleSetTab(tab.id)}
-                    className={`w-full text-left px-4 py-3 text-xs font-bold rounded-xl flex items-center space-x-3 ${
-                      isActive ? 'bg-rose-550 text-white' : 'text-slate-300 hover:bg-slate-800'
-                    }`}
-                  >
-                    <IconComp className="w-4 h-4 text-current" />
-                    <span>{tab.name}</span>
-                  </button>
-                );
-              })}
-              <div className="pt-4 border-t border-slate-800 mt-4 flex items-center justify-between text-xs text-slate-300">
-                <div className="flex items-center space-x-2">
-                  <UserIcon className="w-4 h-4 text-rose-450" />
-                  <span>{currentUser.name} ({currentUser.role})</span>
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="text-rose-400 font-bold"
-                >
-                  Sign Out
-                </button>
-              </div>
+              <Sidebar
+                user={user}
+                activeTab={activeTab}
+                onSelect={handleTabSelect}
+                onLogout={handleLogout}
+                mobile
+                onClose={() => setDrawerOpen(false)}
+              />
             </motion.div>
-          )}
-        </AnimatePresence>
+          </>
+        )}
+      </AnimatePresence>
 
-        {/* Content Viewer (9 cols on lg) */}
-        <main className="lg:col-span-9 space-y-6 bg-slate-50 min-h-[500px]" id="content-viewer">
-          {isUnauthorizedPath ? renderUnauthorizedScreen() : (
-            <>
-              {activeTab === 'dashboard' && <Dashboard />}
-              {activeTab === 'pos' && <Sales userRole={currentUser.role} />}
-              {activeTab === 'inventory' && <Inventory userRole={currentUser.role} />}
-              {activeTab === 'printing' && <PrintingOrders userRole={currentUser.role} />}
-              {activeTab === 'cafe' && <CafeManagement userRole={currentUser.role} />}
-              {activeTab === 'customers' && <Customers />}
-              {activeTab === 'wifi' && <WifiManagement />}
-              {activeTab === 'pc-agent' && <PCAgentConsole />}
-              {activeTab === 'logs' && <ActivityLogs userRole={currentUser.role} />}
-            </>
-          )}
+      {/* ---- Main content area ---- */}
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        <Topbar
+          user={user}
+          activeTab={activeTab}
+          onMenuToggle={() => setDrawerOpen(d => !d)}
+        />
+
+        <main
+          className="flex-1 overflow-y-auto"
+          style={{ padding: '24px', background: '#f8fafc' }}
+        >
+          <div className="max-w-7xl mx-auto">
+            {unauthorized ? (
+              <UnauthorizedScreen user={user} onBack={handleBackToWorkspace} />
+            ) : (
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.18 }}
+                >
+                  {activeTab === 'dashboard'     && <Dashboard />}
+                  {activeTab === 'pos'           && <Sales userRole={user.role} />}
+                  {activeTab === 'inventory'     && <Inventory userRole={user.role} />}
+                  {activeTab === 'printing'      && <PrintingOrders userRole={user.role} />}
+                  {activeTab === 'print-manager' && <PrintManager />}
+                  {activeTab === 'cafe'          && <CafeManagement userRole={user.role} />}
+                  {activeTab === 'customers'     && <Customers />}
+                  {activeTab === 'wifi'          && <WifiManagement />}
+                  {activeTab === 'pc-agent'      && <PCAgentConsole />}
+                  {activeTab === 'logs'          && <ActivityLogs userRole={user.role} />}
+                </motion.div>
+              </AnimatePresence>
+            )}
+          </div>
         </main>
       </div>
 
-      {/* Global Footer */}
-      <footer className="bg-slate-900 border-t border-slate-800 text-slate-450 text-[11px] font-mono py-6 tracking-wide text-center" id="global-footer">
-        <p className="text-slate-500">
-          Dube Man General Dealers Systems Management Console &bull; Built in complete RLS & Cryptographic Compliance
-        </p>
-        <p className="text-slate-650 mt-1 uppercase text-[9px] tracking-widest">
-          Certified Audit Period &bull; Year 2026 Audit Complete
-        </p>
-      </footer>
+      <Analytics />
     </div>
   );
 }
-
