@@ -204,7 +204,7 @@ export default function Inventory({ userRole }: InventoryProps) {
 
       {/* Grid inventory catalog cards */}
       {loading ? (
-        <div className="h-[250px] flex flex-col items-center justify-center text-center text-slate-450">
+        <div className="h-[250px] flex flex-col items-center justify-center text-center text-slate-400">
           <RefreshCw className="w-8 h-8 animate-spin text-rose-500 mb-2" />
           <span className="text-xs font-mono">Synchronizing live product lines...</span>
         </div>
@@ -219,7 +219,7 @@ export default function Inventory({ userRole }: InventoryProps) {
                 key={product.id}
                 whileHover={{ y: -3 }}
                 className={`bg-white rounded-3xl p-5 border shadow-xs flex flex-col justify-between h-[230px] ${
-                  isLowStock ? 'border-amber-250 bg-amber-50/10' : 'border-slate-200/80'
+                  isLowStock ? 'border-amber-200 bg-amber-50/10' : 'border-slate-200/80'
                 }`}
               >
                 {/* Product label card */}
@@ -280,7 +280,7 @@ export default function Inventory({ userRole }: InventoryProps) {
                           setIsAdjusting(true);
                         }}
                         disabled={product.quantity <= 0}
-                        className="p-1 px-3.5 py-1.5 bg-slate-50 hover:bg-slate-100 disabled:opacity-50 border border-slate-205 rounded-xl text-slate-650 text-[11px] font-semibold flex items-center transition-all cursor-pointer"
+                        className="p-1 px-3.5 py-1.5 bg-slate-50 hover:bg-slate-100 disabled:opacity-50 border border-slate-200 rounded-xl text-slate-600 text-[11px] font-semibold flex items-center transition-all cursor-pointer"
                       >
                         <Minus className="w-3 h-3 mr-1 text-slate-400" />
                         <span>Stock Out</span>
@@ -307,7 +307,7 @@ export default function Inventory({ userRole }: InventoryProps) {
         </div>
       ) : (
         <div className="bg-white rounded-3xl border border-slate-200/80 p-12 text-center shadow-xs">
-          <Package className="w-12 h-12 text-slate-350 mx-auto" />
+          <Package className="w-12 h-12 text-slate-300 mx-auto" />
           <h3 className="text-slate-600 text-sm font-bold mt-4">No Inventory Items Registered</h3>
           <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
             No products matched your current category or search key filters. Clear query tags or register novel SKUs above.
@@ -321,7 +321,7 @@ export default function Inventory({ userRole }: InventoryProps) {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white border border-slate-150 rounded-3xl max-w-md w-full p-6 shadow-2xl relative text-left"
+            className="bg-white border border-slate-100 rounded-3xl max-w-md w-full p-6 shadow-2xl relative text-left"
           >
             <div className="mb-4">
               <span className={`text-[10px] font-mono font-black px-2.5 py-0.5 rounded-full ${
@@ -341,7 +341,7 @@ export default function Inventory({ userRole }: InventoryProps) {
                     type="button"
                     onClick={() => { setAdjustType('STOCK_IN'); setAdjustError(''); }}
                     className={`p-2.5 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer ${
-                      adjustType === 'STOCK_IN' ? 'bg-emerald-50 border-emerald-450 text-emerald-705' : 'bg-slate-50 text-slate-450 border-transparent'
+                      adjustType === 'STOCK_IN' ? 'bg-emerald-50 border-emerald-400 text-emerald-700' : 'bg-slate-50 text-slate-400 border-transparent'
                     }`}
                   >
                     Stock In (+ Add)
@@ -350,7 +350,7 @@ export default function Inventory({ userRole }: InventoryProps) {
                     type="button"
                     onClick={() => { setAdjustType('STOCK_OUT'); setAdjustError(''); }}
                     className={`p-2.5 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer ${
-                      adjustType === 'STOCK_OUT' ? 'bg-rose-50 border-rose-450 text-rose-705' : 'bg-slate-50 text-slate-450 border-transparent'
+                      adjustType === 'STOCK_OUT' ? 'bg-rose-50 border-rose-400 text-rose-700' : 'bg-slate-50 text-slate-400 border-transparent'
                     }`}
                   >
                     Stock Out (- Deduct)
@@ -361,7 +361,7 @@ export default function Inventory({ userRole }: InventoryProps) {
               <div className="space-y-1">
                 <label className="text-xs text-slate-500 font-mono uppercase tracking-wider flex justify-between">
                   <span>Adjustment Quantity</span>
-                  <span className="text-slate-450 lowercase font-sans">available: {adjustProduct.quantity}</span>
+                  <span className="text-slate-400 lowercase font-sans">available: {adjustProduct.quantity}</span>
                 </label>
                 <input
                   type="number"
@@ -369,13 +369,13 @@ export default function Inventory({ userRole }: InventoryProps) {
                   min={1}
                   value={adjustQty}
                   onChange={(e) => setAdjustQty(parseInt(e.target.value) || 0)}
-                  className="w-full pl-4 pr-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-rose-500 rounded-xl text-slate-705 text-xs outline-none transition-all font-mono"
+                  className="w-full pl-4 pr-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-rose-500 rounded-xl text-slate-700 text-xs outline-none transition-all font-mono"
                 />
               </div>
 
               {adjustError && (
                 <div className="bg-rose-50 border border-rose-200 text-rose-800 text-[11px] p-3 rounded-xl flex items-center space-x-2 font-mono">
-                  <AlertTriangle className="w-4 h-4 shrink-0 text-rose-550" />
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500" />
                   <span>{adjustError}</span>
                 </div>
               )}
@@ -422,7 +422,7 @@ export default function Inventory({ userRole }: InventoryProps) {
                   placeholder="e.g. Spiral Binding Notebook (A4 size)"
                   value={newProdName}
                   onChange={(e) => setNewProdName(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-201 rounded-xl text-slate-700 text-xs focus:border-rose-500 outline-none"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-xs focus:border-rose-500 outline-none"
                 />
               </div>
 
@@ -432,7 +432,7 @@ export default function Inventory({ userRole }: InventoryProps) {
                   <select
                     value={newProdCategory}
                     onChange={(e) => setNewProdCategory(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-201 rounded-xl text-slate-700 text-xs focus:border-rose-500 outline-none cursor-pointer"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-xs focus:border-rose-500 outline-none cursor-pointer"
                   >
                     <option value="Stationery">Stationery Sales</option>
                     <option value="Printing">Printing Services</option>
@@ -450,7 +450,7 @@ export default function Inventory({ userRole }: InventoryProps) {
                     placeholder="e.g. Limbe Stationery Vendors"
                     value={newProdSupplier}
                     onChange={(e) => setNewProdSupplier(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-201 rounded-xl text-slate-700 text-xs focus:border-rose-500 outline-none"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-xs focus:border-rose-500 outline-none"
                   />
                 </div>
               </div>
@@ -463,7 +463,7 @@ export default function Inventory({ userRole }: InventoryProps) {
                     required
                     value={newProdBuying}
                     onChange={(e) => setNewProdBuying(parseFloat(e.target.value) || 0)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-201 rounded-xl text-slate-705 text-xs focus:border-rose-500 outline-none font-mono"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-xs focus:border-rose-500 outline-none font-mono"
                   />
                 </div>
 
@@ -474,7 +474,7 @@ export default function Inventory({ userRole }: InventoryProps) {
                     required
                     value={newProdSelling}
                     onChange={(e) => setNewProdSelling(parseFloat(e.target.value) || 0)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-201 rounded-xl text-slate-705 text-xs focus:border-rose-500 outline-none font-mono"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-xs focus:border-rose-500 outline-none font-mono"
                   />
                 </div>
 
@@ -485,7 +485,7 @@ export default function Inventory({ userRole }: InventoryProps) {
                     required
                     value={newProdQty}
                     onChange={(e) => setNewProdQty(parseInt(e.target.value) || 0)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-201 rounded-xl text-slate-705 text-xs focus:border-rose-500 outline-none font-mono"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-xs focus:border-rose-500 outline-none font-mono"
                   />
                 </div>
               </div>
@@ -499,7 +499,7 @@ export default function Inventory({ userRole }: InventoryProps) {
                   required
                   value={newProdMinStock}
                   onChange={(e) => setNewProdMinStock(parseInt(e.target.value) || 0)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-201 rounded-xl text-slate-705 text-xs focus:border-rose-500 outline-none font-mono"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-xs focus:border-rose-500 outline-none font-mono"
                 />
               </div>
 

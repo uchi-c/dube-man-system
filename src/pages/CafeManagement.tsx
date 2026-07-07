@@ -210,7 +210,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
         <div className="flex items-center space-x-2 shrink-0">
           <button 
             onClick={pullCafeFromDb}
-            className="p-3 bg-slate-105 hover:bg-slate-200 border border-slate-200 rounded-2xl flex items-center justify-center cursor-pointer transition-all shrink-0"
+            className="p-3 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-2xl flex items-center justify-center cursor-pointer transition-all shrink-0"
             title="Reload Workstations"
           >
             <RefreshCw className={`w-4 h-4 text-slate-600 ${loading ? 'animate-spin' : ''}`} />
@@ -382,8 +382,8 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
 
                     {/* Status Indicator badge */}
                     <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-bold tracking-wide uppercase ${
-                      computer.status === 'Occupied' ? 'bg-amber-100 text-amber-805' :
-                      computer.status === 'Maintenance' ? 'bg-rose-100 text-rose-855' :
+                      computer.status === 'Occupied' ? 'bg-amber-100 text-amber-800' :
+                      computer.status === 'Maintenance' ? 'bg-rose-100 text-rose-900' :
                       'bg-slate-100 text-slate-500'
                     }`}>
                       {mappedStatus}
@@ -412,7 +412,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
                         <span className="text-slate-500 flex items-center">
                           <Clock className="w-3 h-3 mr-1 text-slate-400" /> Time Used:
                         </span>
-                        <span className={`font-semibold ${elapsed >= 60 ? 'text-rose-400 font-bold' : 'text-slate-150'}`}>{elapsed} minutes</span>
+                        <span className={`font-semibold ${elapsed >= 60 ? 'text-rose-400 font-bold' : 'text-slate-100'}`}>{elapsed} minutes</span>
                       </div>
                       <div className="flex justify-between items-center text-rose-300">
                         <span className="text-slate-500 flex items-center">
@@ -439,7 +439,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
                   <div className="mt-3 pt-3 border-t border-slate-100 text-[10px] text-slate-400 font-mono space-y-1">
                     <div className="flex justify-between items-center">
                       <span className="flex items-center">
-                        <Server className="w-3 h-3 mr-1 text-slate-350" /> PC Tracking Agent:
+                        <Server className="w-3 h-3 mr-1 text-slate-300" /> PC Tracking Agent:
                       </span>
                       <span className={`font-bold ${computer.status === 'Maintenance' ? 'text-rose-400' : 'text-emerald-500'}`}>
                         {computer.status === 'Maintenance' ? 'SUSPENDED' : 'READY_TO_CONNECT'}
@@ -539,7 +539,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
                 />
               </div>
 
-              <div className="flex space-x-2 pt-3 border-t justify-end text-xs font-bold animate-fadeIn">
+              <div className="flex space-x-2 pt-3 border-t justify-end text-xs font-bold uruu-animate-in">
                 <button
                   type="button"
                   onClick={() => {
@@ -590,7 +590,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
               </div>
               <div className="flex justify-between items-center text-slate-800 border-t pt-2 font-bold text-sm">
                 <span>Total billing:</span>
-                <span className="text-rose-605 text-base">K {Number(billingConfirmation.amount).toFixed(2)}</span>
+                <span className="text-rose-600 text-base">K {Number(billingConfirmation.amount).toFixed(2)}</span>
               </div>
             </div>
 
@@ -614,7 +614,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
           This system is pre-configured with active hooks for future workstation agent connection. Workstation terminal daemons can query 
           online heartbeat status, report user activity triggers, and sync session state lockdowns via standard JSON payloads.
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 font-mono text-[10px] text-slate-450 bg-white p-3.5 border border-slate-200 rounded-2xl">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 font-mono text-[10px] text-slate-400 bg-white p-3.5 border border-slate-200 rounded-2xl">
           <div>
             <span className="text-slate-400 block uppercase tracking-wide mb-0.5">Heartbeat Endpoint</span>
             <code className="text-slate-700">POST /api/agent/ping</code>

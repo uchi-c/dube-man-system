@@ -53,9 +53,6 @@ async function fetchProfileForAuthUser(authUser: any): Promise<User | null> {
     .select('*')
     .eq('id', authUser.id)
     .maybeSingle();
-  console.log('Auth User:', authUser);
-  console.log('Profile:', profile);
-  console.log('Profile Error:', error);
 
   if (!error && profile) {
     return mapProfileToUser(profile);
@@ -129,15 +126,9 @@ export async function loginUser(email: string, password: string): Promise<User |
       console.error('Supabase login error:', err);
       throw err;
     }
-  } const { data: authData, error: authError } =
-    await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
+  }
 
-  console.log('AUTH DATA:', authData);
-  console.log('AUTH ERROR:', authError);
-
+  // Local demo mode — no live Supabase call, just match against the seeded local users.
   const localUsers = localDb.getAllUsers();
   const found = localUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
   if (found) {

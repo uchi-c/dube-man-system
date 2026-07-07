@@ -43,7 +43,7 @@ export default function ActivityLogs({ userRole }: ActivityLogsProps) {
         </div>
         <button
           onClick={refreshLogs}
-          className="px-4 py-2 border border-slate-200 hover:border-slate-300 text-slate-650 bg-white rounded-xl text-xs font-semibold flex items-center space-x-1.5 cursor-pointer"
+          className="px-4 py-2 border border-slate-200 hover:border-slate-300 text-slate-600 bg-white rounded-xl text-xs font-semibold flex items-center space-x-1.5 cursor-pointer"
         >
           <RefreshCcw className="w-3.5 h-3.5 text-slate-400" />
           <span>Sync logs</span>
@@ -85,7 +85,7 @@ export default function ActivityLogs({ userRole }: ActivityLogsProps) {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-100 font-mono text-slate-450 uppercase tracking-wider text-[10px]">
+                <tr className="bg-slate-50 border-b border-slate-100 font-mono text-slate-400 uppercase tracking-wider text-[10px]">
                   <th className="px-5 py-3 font-bold">Operator Profile</th>
                   <th className="px-5 py-3 font-bold">Event Log Description</th>
                   <th className="px-5 py-3 font-bold">Security Timestamp</th>
@@ -115,7 +115,7 @@ export default function ActivityLogs({ userRole }: ActivityLogsProps) {
                     {/* Timestamp */}
                     <td className="px-5 py-3.5 whitespace-nowrap font-mono text-[10px] text-slate-400">
                       <span className="flex items-center">
-                        <Clock className="w-3 h-3 mr-1 text-slate-350" />
+                        <Clock className="w-3 h-3 mr-1 text-slate-300" />
                         {new Date(log.timestamp).toLocaleString()}
                       </span>
                     </td>

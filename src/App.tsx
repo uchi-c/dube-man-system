@@ -640,15 +640,6 @@ export default function App() {
         </main>
       </div>
 
-      {/* Global Footer */}
-      <footer className="bg-slate-900 border-t border-slate-800 text-slate-450 text-[11px] font-mono py-6 tracking-wide text-center" id="global-footer">
-        <p className="text-slate-500">
-          Dube Man General Dealers Systems Management Console &bull; Built in complete RLS & Cryptographic Compliance
-        </p>
-        <p className="text-slate-650 mt-1 uppercase text-[9px] tracking-widest">
-          Certified Audit Period &bull; Year 2026 Audit Complete
-        </p>
-      </footer>
       <Analytics />
     </div>
   );

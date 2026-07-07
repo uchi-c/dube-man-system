@@ -114,7 +114,7 @@ export default function ConnectedDevices({ customers, usageLogs, onRefresh, load
                       EXPIRED
                     </span>
                   ) : (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-slate-100 text-slate-450 border border-slate-200 uppercase tracking-wider">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-slate-100 text-slate-400 border border-slate-200 uppercase tracking-wider">
                       DISCONNECTED
                     </span>
                   )}
