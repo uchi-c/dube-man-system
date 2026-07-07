@@ -72,7 +72,7 @@ export default function DataTable<T>({
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-100 font-mono text-slate-450 uppercase tracking-wider text-[10px]">
+            <tr className="bg-slate-50 border-b border-slate-100 font-mono text-slate-400 uppercase tracking-wider text-[10px]">
               {columns.map((column, idx) => (
                 <th key={idx} className={`px-4 py-3 font-bold ${column.className || ''}`}>
                   {column.header}
@@ -102,8 +102,8 @@ export default function DataTable<T>({
             ) : (
               <tr>
                 <td colSpan={columns.length} className="px-5 py-12 text-center text-slate-400">
-                  <AlertCircle className="w-8 h-8 text-slate-350 mx-auto mb-2" />
-                  <span className="font-semibold block text-slate-650">Information Ledger Empty</span>
+                  <AlertCircle className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  <span className="font-semibold block text-slate-600">Information Ledger Empty</span>
                   <p className="text-[11px] text-slate-400 max-w-sm mx-auto mt-1">{emptyMessage}</p>
                 </td>
               </tr>

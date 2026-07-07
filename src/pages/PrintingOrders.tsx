@@ -169,7 +169,7 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
             className="p-3 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-2xl flex items-center justify-center cursor-pointer transition-all shrink-0"
             title="Reload tickets"
           >
-            <RefreshCw className={`w-4 h-4 text-slate-650 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 text-slate-600 ${loading ? 'animate-spin' : ''}`} />
           </button>
 
           {canEdit && (
@@ -218,12 +218,12 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
 
       {/* Grid of print jobs */}
       {loading ? (
-        <div className="h-[250px] flex flex-col items-center justify-center text-center text-slate-450">
+        <div className="h-[250px] flex flex-col items-center justify-center text-center text-slate-400">
           <RefreshCw className="w-8 h-8 animate-spin text-rose-500 mb-2" />
           <span className="text-xs font-mono">Synchronizing workspace work orders...</span>
         </div>
       ) : filteredOrders.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-fadeIn">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 uruu-animate-in">
           {filteredOrders.map(order => {
             const balance = order.amount - order.amount_paid;
             const nextStatus = nextStatusMap[order.status];
@@ -242,9 +242,9 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
                     </span>
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-tight uppercase ${
                       order.status === 'Pending' ? 'bg-amber-100 text-amber-800' :
-                      order.status === 'Designing' ? 'bg-purple-105 text-purple-800 animate-pulse' :
+                      order.status === 'Designing' ? 'bg-purple-100 text-purple-800 animate-pulse' :
                       order.status === 'Printing' ? 'bg-blue-100 text-blue-800' :
-                      order.status === 'Completed' ? 'bg-emerald-100/80 text-emerald-800 font-extrabold border border-emerald-250' :
+                      order.status === 'Completed' ? 'bg-emerald-100/80 text-emerald-800 font-extrabold border border-emerald-200' :
                       'bg-slate-100 text-slate-500'
                     }`}>
                       {order.status}
@@ -266,15 +266,15 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
                   {/* Financial trackers */}
                   <div className="grid grid-cols-3 gap-2 text-center text-xs mb-3 font-mono">
                     <div className="bg-slate-50 p-2 rounded-xl text-slate-600 border border-slate-100">
-                      <span className="text-[9px] text-slate-455 block uppercase font-sans">Quota bill</span>
+                      <span className="text-[9px] text-slate-500 block uppercase font-sans">Quota bill</span>
                       <strong>ZMW {order.amount}</strong>
                     </div>
-                    <div className="bg-emerald-50/50 p-2 rounded-xl text-emerald-850 border border-emerald-100">
-                      <span className="text-[9px] text-emerald-455 block uppercase font-sans">Deposited</span>
+                    <div className="bg-emerald-50/50 p-2 rounded-xl text-emerald-800 border border-emerald-100">
+                      <span className="text-[9px] text-emerald-500 block uppercase font-sans">Deposited</span>
                       <strong className="text-emerald-700">ZMW {order.amount_paid}</strong>
                     </div>
                     <div className={`p-2 rounded-xl border ${balance > 0 ? 'bg-rose-50 text-rose-800 border-rose-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
-                      <span className="text-[9px] text-slate-455 block uppercase font-sans">Deficit</span>
+                      <span className="text-[9px] text-slate-500 block uppercase font-sans">Deficit</span>
                       <strong className={balance > 0 ? 'text-rose-600' : 'text-slate-500'}>
                         {balance > 0 ? `ZMW ${balance}` : 'Clear'}
                       </strong>
@@ -336,7 +336,7 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
 
       {/* CREATE PRINT MODAL FORM */}
       {isCreating && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fadeIn">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 uruu-animate-in">
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -355,7 +355,7 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
                   required
                   value={selectedCustomerId}
                   onChange={(e) => setSelectedCustomerId(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-rose-500 rounded-xl text-slate-705 text-xs outline-none cursor-pointer"
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-rose-500 rounded-xl text-slate-700 text-xs outline-none cursor-pointer"
                 >
                   <option value="">-- Choose Customer profile --</option>
                   {customers.map(c => (
@@ -374,7 +374,7 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
                   placeholder="e.g. 10x Yellow Embroidery Hoodies - Size Medium"
                   value={orderDesc}
                   onChange={(e) => setOrderDesc(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-rose-500 rounded-xl text-slate-705 text-xs outline-none resize-none"
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 focus:border-rose-500 rounded-xl text-slate-700 text-xs outline-none resize-none"
                 />
               </div>
 
@@ -388,7 +388,7 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
                     min={1}
                     value={orderQty}
                     onChange={(e) => setOrderQty(parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-250 rounded-xl text-slate-705 text-xs outline-none font-mono"
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-xs outline-none font-mono"
                   />
                 </div>
 
@@ -400,7 +400,7 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
                     min={1}
                     value={orderAmount}
                     onChange={(e) => setOrderAmount(parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-250 rounded-xl text-slate-705 text-xs outline-none font-mono"
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-xs outline-none font-mono"
                   />
                 </div>
 
@@ -412,13 +412,13 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
                     min={0}
                     value={orderDeposit}
                     onChange={(e) => setOrderDeposit(parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-250 rounded-xl text-slate-705 text-xs outline-none font-mono"
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-xs outline-none font-mono"
                   />
                 </div>
               </div>
 
               {validationError && (
-                <div className="bg-rose-50 border border-rose-200 text-rose-805 text-[11px] p-2.5 rounded-xl font-mono">
+                <div className="bg-rose-50 border border-rose-200 text-rose-800 text-[11px] p-2.5 rounded-xl font-mono">
                   <span>{validationError}</span>
                 </div>
               )}
@@ -427,7 +427,7 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
                 <button
                   type="button"
                   onClick={() => setIsCreating(false)}
-                  className="px-4 py-2 hover:bg-slate-55 rounded-xl text-slate-500 cursor-pointer"
+                  className="px-4 py-2 hover:bg-slate-50 rounded-xl text-slate-500 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -457,7 +457,7 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
             </div>
 
             <form onSubmit={handlePaymentSubmit} className="space-y-4 text-xs font-sans">
-              <div className="bg-slate-50 border border-slate-205 rounded-2xl p-4 text-xs space-y-1.5 text-slate-600 font-mono">
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-1.5 text-slate-600 font-mono">
                 <div className="flex justify-between">
                   <span>Total cost ZMW:</span>
                   <span>{paymentOrder.amount}</span>
@@ -466,7 +466,7 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
                   <span>Already Paid:</span>
                   <span className="text-emerald-600">{paymentOrder.amount_paid}</span>
                 </div>
-                <div className="flex justify-between font-bold border-t pt-1.5 text-slate-850">
+                <div className="flex justify-between font-bold border-t pt-1.5 text-slate-800">
                   <span>Deficit:</span>
                   <span className="text-rose-600">ZMW {paymentOrder.amount - paymentOrder.amount_paid}</span>
                 </div>
@@ -481,7 +481,7 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
                   max={paymentOrder.amount - paymentOrder.amount_paid}
                   value={paidIncrement}
                   onChange={(e) => setPaidIncrement(parseFloat(e.target.value) || 0)}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-250 rounded-xl text-slate-750 font-bold font-mono text-xs outline-none"
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 font-bold font-mono text-xs outline-none"
                 />
               </div>
 
@@ -492,7 +492,7 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
                     setIsPaying(false);
                     setPaymentOrder(null);
                   }}
-                  className="px-4 py-2 hover:bg-slate-55 rounded-xl text-slate-500 cursor-pointer"
+                  className="px-4 py-2 hover:bg-slate-50 rounded-xl text-slate-500 cursor-pointer"
                 >
                   Cancel
                 </button>

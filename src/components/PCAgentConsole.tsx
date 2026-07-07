@@ -112,7 +112,7 @@ export default function PCAgentConsole() {
                   <div>
                     <span className="font-extrabold text-emerald-800 text-[11px] block uppercase">Zero Remote shells policy</span>
                     <p className="mt-0.5 text-slate-600 leading-snug">
-                      To prevent any forms of remote exploit, **the system strictly forbids any remote code shells**. The local lock screen agent operates strictly inside isolated parameters.
+                      To prevent any forms of remote exploit, <strong className="text-slate-800">the system strictly forbids any remote code shells</strong>. The local lock screen agent operates strictly inside isolated parameters.
                     </p>
                   </div>
                 </div>
@@ -149,7 +149,7 @@ export default function PCAgentConsole() {
                   <div className="text-emerald-600 font-bold select-all truncate">7af802cd43b12dc17abef768297fbc</div>
                 </div>
 
-                <div className="flex items-center space-x-2.5 text-slate-400 bg-slate-50 p-2.5 px-3 rounded-xl border border-dashed border-slate-350 text-[10px]">
+                <div className="flex items-center space-x-2.5 text-slate-400 bg-slate-50 p-2.5 px-3 rounded-xl border border-dashed border-slate-300 text-[10px]">
                   <KeyRound className="w-4 h-4 text-slate-500" />
                   <span>Verify signature headers mismatch triggers immediate workstation block.</span>
                 </div>

@@ -28,25 +28,25 @@ export default function DashboardCard({
   // Define color variations
   const schemes = {
     rose: {
-      border: 'border-rose-100 hover:border-rose-250',
+      border: 'border-rose-100 hover:border-rose-200',
       bg: 'bg-rose-50/10',
       iconBox: 'bg-rose-100 text-rose-700',
       valueClr: 'text-rose-600',
     },
     amber: {
-      border: 'border-amber-100 hover:border-amber-250',
+      border: 'border-amber-100 hover:border-amber-200',
       bg: 'bg-amber-50/10',
       iconBox: 'bg-amber-100 text-amber-700',
       valueClr: 'text-amber-600',
     },
     blue: {
-      border: 'border-blue-100 hover:border-blue-250',
+      border: 'border-blue-100 hover:border-blue-200',
       bg: 'bg-blue-50/10',
       iconBox: 'bg-blue-100 text-blue-700',
       valueClr: 'text-blue-600',
     },
     emerald: {
-      border: 'border-emerald-100 hover:border-emerald-250',
+      border: 'border-emerald-100 hover:border-emerald-200',
       bg: 'bg-emerald-50/10',
       iconBox: 'bg-emerald-100 text-emerald-700',
       valueClr: 'text-emerald-600',
@@ -58,7 +58,7 @@ export default function DashboardCard({
       valueClr: 'text-slate-800',
     },
     violet: {
-      border: 'border-violet-100 hover:border-violet-250',
+      border: 'border-violet-100 hover:border-violet-200',
       bg: 'bg-violet-50/10',
       iconBox: 'bg-violet-100 text-violet-700',
       valueClr: 'text-violet-600',

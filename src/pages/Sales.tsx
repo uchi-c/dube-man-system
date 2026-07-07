@@ -220,7 +220,7 @@ export default function Sales({ userRole }: SalesPageProps) {
     {
       header: 'Items Purchased',
       accessor: (sale: Sale) => (
-        <span className="text-[10px] text-slate-450 truncate block max-w-xs font-mono">
+        <span className="text-[10px] text-slate-400 truncate block max-w-xs font-mono">
           {sale.items?.map(it => `${it.product_name || 'Item'} (${it.quantity})`).join(', ') || 'General Charging'}
         </span>
       )
@@ -236,7 +236,7 @@ export default function Sales({ userRole }: SalesPageProps) {
           className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
             activeTab === 'pos' 
               ? 'bg-white text-slate-800 shadow-sm' 
-              : 'text-slate-450 hover:text-slate-700'
+              : 'text-slate-400 hover:text-slate-700'
           }`}
         >
           <ShoppingCart className="w-4 h-4 inline mr-1.5 shrink-0" />
@@ -247,7 +247,7 @@ export default function Sales({ userRole }: SalesPageProps) {
           className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
             activeTab === 'ledger' 
               ? 'bg-white text-slate-800 shadow-sm' 
-              : 'text-slate-450 hover:text-slate-700'
+              : 'text-slate-400 hover:text-slate-700'
           }`}
         >
           <FileText className="w-4 h-4 inline mr-1.5 shrink-0" />
@@ -277,9 +277,9 @@ export default function Sales({ userRole }: SalesPageProps) {
             </div>
 
             {/* Catalog Picker area */}
-            <div className="bg-slate-50 border border-slate-250/20 rounded-3xl p-4 min-h-[380px] max-h-[500px] overflow-y-auto">
+            <div className="bg-slate-50 border border-slate-200/20 rounded-3xl p-4 min-h-[380px] max-h-[500px] overflow-y-auto">
               {loading ? (
-                <div className="h-[250px] flex flex-col items-center justify-center text-center text-slate-450">
+                <div className="h-[250px] flex flex-col items-center justify-center text-center text-slate-400">
                   <RefreshCw className="w-8 h-8 animate-spin text-rose-500 mb-2" />
                   <span className="text-xs font-mono">Loading product lines...</span>
                 </div>
@@ -295,7 +295,7 @@ export default function Sales({ userRole }: SalesPageProps) {
                         className={`bg-white rounded-2xl p-4 border transition-all flex flex-col justify-between h-[125px] cursor-pointer text-left select-none ${
                           outOfStock 
                             ? 'opacity-60 border-slate-200 cursor-not-allowed bg-slate-50' 
-                            : 'border-slate-205 hover:border-rose-450 hover:shadow-md'
+                            : 'border-slate-200 hover:border-rose-400 hover:shadow-md'
                         }`}
                       >
                         <div>
@@ -370,7 +370,7 @@ export default function Sales({ userRole }: SalesPageProps) {
                             >
                               <Minus className="w-3 h-3" />
                             </button>
-                            <span className="w-6 text-center text-xs font-bold text-slate-705 font-mono">{item.quantity}</span>
+                            <span className="w-6 text-center text-xs font-bold text-slate-700 font-mono">{item.quantity}</span>
                             <button 
                               onClick={() => updateCartQuantity(item.product.id, 1)}
                               className="p-1 text-slate-500 hover:bg-slate-200 rounded-sm cursor-pointer"
@@ -422,7 +422,7 @@ export default function Sales({ userRole }: SalesPageProps) {
                   </label>
 
                   {isAddingCustomer ? (
-                    <form onSubmit={handleAddNewCustomerOnPOS} className="bg-slate-50 border border-slate-205 p-3 rounded-2xl space-y-2 text-xs">
+                    <form onSubmit={handleAddNewCustomerOnPOS} className="bg-slate-50 border border-slate-200 p-3 rounded-2xl space-y-2 text-xs">
                       <input
                         type="text"
                         required
@@ -485,7 +485,7 @@ export default function Sales({ userRole }: SalesPageProps) {
                   </div>
                   <div className="flex justify-between text-slate-800 font-bold border-t pt-1.5 text-sm">
                     <span>Receipt Total:</span>
-                    <span className="text-rose-605">ZMW {totalAmount.toFixed(2)}</span>
+                    <span className="text-rose-600">ZMW {totalAmount.toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -522,7 +522,7 @@ export default function Sales({ userRole }: SalesPageProps) {
         <div id="ledger-view" className="space-y-4">
           <div className="flex justify-between items-center text-left">
             <div>
-              <h1 className="text-2xl font-bold text-slate-850 tracking-tight">Sales Register Ledger</h1>
+              <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Sales Register Ledger</h1>
               <p className="text-xs text-slate-400 mt-0.5">Comprehensive audit spreadsheet. View historical transactions.</p>
             </div>
             

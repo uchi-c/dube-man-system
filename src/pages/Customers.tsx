@@ -66,7 +66,7 @@ export default function Customers() {
     {
       header: 'Avatar',
       accessor: (c: Customer) => (
-        <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-750 font-bold flex items-center justify-center font-mono select-none uppercase text-xs">
+        <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-700 font-bold flex items-center justify-center font-mono select-none uppercase text-xs">
           {c.name.charAt(0)}
         </div>
       )
@@ -79,7 +79,7 @@ export default function Customers() {
       header: 'Phone Connection',
       accessor: (c: Customer) => (
         <span className="text-slate-500 font-mono text-xs flex items-center">
-          <Phone className="w-3.5 h-3.5 mr-1 text-slate-405 shrink-0" />
+          <Phone className="w-3.5 h-3.5 mr-1 text-slate-400 shrink-0" />
           {c.phone || 'Unavailable'}
         </span>
       )
@@ -88,7 +88,7 @@ export default function Customers() {
       header: 'Email Profile',
       accessor: (c: Customer) => (
         <span className="text-slate-500 font-mono text-xs flex items-center">
-          <Mail className="w-3.5 h-3.5 mr-1 text-slate-405 shrink-0" />
+          <Mail className="w-3.5 h-3.5 mr-1 text-slate-400 shrink-0" />
           {c.email || 'Generic Walk-in'}
         </span>
       )
@@ -97,7 +97,7 @@ export default function Customers() {
       header: 'Registry Date',
       accessor: (c: Customer) => (
         <span className="text-slate-400 font-mono text-xs flex items-center">
-          <Calendar className="w-3.5 h-3.5 mr-1 text-slate-350 shrink-0" />
+          <Calendar className="w-3.5 h-3.5 mr-1 text-slate-300 shrink-0" />
           {new Date(c.created_at).toLocaleDateString()}
         </span>
       )
@@ -120,15 +120,15 @@ export default function Customers() {
         <div className="flex items-center space-x-2">
           <button 
             onClick={loadData}
-            className="p-3 bg-slate-105 hover:bg-slate-200 border border-slate-200 rounded-2xl flex items-center justify-center cursor-pointer transition-all shrink-0"
+            className="p-3 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-2xl flex items-center justify-center cursor-pointer transition-all shrink-0"
             title="Reload records"
           >
-            <RefreshCw className={`w-4 h-4 text-slate-650 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 text-slate-600 ${loading ? 'animate-spin' : ''}`} />
           </button>
 
           <button
             onClick={() => setIsRegistering(true)}
-            className="px-5 py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl text-sm font-semibold shadow-md inline-flex items-center space-x-2 cursor-pointer transition"
+            className="px-5 py-3 bg-rose-500 hover:bg-rose-600 text-white rounded-2xl text-sm font-semibold shadow-md inline-flex items-center space-x-2 cursor-pointer transition shrink-0 whitespace-nowrap"
           >
             <Plus className="w-4 h-4 shrink-0" />
             <span>Register New Customer</span>
@@ -172,7 +172,7 @@ export default function Customers() {
                   placeholder="e.g. Alinafe Phiri"
                   value={custName}
                   onChange={(e) => setCustName(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-rose-500 rounded-xl text-slate-705 outline-none font-medium"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-rose-500 rounded-xl text-slate-700 outline-none font-medium"
                 />
               </div>
 
@@ -183,7 +183,7 @@ export default function Customers() {
                   placeholder="e.g. +265 999 123 456"
                   value={custPhone}
                   onChange={(e) => setCustPhone(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-rose-500 rounded-xl text-slate-705 outline-none font-mono"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-rose-500 rounded-xl text-slate-700 outline-none font-mono"
                 />
               </div>
 
@@ -194,7 +194,7 @@ export default function Customers() {
                   placeholder="e.g. alinafe@gmail.com"
                   value={custEmail}
                   onChange={(e) => setCustEmail(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-rose-500 rounded-xl text-slate-705 outline-none font-mono"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 focus:border-rose-500 rounded-xl text-slate-700 outline-none font-mono"
                 />
               </div>
 

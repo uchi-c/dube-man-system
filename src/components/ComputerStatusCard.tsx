@@ -42,7 +42,7 @@ export default function ComputerStatusCard({ computer, activeSession }: Computer
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-slate-900 border text-slate-105 rounded-2xl p-4 flex flex-col justify-between space-y-4 shadow-lg ${
+      className={`bg-slate-900 border text-slate-100 rounded-2xl p-4 flex flex-col justify-between space-y-4 shadow-lg ${
         agentStatus === 'ONLINE' ? 'border-emerald-500/30 bg-gradient-to-b from-slate-900 to-emerald-950/10' :
         agentStatus === 'STANDBY' ? 'border-amber-500/30 bg-gradient-to-b from-slate-900 to-amber-950/10' :
         'border-rose-500/20 bg-gradient-to-b from-slate-900 to-rose-950/10'
