@@ -85,7 +85,7 @@ export default function DashboardCard({
         {/* Primary Value */}
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <h3 className={`text-2xl font-black tracking-tight ${choice.valueClr}`}>
+            <h3 className={`text-2xl font-black tracking-tight tabular-nums ${choice.valueClr}`}>
               {value}
             </h3>
             {trend && trend !== 'neutral' && (
@@ -102,7 +102,7 @@ export default function DashboardCard({
             )}
           </div>
           {subValue && (
-            <p className="text-[11px] font-mono text-slate-400">
+            <p className="text-[11px] font-mono tabular-nums text-slate-400">
               {subValue}
             </p>
           )}

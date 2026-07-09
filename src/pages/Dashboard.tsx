@@ -446,7 +446,7 @@ export default function Dashboard() {
                       >
                         {order.status}
                       </span>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0f172a' }}>
+                      <div className="tabular-nums" style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0f172a' }}>
                         {currency(order.amount)}
                       </div>
                     </div>
