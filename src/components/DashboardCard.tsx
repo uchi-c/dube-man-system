@@ -1,4 +1,3 @@
-import React from 'react';
 import { LucideIcon, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { motion } from 'motion/react';
 

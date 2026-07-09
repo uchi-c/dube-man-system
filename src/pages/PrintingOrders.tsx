@@ -4,9 +4,9 @@ import {
   fetchPrintingOrders, insertPrintingOrder, 
   advancePrintingOrderStatus, addPrintingOrderPayment, fetchCustomers
 } from '../services/supabase';
-import { 
-  Printer, ArrowRight, CheckCircle2, ChevronRight, 
-  Clock, Coins, FileText, Search, CreditCard, UserPlus, Sparkles, Filter, Plus, RefreshCw, AlertTriangle 
+import {
+  Printer, ArrowRight, CheckCircle2,
+  Coins, Search, Plus, RefreshCw
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatCurrency } from '../utils/format';

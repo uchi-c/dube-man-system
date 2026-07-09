@@ -4,9 +4,9 @@
  */
 
 import { 
-  User, Product, InventoryTransaction, Sale, 
-  Customer, PrintingOrder, Computer, CafeSession, 
-  ActivityLog, WifiSessionRecord, UserRole, PrintingStatus,
+  User, Product, Sale,
+  Customer, PrintingOrder, Computer, CafeSession,
+  ActivityLog, WifiSessionRecord, PrintingStatus,
   CafeSessionStatus, WifiCustomer, WifiPackage, WifiSession,
   WifiUsageLog, RouterSetting
 } from '../types';

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ShoppingCart, Package, Printer, Monitor,
   Users, TrendingUp, AlertTriangle, RefreshCw,
-  ArrowUpRight, ArrowDownRight, Clock, Zap,
+  ArrowUpRight, ArrowDownRight, Zap,
 } from 'lucide-react';
 import {
   fetchProducts, fetchSales, fetchPrintingOrders,

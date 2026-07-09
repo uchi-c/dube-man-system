@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Package, Plus, RefreshCw, AlertTriangle,
-  TrendingDown, Edit2, Save, X, Layers
+  Edit2, Save, X, Layers
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {

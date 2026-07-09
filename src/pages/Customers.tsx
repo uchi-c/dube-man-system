@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Customer } from '../types';
 import { fetchCustomers, insertCustomer } from '../services/supabase';
-import { Users, Plus, Mail, Phone, Calendar, UserPlus, Info, RefreshCw, Check } from 'lucide-react';
+import { Plus, Mail, Phone, Calendar, Info, RefreshCw, Check } from 'lucide-react';
 import { motion } from 'motion/react';
 import DataTable from '../components/DataTable';
 

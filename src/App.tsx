@@ -60,9 +60,6 @@ const TABS: TabDef[] = [
 const PATH_TO_TAB: Record<string, string> = Object.fromEntries(
   TABS.map(t => [t.path, t.id])
 );
-const TAB_TO_PATH: Record<string, string> = Object.fromEntries(
-  TABS.map(t => [t.id, t.path])
-);
 PATH_TO_TAB['/users'] = 'logs'; // legacy alias
 
 const GROUP_ORDER = ['Home','Operations','Printing','Connectivity','System'];

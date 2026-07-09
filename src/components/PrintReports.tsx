@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import {
   BarChart2, PrinterIcon, User, Users, Monitor,
-  RefreshCw, Download, FileText
+  RefreshCw, FileText
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer, Cell
+  Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import {
   fetchPrintReportByPrinter, fetchPrintReportByEmployee,
@@ -23,11 +23,6 @@ const GROUPS: { id: ReportGroup; label: string; icon: React.ElementType }[] = [
   { id: 'employee', label: 'By Employee',  icon: User },
   { id: 'customer', label: 'By Customer',  icon: Users },
   { id: 'computer', label: 'By Computer',  icon: Monitor },
-];
-
-const COLORS = [
-  '#3b82f6','#f59e0b','#10b981','#8b5cf6',
-  '#ef4444','#06b6d4','#ec4899','#84cc16',
 ];
 
 // ---- helpers ----------------------------------------------------------------

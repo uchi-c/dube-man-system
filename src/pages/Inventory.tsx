@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Product } from '../types';
-import { fetchProducts, insertProduct, adjustStockLevel, updateProduct } from '../services/supabase';
-import { 
-  Package, Plus, Minus, Search, 
-  AlertTriangle, Check, Briefcase, Filter, Info, ShieldX, RefreshCw 
+import { fetchProducts, insertProduct, adjustStockLevel } from '../services/supabase';
+import {
+  Package, Plus, Minus, Search,
+  AlertTriangle, Check, Briefcase, ShieldX, RefreshCw
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatCurrency } from '../utils/format';

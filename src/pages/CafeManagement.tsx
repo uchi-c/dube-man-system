@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Computer, CafeSession, CafeSessionStatus, ComputerStatus } from '../types';
+import { Computer, CafeSession } from '../types';
 import { 
   fetchComputers, fetchRunningCafeSessions, fetchCompletedCafeSessions,
   startWorkstationSession, endWorkstationSession, updateComputerLockStatus,
   supabase, isSupabaseConfigured
 } from '../services/supabase';
-import { 
-  Monitor, Play, Square, Wrench, ShieldAlert, 
-  Clock, Coins, User, Check, DollarSign, Terminal, 
-  Activity, RefreshCw, BarChart3, Server, TrendingUp, Zap, HelpCircle
+import {
+  Monitor, Play, Square, Wrench, ShieldAlert,
+  Clock, Coins, User, Check,
+  Activity, RefreshCw, Server, TrendingUp, Zap
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import ComputerStatusCard from '../components/ComputerStatusCard';
@@ -31,7 +31,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
   const [billingConfirmation, setBillingConfirmation] = useState<any | null>(null);
 
   // Tick helper to redraw active stopwatch indicators
-  const [tick, setTick] = useState(0);
+  const [, setTick] = useState(0);
 
   const pullCafeFromDb = async () => {
     setLoading(true);

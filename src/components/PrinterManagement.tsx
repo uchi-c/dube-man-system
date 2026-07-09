@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  PrinterIcon, Plus, Edit2, Power, RefreshCw,
-  CheckCircle, WifiOff, AlertTriangle, Pause, X, Save
+  PrinterIcon, Plus, Edit2, Power, RefreshCw, X, Save
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -277,13 +276,6 @@ export default function PrinterManagement() {
     await disablePrinter(id);
     await load();
     setDisabling(null);
-  };
-
-  const statusIcon = (s: PrinterStatus) => {
-    if (s === 'Online')  return <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />;
-    if (s === 'Paused')  return <Pause       className="w-3.5 h-3.5 text-amber-400" />;
-    if (s === 'Error')   return <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />;
-    return <WifiOff className="w-3.5 h-3.5 text-slate-400" />;
   };
 
   return (

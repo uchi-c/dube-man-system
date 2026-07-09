@@ -4,12 +4,12 @@ import {
   fetchProducts, fetchCustomers, insertCustomer, 
   insertSale, fetchSales 
 } from '../services/supabase';
-import { 
-  ShoppingCart, Search, Plus, Minus, Trash2, 
-  CreditCard, Sparkles, Check, UserPlus, Info, 
-  Terminal, AlertCircle, RefreshCw, FileText, Calendar 
+import {
+  ShoppingCart, Search, Plus, Minus, Trash2,
+  CreditCard, Sparkles, Check, UserPlus,
+  AlertCircle, RefreshCw, FileText
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import DataTable from '../components/DataTable';
 import { formatCurrency } from '../utils/format';
 

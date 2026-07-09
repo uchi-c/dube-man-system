@@ -2,7 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 import * as localDb from '../utils/db';
 import {
-  User, Product, Customer, Sale, SaleItem,
+  User, Product, Customer, Sale,
   PrintingOrder, Computer, CafeSession, ActivityLog,
   WifiSessionRecord, UserRole, PrintingStatus, ComputerStatus,
   CafeSessionStatus, WifiCustomer, WifiPackage, WifiSession,
@@ -1114,7 +1114,6 @@ export async function startWifiSession(
   packageId: string
 ): Promise<WifiSession | null> {
   const currentUser = localDb.getCurrentUser();
-  const userName = currentUser ? currentUser.name : 'Console_Staff';
 
   if (isSupabaseConfigured) {
     try {

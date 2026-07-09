@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { WifiCustomer, WifiUsageLog } from '../types';
-import { Search, HardDrive, Cpu, ShieldAlert, Wifi, Activity, Clock, RefreshCw } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Search, Cpu, Wifi, RefreshCw } from 'lucide-react';
 
 interface ConnectedDevicesProps {
   customers: WifiCustomer[];
