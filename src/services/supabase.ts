@@ -462,7 +462,7 @@ export async function insertSale(
   if (isSupabaseConfigured) {
     try {
       // 1. Calculate active totals
-      let totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+      const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
 
       // 2. Validate sufficient stocks first
       for (const item of items) {
