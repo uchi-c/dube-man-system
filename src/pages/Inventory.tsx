@@ -6,6 +6,7 @@ import {
   AlertTriangle, Check, Briefcase, Filter, Info, ShieldX, RefreshCw 
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { formatCurrency } from '../utils/format';
 
 interface InventoryProps {
   userRole: string;
@@ -255,11 +256,11 @@ export default function Inventory({ userRole }: InventoryProps) {
                   <div className="grid grid-cols-3 gap-2 text-center text-xs font-mono tabular-nums">
                     <div className="p-2 bg-slate-50 border border-slate-100 rounded-xl">
                       <span className="text-[9px] text-slate-400 block mb-0.5">Buy Price</span>
-                      <strong className="text-slate-700 text-[10px]">ZMW {product.buying_price}</strong>
+                      <strong className="text-slate-700 text-[10px]">{formatCurrency(product.buying_price)}</strong>
                     </div>
                     <div className="p-2 bg-slate-50 border border-slate-100 rounded-xl">
                       <span className="text-[9px] text-slate-400 block mb-0.5">Sell Price</span>
-                      <strong className="text-rose-600 text-[10px]">ZMW {product.selling_price}</strong>
+                      <strong className="text-rose-600 text-[10px]">{formatCurrency(product.selling_price)}</strong>
                     </div>
                     <div className={`p-2 border rounded-xl ${isLowStock ? 'bg-amber-100/40 border-amber-200' : 'bg-slate-50 border-slate-100'}`}>
                       <span className="text-[9px] text-slate-400 block mb-0.5">In Stock</span>

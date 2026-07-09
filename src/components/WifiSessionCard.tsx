@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { WifiSession } from '../types';
 import { Wifi, Clock, Phone, Smartphone, ShieldAlert, Ban, CheckCircle, RefreshCcw } from 'lucide-react';
 import { motion } from 'motion/react';
+import { formatCurrency } from '../utils/format';
 
 interface WifiSessionCardProps {
   key?: any;
@@ -123,7 +124,7 @@ export default function WifiSessionCard({ session, onTerminate, onExpire }: Wifi
         <div className="text-right">
           <span className="text-[9px] font-mono uppercase text-slate-400 block tracking-wide">Authorized Cost</span>
           <span className="text-sm font-bold text-slate-700 block mt-0.5 tabular-nums">
-            MWK {session.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            {formatCurrency(session.amount)}
           </span>
         </div>
       </div>

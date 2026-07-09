@@ -3,6 +3,7 @@ import { Settings2, Save, RefreshCw, CheckCircle2, AlertTriangle } from 'lucide-
 import {
   fetchPrintPricingSettings, upsertPrintPricingSettings
 } from '../services/supabase';
+import { formatCurrency } from '../utils/format';
 
 interface PricingForm {
   bw_price_per_page:     number;
@@ -116,17 +117,17 @@ export default function PrintSettings() {
         </div>
 
         {/* Margin preview */}
-        <div className="bg-slate-50 rounded-2xl p-4 grid grid-cols-2 gap-4 text-xs border border-slate-100">
+        <div className="bg-slate-50 rounded-2xl p-4 grid grid-cols-2 gap-4 text-xs border border-slate-100 tabular-nums">
           <div>
             <div className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">B&W Margin / Page</div>
             <div className={`text-base font-extrabold ${marginBW >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-              ZMW {marginBW.toFixed(3)}
+              {formatCurrency(marginBW, { decimals: 3 })}
             </div>
           </div>
           <div>
             <div className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">Colour Margin / Page</div>
             <div className={`text-base font-extrabold ${marginColour >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-              ZMW {marginColour.toFixed(3)}
+              {formatCurrency(marginColour, { decimals: 3 })}
             </div>
           </div>
         </div>

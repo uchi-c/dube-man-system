@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   fetchAllPrinters, insertPrinter, updatePrinter, disablePrinter
 } from '../services/supabase';
+import { formatCurrency } from '../utils/format';
 import type { Printer, PrinterStatus, PaperSize } from '../types';
 
 const PAPER_SIZES: PaperSize[] = ['A4', 'A3', 'A5', 'Letter', 'Legal', 'Custom'];
@@ -373,13 +374,13 @@ export default function PrinterManagement() {
                   <div>
                     <span className="text-slate-400">BW / Page</span>
                     <div className="font-semibold text-slate-700 mt-0.5">
-                      ZMW {printer.cost_per_bw_page.toFixed(2)}
+                      {formatCurrency(printer.cost_per_bw_page)}
                     </div>
                   </div>
                   <div>
                     <span className="text-slate-400">Colour / Page</span>
                     <div className="font-semibold text-slate-700 mt-0.5">
-                      ZMW {printer.cost_per_colour_page.toFixed(2)}
+                      {formatCurrency(printer.cost_per_colour_page)}
                     </div>
                   </div>
                 </div>

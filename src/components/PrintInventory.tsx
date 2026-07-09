@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   fetchPaperInventory, upsertPaperInventory, addPaperStock
 } from '../services/supabase';
+import { formatCurrency } from '../utils/format';
 import type { PaperInventory, PaperSize } from '../types';
 
 const PAPER_SIZES: PaperSize[] = ['A4', 'A3', 'A5', 'Letter', 'Legal', 'Custom'];
@@ -26,7 +27,7 @@ function stockColor(item: PaperInventory): string {
 }
 
 function fmtMoney(n: number) {
-  return 'ZMW ' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return formatCurrency(n);
 }
 
 // ---- Restock modal ----------------------------------------------------------

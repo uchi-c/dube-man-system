@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import DataTable from '../components/DataTable';
+import { formatCurrency } from '../utils/format';
 
 interface SalesPageProps {
   userRole: string;
@@ -215,7 +216,7 @@ export default function Sales({ userRole }: SalesPageProps) {
     },
     {
       header: 'Billing Amount',
-      accessor: (sale: Sale) => <strong className="text-rose-600 font-mono tabular-nums">ZMW {Number(sale.total_amount).toFixed(2)}</strong>
+      accessor: (sale: Sale) => <strong className="text-rose-600 font-mono tabular-nums">{formatCurrency(sale.total_amount)}</strong>
     },
     {
       header: 'Items Purchased',
@@ -311,7 +312,7 @@ export default function Sales({ userRole }: SalesPageProps) {
                         </div>
 
                         <div className="flex justify-between items-center pt-2 mt-2 border-t border-slate-100">
-                          <span className="text-rose-600 font-extrabold text-xs tabular-nums">ZMW {p.selling_price}</span>
+                          <span className="text-rose-600 font-extrabold text-xs tabular-nums">{formatCurrency(p.selling_price)}</span>
                           {!outOfStock && (
                             <div className="bg-rose-50 hover:bg-rose-100 p-1 rounded-lg text-rose-500 transition-all">
                               <Plus className="w-3.5 h-3.5 stroke-[3]" />
@@ -359,7 +360,7 @@ export default function Sales({ userRole }: SalesPageProps) {
                       <div key={item.product.id} className="py-2.5 flex items-start justify-between text-xs">
                         <div className="pr-2 truncate text-left">
                           <span className="font-semibold text-slate-700 block truncate">{item.product.name}</span>
-                          <span className="text-[10px] text-rose-500 font-mono font-bold tabular-nums">ZMW {item.product.selling_price} each</span>
+                          <span className="text-[10px] text-rose-500 font-mono font-bold tabular-nums">{formatCurrency(item.product.selling_price)} each</span>
                         </div>
                         
                         <div className="flex items-center space-x-2 shrink-0">
@@ -480,12 +481,12 @@ export default function Sales({ userRole }: SalesPageProps) {
                 {/* Pricing logs */}
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-1 font-mono tabular-nums">
                   <div className="flex justify-between text-slate-500">
-                    <span>Subtotal ZMW:</span>
-                    <span>{totalAmount.toFixed(2)}</span>
+                    <span>Subtotal:</span>
+                    <span>{formatCurrency(totalAmount, { symbol: false })}</span>
                   </div>
                   <div className="flex justify-between text-slate-800 font-bold border-t pt-1.5 text-sm">
                     <span>Receipt Total:</span>
-                    <span className="text-rose-600">ZMW {totalAmount.toFixed(2)}</span>
+                    <span className="text-rose-600">{formatCurrency(totalAmount)}</span>
                   </div>
                 </div>
 

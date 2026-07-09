@@ -10,6 +10,7 @@ import {
 } from 'recharts';
 import { motion } from 'motion/react';
 import { fetchPrintDashboardStats } from '../services/supabase';
+import { formatCurrency, formatNumber } from '../utils/format';
 import type { PrintDashboardStats } from '../types';
 
 // ---- KPI card ---------------------------------------------------------------
@@ -123,9 +124,8 @@ export default function PrintDashboard() {
 
   if (!stats) return null;
 
-  const fmtNum = (n: number) => n.toLocaleString();
-  const fmtMoney = (n: number) =>
-    'ZMW ' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtNum = formatNumber;
+  const fmtMoney = formatCurrency;
 
   return (
     <div className="space-y-6" id="print-dashboard">

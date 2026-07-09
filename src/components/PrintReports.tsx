@@ -11,6 +11,7 @@ import {
   fetchPrintReportByPrinter, fetchPrintReportByEmployee,
   fetchPrintReportByCustomer, fetchPrintReportByComputer
 } from '../services/supabase';
+import { formatCurrency } from '../utils/format';
 import type { PrintReportRow } from '../types';
 
 // ---- Types ------------------------------------------------------------------
@@ -32,7 +33,7 @@ const COLORS = [
 // ---- helpers ----------------------------------------------------------------
 
 function fmtMoney(n: number) {
-  return 'ZMW ' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return formatCurrency(n);
 }
 
 // ---- Summary row ------------------------------------------------------------
