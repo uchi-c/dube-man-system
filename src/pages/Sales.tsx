@@ -12,6 +12,7 @@ import {
 import { motion } from 'motion/react';
 import DataTable from '../components/DataTable';
 import { formatCurrency } from '../utils/format';
+import { cartTotal } from '../utils/billing';
 
 interface SalesPageProps {
   userRole: string;
@@ -75,7 +76,10 @@ export default function Sales({ userRole }: SalesPageProps) {
 
   // Total cart calculation
   const totalAmount = useMemo(() => {
-    return cart.reduce((total, item) => total + (item.product.selling_price * item.quantity), 0);
+    return cartTotal(cart.map(item => ({
+      unitPrice: item.product.selling_price,
+      quantity: item.quantity,
+    })));
   }, [cart]);
 
   // Add Item to cart

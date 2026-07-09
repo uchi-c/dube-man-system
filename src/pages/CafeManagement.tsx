@@ -13,6 +13,7 @@ import {
 import { motion } from 'motion/react';
 import ComputerStatusCard from '../components/ComputerStatusCard';
 import { formatCurrency } from '../utils/format';
+import { elapsedMinutes, sessionCharge } from '../utils/billing';
 
 interface CafeConsoleProps {
   userRole: string;
@@ -146,12 +147,8 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
   };
 
   // Utility to determine active elapsed time in minutes
-  const getElapsedMinutes = (startTimeStr: string) => {
-    const start = new Date(startTimeStr).getTime();
-    const now = new Date().getTime();
-    const diffMs = now - start;
-    return Math.max(1, Math.floor(diffMs / 60000));
-  };
+  const getElapsedMinutes = (startTimeStr: string) =>
+    elapsedMinutes(new Date(startTimeStr).getTime(), Date.now());
 
   // ==========================================
   // REAL-TIME ANALYTICS CALCULATIONS
@@ -164,7 +161,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
   const todayRevenue = todayCompleted.reduce((sum, s) => sum + (s.amount || 0), 0) +
                        todayRunning.reduce((sum, s) => {
                          const mins = getElapsedMinutes(s.start_time);
-                         return sum + (mins * (s.rate_per_minute || 1.00));
+                         return sum + sessionCharge(mins, s.rate_per_minute || 1.0);
                        }, 0);
 
   // Total Minutes Used: Sum of duration of all past sessions + running sessions
@@ -346,7 +343,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
           {computers.map(computer => {
             const session = runningSessions.find(s => s.computer_id === computer.id && s.status === 'ACTIVE');
             const elapsed = session ? getElapsedMinutes(session.start_time) : 0;
-            const liveCharge = session ? (elapsed * (session.rate_per_minute || 1.00)) : 0;
+            const liveCharge = session ? sessionCharge(elapsed, session.rate_per_minute || 1.0) : 0;
 
             // Map UI status
             let mappedStatus = computer.status.toUpperCase();
