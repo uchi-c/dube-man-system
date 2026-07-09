@@ -1,4 +1,5 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { User, UserRole } from './types';
 import { initializeStore } from './utils/db';
 import { getAuthenticatedUser, logoutUser } from './services/supabase';
@@ -63,6 +64,14 @@ const PATH_TO_TAB: Record<string, string> = Object.fromEntries(
 PATH_TO_TAB['/users'] = 'logs'; // legacy alias
 
 const GROUP_ORDER = ['Home','Operations','Printing','Connectivity','System'];
+
+// Role-based landing paths.
+const ROLE_DEFAULT_PATH: Record<string, string> = {
+  ADMIN: '/dashboard',
+  STAFF: '/sales',
+  CAFE_OPERATOR: '/cafe-management',
+};
+const defaultPathFor = (role: string) => ROLE_DEFAULT_PATH[role] ?? '/dashboard';
 
 // ---- Sync indicator --------------------------------------------------------
 
@@ -435,134 +444,104 @@ function LoadingScreen() {
   );
 }
 
+// ---- Page renderer ---------------------------------------------------------
+
+function renderPage(id: string, role: string) {
+  switch (id) {
+    case 'dashboard':     return <Dashboard />;
+    case 'pos':           return <Sales userRole={role} />;
+    case 'inventory':     return <Inventory userRole={role} />;
+    case 'printing':      return <PrintingOrders userRole={role} />;
+    case 'print-manager': return <PrintManager />;
+    case 'cafe':          return <CafeManagement userRole={role} />;
+    case 'customers':     return <Customers />;
+    case 'wifi':          return <WifiManagement />;
+    case 'pc-agent':      return <PCAgentConsole />;
+    case 'logs':          return <ActivityLogs userRole={role} />;
+    default:              return null;
+  }
+}
+
+// ---- Per-route frame: role guard + animation + lazy boundary ---------------
+
+function RouteFrame({ tab, user }: { tab: TabDef; user: User }) {
+  const navigate = useNavigate();
+  const allowed = tab.roles.includes(user.role as UserRole);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -4 }}
+      transition={{ duration: 0.18 }}
+    >
+      {allowed ? (
+        <ErrorBoundary section={tab.label}>
+          <Suspense fallback={<PageFallback />}>
+            {renderPage(tab.id, user.role)}
+          </Suspense>
+        </ErrorBoundary>
+      ) : (
+        <UnauthorizedScreen user={user} onBack={() => navigate(defaultPathFor(user.role))} />
+      )}
+    </motion.div>
+  );
+}
+
 // ---- Root App --------------------------------------------------------------
 
 export default function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [user, setUser]                   = useState<User | null>(null);
-  const [activeTab, setActiveTab]         = useState('dashboard');
   const [drawerOpen, setDrawerOpen]       = useState(false);
   const [checking, setChecking]           = useState(true);
-  const [unauthorized, setUnauthorized]   = useState(false);
 
-  // ---- URL helpers ----
-  const getPath = () => {
-    const hash = window.location.hash;
-    if (hash?.startsWith('#')) return hash.slice(1);
-    return window.location.pathname;
-  };
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const setPath = (path: string) => {
-    window.location.hash = path;
-    if (window.location.pathname !== path) {
-      window.history.pushState(null, '', path);
-    }
-  };
+  // The URL is the source of truth; derive the active tab from the path.
+  const activeTab = PATH_TO_TAB[location.pathname] ?? '';
 
-  // ---- Role-aware routing ----
-  const route = (u: User | null) => {
-    if (!u) { setPath('/login'); return; }
-
-    const defaults: Record<string, string> = {
-      ADMIN: '/dashboard',
-      STAFF: '/sales',
-      CAFE_OPERATOR: '/cafe-management',
-    };
-    const defaultPath = defaults[u.role] ?? '/dashboard';
-
-    const cur = getPath();
-    if (!cur || cur === '/' || cur === '/login') {
-      const id = PATH_TO_TAB[defaultPath] ?? 'dashboard';
-      setActiveTab(id);
-      setUnauthorized(false);
-      setPath(defaultPath);
-      return;
-    }
-
-    const tabId = PATH_TO_TAB[cur];
-    if (!tabId) {
-      setActiveTab(PATH_TO_TAB[defaultPath] ?? 'dashboard');
-      setUnauthorized(false);
-      setPath(defaultPath);
-      return;
-    }
-
-    const tabDef = TABS.find(t => t.id === tabId);
-    if (tabDef && tabDef.roles.includes(u.role as UserRole)) {
-      setActiveTab(tabId);
-      setUnauthorized(false);
-    } else {
-      setUnauthorized(true);
-    }
-  };
-
-  // ---- Init ----
+  // ---- Init: restore session ----
   useEffect(() => {
     let cancelled = false;
     (async () => {
       initializeStore();
       const u = await getAuthenticatedUser();
       if (cancelled) return;
-      if (u) { setUser(u); setAuthenticated(true); route(u); }
-      else { setAuthenticated(false); setPath('/login'); }
+      if (u) { setUser(u); setAuthenticated(true); }
+      else { setAuthenticated(false); }
       setTimeout(() => { if (!cancelled) setChecking(false); }, 500);
     })();
     return () => { cancelled = true; };
   }, []);
 
-  // ---- URL change listener ----
-  useEffect(() => {
-    const handler = () => route(user);
-    window.addEventListener('popstate', handler);
-    window.addEventListener('hashchange', handler);
-    return () => {
-      window.removeEventListener('popstate', handler);
-      window.removeEventListener('hashchange', handler);
-    };
-  }, [user]);
-
   const handleLogin = (u: User) => {
     localStorage.setItem('dubeman_current_user', JSON.stringify(u));
     setUser(u);
     setAuthenticated(true);
-    route(u);
     setChecking(false);
+    navigate(defaultPathFor(u.role), { replace: true });
   };
 
   const handleLogout = async () => {
     await logoutUser();
     setUser(null);
     setAuthenticated(false);
-    setUnauthorized(false);
-    setPath('/login');
+    navigate('/login', { replace: true });
   };
 
   const handleTabSelect = (id: string) => {
     const tabDef = TABS.find(t => t.id === id);
-    if (!user || !tabDef) return;
-    if (tabDef.roles.includes(user.role as UserRole)) {
-      setActiveTab(id);
-      setUnauthorized(false);
-      setPath(tabDef.path);
-    } else {
-      setUnauthorized(true);
-      setPath(tabDef.path);
-    }
+    if (tabDef) navigate(tabDef.path);
     setDrawerOpen(false);
-  };
-
-  const handleBackToWorkspace = () => {
-    if (!user) return;
-    const defaults: Record<string, string> = {
-      ADMIN: 'dashboard', STAFF: 'pos', CAFE_OPERATOR: 'cafe',
-    };
-    const id = defaults[user.role] ?? 'dashboard';
-    handleTabSelect(id);
   };
 
   // ---- Render guards ----
   if (checking) return <LoadingScreen />;
   if (!authenticated || !user) return <Login onLoginSuccess={handleLogin} />;
+
+  const homePath = defaultPathFor(user.role);
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: '#f8fafc', fontFamily: "'Inter','Manrope',sans-serif" }}>
@@ -624,34 +603,18 @@ export default function App() {
           style={{ padding: '24px', background: '#f8fafc' }}
         >
           <div className="max-w-7xl mx-auto">
-            {unauthorized ? (
-              <UnauthorizedScreen user={user} onBack={handleBackToWorkspace} />
-            ) : (
-              <ErrorBoundary section={TABS.find(t => t.id === activeTab)?.label} key={activeTab}>
-                <Suspense fallback={<PageFallback />}>
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={activeTab}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -4 }}
-                      transition={{ duration: 0.18 }}
-                    >
-                      {activeTab === 'dashboard'     && <Dashboard />}
-                      {activeTab === 'pos'           && <Sales userRole={user.role} />}
-                      {activeTab === 'inventory'     && <Inventory userRole={user.role} />}
-                      {activeTab === 'printing'      && <PrintingOrders userRole={user.role} />}
-                      {activeTab === 'print-manager' && <PrintManager />}
-                      {activeTab === 'cafe'          && <CafeManagement userRole={user.role} />}
-                      {activeTab === 'customers'     && <Customers />}
-                      {activeTab === 'wifi'          && <WifiManagement />}
-                      {activeTab === 'pc-agent'      && <PCAgentConsole />}
-                      {activeTab === 'logs'          && <ActivityLogs userRole={user.role} />}
-                    </motion.div>
-                  </AnimatePresence>
-                </Suspense>
-              </ErrorBoundary>
-            )}
+            <AnimatePresence mode="wait">
+              <Routes location={location} key={location.pathname}>
+                {TABS.map(tab => (
+                  <Route key={tab.id} path={tab.path} element={<RouteFrame tab={tab} user={user} />} />
+                ))}
+                {/* Legacy alias + default landings */}
+                <Route path="/users" element={<Navigate to="/logs" replace />} />
+                <Route path="/login" element={<Navigate to={homePath} replace />} />
+                <Route path="/" element={<Navigate to={homePath} replace />} />
+                <Route path="*" element={<Navigate to={homePath} replace />} />
+              </Routes>
+            </AnimatePresence>
           </div>
         </main>
       </div>
