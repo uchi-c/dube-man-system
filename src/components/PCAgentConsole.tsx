@@ -1,12 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { getComputers } from '../utils/db';
-import { Terminal, ShieldCheck, Cpu, HardDrive, RefreshCcw, Wifi, KeyRound, Play, HelpCircle, Lock } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Terminal, ShieldCheck, RefreshCcw, KeyRound } from 'lucide-react';
 
 export default function PCAgentConsole() {
   const computers = getComputers();
   const [activeTab, setActiveTab] = useState<'status' | 'cryptography'>('status');
-  const [selectedComp, setSelectedComp] = useState<string>(computers[0].computer_code);
   const [isSimulatingHeartbeat, setIsSimulatingHeartbeat] = useState(false);
   const [heartbeatLogs, setHeartbeatLogs] = useState<string[]>([
     "[SYSTEM] PC-Agent telemetry listener initialized successfully.",

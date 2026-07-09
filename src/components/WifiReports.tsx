@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { WifiSession, WifiUsageLog, WifiPackage } from '../types';
-import { 
+import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, Legend
+  LineChart, Line
 } from 'recharts';
-import { 
+import {
   TrendingUp, Users, Clock, Flame, Calendar, FileSpreadsheet, Search, History,
-  Activity, ArrowDownLeft, ArrowUpRight
+  ArrowDownLeft, ArrowUpRight
 } from 'lucide-react';
 import { formatCurrency, CURRENCY } from '../utils/format';
 

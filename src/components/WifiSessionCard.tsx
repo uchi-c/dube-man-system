@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { WifiSession } from '../types';
-import { Wifi, Clock, Phone, Smartphone, ShieldAlert, Ban, CheckCircle, RefreshCcw } from 'lucide-react';
+import { Wifi, Clock, Phone, Smartphone, Ban, CheckCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatCurrency } from '../utils/format';
 

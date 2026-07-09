@@ -50,17 +50,6 @@ function KpiCard({ label, value, sub, icon: Icon, color, iconColor, delay = 0 }:
   );
 }
 
-// ---- Printer status badge ---------------------------------------------------
-
-function StatusBadge({ label, count, color }: { label: string; count: number; color: string }) {
-  return (
-    <div className={`flex items-center justify-between px-4 py-3 rounded-xl border ${color}`}>
-      <span className="text-xs font-semibold">{label}</span>
-      <span className="text-lg font-extrabold tabular-nums">{count}</span>
-    </div>
-  );
-}
-
 // ---- Custom tooltip for the chart -------------------------------------------
 
 function ChartTooltip({ active, payload, label }: any) {

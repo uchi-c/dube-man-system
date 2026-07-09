@@ -11,8 +11,8 @@ import WifiSessionCard from '../components/WifiSessionCard';
 import ConnectedDevices from '../components/ConnectedDevices';
 import WifiReports from '../components/WifiReports';
 import { 
-  Wifi, PlusCircle, LayoutDashboard, Cpu, Database, RefreshCw, Radio, 
-  Settings2, Smartphone, ShieldCheck, Play, HelpCircle, Save, CheckCircle2, UserCheck
+  Wifi, PlusCircle, LayoutDashboard, Cpu, Database, RefreshCw, Radio,
+  Settings2, ShieldCheck, Play, HelpCircle, Save, CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatCurrency } from '../utils/format';
@@ -26,7 +26,7 @@ export default function WifiManagement() {
   const [sessions, setSessions] = useState<WifiSession[]>([]);
   const [customers, setCustomers] = useState<WifiCustomer[]>([]);
   const [usageLogs, setUsageLogs] = useState<WifiUsageLog[]>([]);
-  const [routerSetting, setRouterSetting] = useState<RouterSetting | null>(null);
+  const [, setRouterSetting] = useState<RouterSetting | null>(null);
 
   // UI state
   const [activeTab, setActiveTab] = useState<'sessions' | 'devices' | 'analytics' | 'router'>('sessions');

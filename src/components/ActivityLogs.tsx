@@ -1,8 +1,7 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { fetchActivityLogs } from '../services/supabase';
 import { ActivityLog } from '../types';
-import { Search, History, RefreshCcw, User, Clock, ShieldAlert } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Search, History, RefreshCcw, Clock, ShieldAlert } from 'lucide-react';
 
 interface ActivityLogsProps {
   userRole: string;
