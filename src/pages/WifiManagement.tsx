@@ -15,6 +15,7 @@ import {
   Settings2, Smartphone, ShieldCheck, Play, HelpCircle, Save, CheckCircle2, UserCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { formatCurrency } from '../utils/format';
 
 export default function WifiManagement() {
   // Current logged in user
@@ -391,7 +392,7 @@ export default function WifiManagement() {
         <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between text-left shadow-sm">
           <div>
             <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">WiFi Income (Today)</span>
-            <strong className="text-xl font-extrabold text-slate-800 mt-1 block tabular-nums">K {todayRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+            <strong className="text-xl font-extrabold text-slate-800 mt-1 block tabular-nums">{formatCurrency(todayRevenue)}</strong>
           </div>
           <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center border border-rose-100">
             <Radio className="w-5 h-5 animate-pulse" />
@@ -555,7 +556,7 @@ export default function WifiManagement() {
                       >
                         {packages.map(pkg => (
                           <option key={pkg.id} value={pkg.id}>
-                            {pkg.name} ({pkg.duration_minutes} Mins) &mdash; MWK {pkg.price}
+                            {pkg.name} ({pkg.duration_minutes} Mins) &mdash; {formatCurrency(pkg.price)}
                           </option>
                         ))}
                       </select>

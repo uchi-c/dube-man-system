@@ -1,20 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { User, UserRole } from './types';
 import { initializeStore } from './utils/db';
 import { getAuthenticatedUser, logoutUser } from './services/supabase';
+import ErrorBoundary from './components/ErrorBoundary';
 
-// Pages
+// Login is needed for first paint (pre-auth), so keep it eager.
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Inventory from './pages/Inventory';
-import Sales from './pages/Sales';
-import PrintingOrders from './pages/PrintingOrders';
-import CafeManagement from './pages/CafeManagement';
-import Customers from './pages/Customers';
-import WifiManagement from './pages/WifiManagement';
-import PrintManager from './pages/PrintManager';
-import PCAgentConsole from './components/PCAgentConsole';
-import ActivityLogs from './components/ActivityLogs';
+
+// Authenticated pages are code-split so they load on demand,
+// keeping the initial bundle small.
+const Dashboard      = lazy(() => import('./pages/Dashboard'));
+const Inventory      = lazy(() => import('./pages/Inventory'));
+const Sales          = lazy(() => import('./pages/Sales'));
+const PrintingOrders = lazy(() => import('./pages/PrintingOrders'));
+const CafeManagement = lazy(() => import('./pages/CafeManagement'));
+const Customers      = lazy(() => import('./pages/Customers'));
+const WifiManagement = lazy(() => import('./pages/WifiManagement'));
+const PrintManager   = lazy(() => import('./pages/PrintManager'));
+const PCAgentConsole = lazy(() => import('./components/PCAgentConsole'));
+const ActivityLogs   = lazy(() => import('./components/ActivityLogs'));
 
 import {
   LayoutDashboard, Package, ShoppingCart, Printer, Monitor,
@@ -386,6 +390,17 @@ function UnauthorizedScreen({ user, onBack }: { user: User; onBack: () => void }
   );
 }
 
+// ---- Lazy page fallback ----------------------------------------------------
+
+function PageFallback() {
+  return (
+    <div className="flex items-center justify-center py-24" style={{ color: '#94a3b8' }}>
+      <RefreshCw className="animate-spin" style={{ width: 18, height: 18, marginRight: 8 }} />
+      <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>Loading…</span>
+    </div>
+  );
+}
+
 // ---- Loading screen --------------------------------------------------------
 
 function LoadingScreen() {
@@ -615,26 +630,30 @@ export default function App() {
             {unauthorized ? (
               <UnauthorizedScreen user={user} onBack={handleBackToWorkspace} />
             ) : (
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.18 }}
-                >
-                  {activeTab === 'dashboard'     && <Dashboard />}
-                  {activeTab === 'pos'           && <Sales userRole={user.role} />}
-                  {activeTab === 'inventory'     && <Inventory userRole={user.role} />}
-                  {activeTab === 'printing'      && <PrintingOrders userRole={user.role} />}
-                  {activeTab === 'print-manager' && <PrintManager />}
-                  {activeTab === 'cafe'          && <CafeManagement userRole={user.role} />}
-                  {activeTab === 'customers'     && <Customers />}
-                  {activeTab === 'wifi'          && <WifiManagement />}
-                  {activeTab === 'pc-agent'      && <PCAgentConsole />}
-                  {activeTab === 'logs'          && <ActivityLogs userRole={user.role} />}
-                </motion.div>
-              </AnimatePresence>
+              <ErrorBoundary section={TABS.find(t => t.id === activeTab)?.label} key={activeTab}>
+                <Suspense fallback={<PageFallback />}>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeTab}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.18 }}
+                    >
+                      {activeTab === 'dashboard'     && <Dashboard />}
+                      {activeTab === 'pos'           && <Sales userRole={user.role} />}
+                      {activeTab === 'inventory'     && <Inventory userRole={user.role} />}
+                      {activeTab === 'printing'      && <PrintingOrders userRole={user.role} />}
+                      {activeTab === 'print-manager' && <PrintManager />}
+                      {activeTab === 'cafe'          && <CafeManagement userRole={user.role} />}
+                      {activeTab === 'customers'     && <Customers />}
+                      {activeTab === 'wifi'          && <WifiManagement />}
+                      {activeTab === 'pc-agent'      && <PCAgentConsole />}
+                      {activeTab === 'logs'          && <ActivityLogs userRole={user.role} />}
+                    </motion.div>
+                  </AnimatePresence>
+                </Suspense>
+              </ErrorBoundary>
             )}
           </div>
         </main>

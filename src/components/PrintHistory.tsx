@@ -4,6 +4,7 @@ import {
   ChevronLeft, ChevronRight, FileText
 } from 'lucide-react';
 import { fetchPrintJobs, fetchAllPrinters } from '../services/supabase';
+import { formatCurrency } from '../utils/format';
 import type { PrintJob, Printer, PrintJobStatus, ColorMode } from '../types';
 
 // ---- helpers ----------------------------------------------------------------
@@ -27,7 +28,7 @@ function fmtDate(iso: string) {
 }
 
 function fmtMoney(n: number) {
-  return 'ZMW ' + n.toFixed(2);
+  return formatCurrency(n);
 }
 
 // ---- Filters state ----------------------------------------------------------

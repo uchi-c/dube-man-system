@@ -9,6 +9,7 @@ import {
   Clock, Coins, FileText, Search, CreditCard, UserPlus, Sparkles, Filter, Plus, RefreshCw, AlertTriangle 
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { formatCurrency } from '../utils/format';
 
 interface PrintingOrdersProps {
   userRole: string;
@@ -267,16 +268,16 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
                   <div className="grid grid-cols-3 gap-2 text-center text-xs mb-3 font-mono tabular-nums">
                     <div className="bg-slate-50 p-2 rounded-xl text-slate-600 border border-slate-100">
                       <span className="text-[9px] text-slate-500 block uppercase font-sans">Quota bill</span>
-                      <strong>ZMW {order.amount}</strong>
+                      <strong>{formatCurrency(order.amount)}</strong>
                     </div>
                     <div className="bg-emerald-50/50 p-2 rounded-xl text-emerald-800 border border-emerald-100">
                       <span className="text-[9px] text-emerald-500 block uppercase font-sans">Deposited</span>
-                      <strong className="text-emerald-700">ZMW {order.amount_paid}</strong>
+                      <strong className="text-emerald-700">{formatCurrency(order.amount_paid)}</strong>
                     </div>
                     <div className={`p-2 rounded-xl border ${balance > 0 ? 'bg-rose-50 text-rose-800 border-rose-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
                       <span className="text-[9px] text-slate-500 block uppercase font-sans">Deficit</span>
                       <strong className={balance > 0 ? 'text-rose-600' : 'text-slate-500'}>
-                        {balance > 0 ? `ZMW ${balance}` : 'Clear'}
+                        {balance > 0 ? formatCurrency(balance) : 'Clear'}
                       </strong>
                     </div>
                   </div>
@@ -459,16 +460,16 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
             <form onSubmit={handlePaymentSubmit} className="space-y-4 text-xs font-sans">
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-1.5 text-slate-600 font-mono tabular-nums">
                 <div className="flex justify-between">
-                  <span>Total cost ZMW:</span>
-                  <span>{paymentOrder.amount}</span>
+                  <span>Total cost:</span>
+                  <span>{formatCurrency(paymentOrder.amount)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Already Paid:</span>
-                  <span className="text-emerald-600">{paymentOrder.amount_paid}</span>
+                  <span className="text-emerald-600">{formatCurrency(paymentOrder.amount_paid)}</span>
                 </div>
                 <div className="flex justify-between font-bold border-t pt-1.5 text-slate-800">
                   <span>Deficit:</span>
-                  <span className="text-rose-600">ZMW {paymentOrder.amount - paymentOrder.amount_paid}</span>
+                  <span className="text-rose-600">{formatCurrency(paymentOrder.amount - paymentOrder.amount_paid)}</span>
                 </div>
               </div>
 

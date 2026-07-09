@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import ComputerStatusCard from '../components/ComputerStatusCard';
+import { formatCurrency } from '../utils/format';
 
 interface CafeConsoleProps {
   userRole: string;
@@ -203,7 +204,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
         <div>
           <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Dube Man Café Workspace</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Real-time minute billing system (<strong>K1 per minute</strong>). Activate workstation terminals, review billing, and prepare PC agent sync hooks.
+            Real-time minute billing system (<strong>{formatCurrency(1)} per minute</strong>). Activate workstation terminals, review billing, and prepare PC agent sync hooks.
           </p>
         </div>
 
@@ -234,7 +235,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
             <span className="text-[10px] uppercase font-bold tracking-wider font-sans text-slate-400">Today's Revenue</span>
           </div>
           <div className="text-lg font-black text-slate-800 font-mono tabular-nums">
-            K {todayRevenue.toFixed(2)}
+            {formatCurrency(todayRevenue)}
           </div>
           <p className="text-[9px] text-slate-400 mt-0.5">Real-time estimate</p>
         </div>
@@ -418,7 +419,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
                         <span className="text-slate-500 flex items-center">
                           <Coins className="w-3 h-3 mr-1 text-slate-400" /> Amount:
                         </span>
-                        <span className={`font-bold tabular-nums ${elapsed >= 60 ? 'text-rose-400 text-xs' : ''}`}>K{liveCharge.toFixed(2)}</span>
+                        <span className={`font-bold tabular-nums ${elapsed >= 60 ? 'text-rose-400 text-xs' : ''}`}>{formatCurrency(liveCharge)}</span>
                       </div>
                     </div>
                   ) : (
@@ -461,7 +462,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
                 {/* Action buttons */}
                 <div className="border-t border-slate-100 pt-3.5 mt-3.5 flex items-center justify-between gap-2">
                   <div className="text-slate-400 text-[10px] font-mono">
-                    Rate: K{computer.rate_per_minute || 1.00}/min
+                    Rate: {formatCurrency(computer.rate_per_minute || 1.0)}/min
                   </div>
 
                   <div className="flex space-x-1.5">
@@ -523,7 +524,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
                 Initiating Client allocation
               </span>
               <h3 className="text-base font-bold text-slate-800 mt-2">Start Café Session</h3>
-              <p className="text-slate-400 text-xs mt-0.5">Workstation: <strong>{selectedComp.computer_name}</strong> &bull; Rate: K{selectedComp.rate_per_minute || 1.00}/min</p>
+              <p className="text-slate-400 text-xs mt-0.5">Workstation: <strong>{selectedComp.computer_name}</strong> &bull; Rate: {formatCurrency(selectedComp.rate_per_minute || 1.0)}/min</p>
             </div>
 
             <form onSubmit={handleStartSessionSubmit} className="space-y-4 text-xs font-sans">
@@ -590,7 +591,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
               </div>
               <div className="flex justify-between items-center text-slate-800 border-t pt-2 font-bold text-sm">
                 <span>Total billing:</span>
-                <span className="text-rose-600 text-base tabular-nums">K {Number(billingConfirmation.amount).toFixed(2)}</span>
+                <span className="text-rose-600 text-base tabular-nums">{formatCurrency(billingConfirmation.amount)}</span>
               </div>
             </div>
 

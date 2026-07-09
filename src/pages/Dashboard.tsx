@@ -16,11 +16,11 @@ import {
   Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { motion } from 'motion/react';
+import { formatCurrency } from '../utils/format';
 
 // ---- helpers ----------------------------------------------------------------
 
-const currency = (n: number) =>
-  'ZMW ' + n.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const currency = formatCurrency;
 
 const today = () => new Date().toISOString().slice(0, 10);
 

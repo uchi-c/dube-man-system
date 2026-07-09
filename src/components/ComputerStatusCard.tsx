@@ -2,6 +2,7 @@ import React from 'react';
 import { Computer, CafeSession } from '../types';
 import { Monitor, Activity, Clock, User, ShieldAlert } from 'lucide-react';
 import { motion } from 'motion/react';
+import { formatCurrency } from '../utils/format';
 
 interface ComputerStatusCardProps {
   key?: React.Key;
@@ -89,7 +90,7 @@ export default function ComputerStatusCard({ computer, activeSession }: Computer
 
         <div className="flex justify-between text-slate-400">
           <span className="flex items-center"><Clock className="w-3 h-3 mr-1 text-slate-500" /> Rate:</span>
-          <span className="text-white">K {(computer.rate_per_minute || 1.00).toFixed(2)} / min</span>
+          <span className="text-white">{formatCurrency(computer.rate_per_minute || 1.0)} / min</span>
         </div>
 
         <div className="border-t border-slate-800/80 pt-2 flex flex-col space-y-1">

@@ -8,6 +8,7 @@ import {
   TrendingUp, Users, Clock, Flame, Calendar, FileSpreadsheet, Search, History,
   Activity, ArrowDownLeft, ArrowUpRight
 } from 'lucide-react';
+import { formatCurrency, CURRENCY } from '../utils/format';
 
 interface WifiReportsProps {
   sessions: WifiSession[];
@@ -92,7 +93,7 @@ export default function WifiReports({ sessions, usageLogs, packages }: WifiRepor
           </div>
           <div>
             <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Total Revenue</span>
-            <strong className="text-sm sm:text-base font-black tabular-nums">K {totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+            <strong className="text-sm sm:text-base font-black tabular-nums">{formatCurrency(totalRevenue)}</strong>
           </div>
         </div>
 
@@ -154,7 +155,7 @@ export default function WifiReports({ sessions, usageLogs, packages }: WifiRepor
                     labelStyle={{ fontWeight: 'bold', fontSize: '11px' }}
                     itemStyle={{ color: '#fb7185', fontSize: '11px' }}
                   />
-                  <Line type="monotone" dataKey="revenue" name="Revenue (MWK)" stroke="#f43f5e" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                  <Line type="monotone" dataKey="revenue" name={`Revenue (${CURRENCY})`} stroke="#f43f5e" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
