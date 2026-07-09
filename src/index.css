@@ -82,6 +82,15 @@ body {
   line-height: 1.6;
   color: var(--uruu-text-primary);
   background: var(--uruu-surface-2);
+  /* Normalise inter-word rhythm and break long tokens cleanly */
+  word-spacing: normal;
+  overflow-wrap: break-word;
+  font-kerning: normal;
+}
+
+/* Paragraph copy: avoid single-word orphan lines on wrap */
+p {
+  text-wrap: pretty;
 }
 
 /* ---- Typography scale ------------------------------------- */
@@ -91,6 +100,7 @@ body {
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.1;
+  text-wrap: balance;
 }
 
 .uruu-h1 {
@@ -99,6 +109,7 @@ body {
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.2;
+  text-wrap: balance;
 }
 
 .uruu-h2 {
@@ -106,12 +117,14 @@ body {
   font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: -0.015em;
+  text-wrap: balance;
 }
 
 .uruu-h3 {
   font-size: 1rem;
   font-weight: 700;
   letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 .uruu-body { font-size: 0.875rem; font-weight: 400; }
@@ -126,6 +139,7 @@ body {
 .uruu-mono {
   font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
   font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- Surface cards ---------------------------------------- */
@@ -328,6 +342,7 @@ body {
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .uruu-kpi-value-lg {
@@ -336,6 +351,7 @@ body {
   font-weight: 800;
   letter-spacing: -0.04em;
   line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- Section divider -------------------------------------- */
@@ -383,6 +399,44 @@ body {
 *:focus-visible {
   outline: 2px solid var(--uruu-accent);
   outline-offset: 2px;
+}
+
+/* ---- Typography & alignment utilities --------------------- */
+/* Tabular figures — keeps numbers, currency and counts vertically
+   aligned inside tables, KPI rows and ledgers regardless of digits. */
+.uruu-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Balanced / tidy text wrapping */
+.uruu-text-balance { text-wrap: balance; }
+.uruu-text-pretty  { text-wrap: pretty; }
+
+/* Word / letter spacing helpers for dense UI copy */
+.uruu-tracking-tight { letter-spacing: -0.02em; }
+.uruu-tracking-wide  { letter-spacing: 0.04em; }
+.uruu-word-spacing   { word-spacing: 0.05em; }
+
+/* Alignment helpers */
+.uruu-text-left   { text-align: left; }
+.uruu-text-center { text-align: center; }
+.uruu-text-right  { text-align: right; }
+
+/* Numeric table cell — right-aligned, tabular, non-wrapping so
+   figure columns line up on the decimal edge. */
+.uruu-num-cell {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Single-line truncation with trailing ellipsis */
+.uruu-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ---- Print overrides -------------------------------------- */

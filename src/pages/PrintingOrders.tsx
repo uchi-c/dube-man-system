@@ -264,7 +264,7 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
                 {/* Account & Milestone advance Buttons */}
                 <div className="pt-4 border-t border-slate-100 mt-4">
                   {/* Financial trackers */}
-                  <div className="grid grid-cols-3 gap-2 text-center text-xs mb-3 font-mono">
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs mb-3 font-mono tabular-nums">
                     <div className="bg-slate-50 p-2 rounded-xl text-slate-600 border border-slate-100">
                       <span className="text-[9px] text-slate-500 block uppercase font-sans">Quota bill</span>
                       <strong>ZMW {order.amount}</strong>
@@ -457,7 +457,7 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
             </div>
 
             <form onSubmit={handlePaymentSubmit} className="space-y-4 text-xs font-sans">
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-1.5 text-slate-600 font-mono">
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-1.5 text-slate-600 font-mono tabular-nums">
                 <div className="flex justify-between">
                   <span>Total cost ZMW:</span>
                   <span>{paymentOrder.amount}</span>

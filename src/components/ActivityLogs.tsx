@@ -83,7 +83,7 @@ export default function ActivityLogs({ userRole }: ActivityLogsProps) {
       ) : filteredLogs.length > 0 ? (
         <div className="bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-left border-collapse text-xs tabular-nums">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100 font-mono text-slate-400 uppercase tracking-wider text-[10px]">
                   <th className="px-5 py-3 font-bold">Operator Profile</th>

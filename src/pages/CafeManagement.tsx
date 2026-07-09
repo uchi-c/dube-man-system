@@ -233,7 +233,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
             <TrendingUp className="w-4 h-4" />
             <span className="text-[10px] uppercase font-bold tracking-wider font-sans text-slate-400">Today's Revenue</span>
           </div>
-          <div className="text-lg font-black text-slate-800 font-mono">
+          <div className="text-lg font-black text-slate-800 font-mono tabular-nums">
             K {todayRevenue.toFixed(2)}
           </div>
           <p className="text-[9px] text-slate-400 mt-0.5">Real-time estimate</p>
@@ -245,7 +245,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
             <Clock className="w-4 h-4" />
             <span className="text-[10px] uppercase font-bold tracking-wider font-sans text-slate-400">Minutes Used</span>
           </div>
-          <div className="text-lg font-black text-slate-800 font-mono">
+          <div className="text-lg font-black text-slate-800 font-mono tabular-nums">
             {totalMinutesUsed} <span className="text-xs font-normal">mins</span>
           </div>
           <p className="text-[9px] text-slate-400 mt-0.5">Aggregate user time</p>
@@ -269,7 +269,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
             <Zap className="w-4 h-4" />
             <span className="text-[10px] uppercase font-bold tracking-wider font-sans text-slate-400">Total Sessions</span>
           </div>
-          <div className="text-lg font-black text-slate-800 font-mono">
+          <div className="text-lg font-black text-slate-800 font-mono tabular-nums">
             {totalSessionsCount}
           </div>
           <p className="text-[9px] text-slate-400 mt-0.5">{runningSessions.length} active terminal</p>
@@ -281,7 +281,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
             <User className="w-4 h-4" />
             <span className="text-[10px] uppercase font-bold tracking-wider font-sans text-slate-400">Avg Cust. Time</span>
           </div>
-          <div className="text-lg font-black text-slate-800 font-mono">
+          <div className="text-lg font-black text-slate-800 font-mono tabular-nums">
             {averageSessionMinutes} <span className="text-xs font-normal">mins</span>
           </div>
           <p className="text-[9px] text-slate-400 mt-0.5">Per allocated session</p>
@@ -412,13 +412,13 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
                         <span className="text-slate-500 flex items-center">
                           <Clock className="w-3 h-3 mr-1 text-slate-400" /> Time Used:
                         </span>
-                        <span className={`font-semibold ${elapsed >= 60 ? 'text-rose-400 font-bold' : 'text-slate-100'}`}>{elapsed} minutes</span>
+                        <span className={`font-semibold tabular-nums ${elapsed >= 60 ? 'text-rose-400 font-bold' : 'text-slate-100'}`}>{elapsed} minutes</span>
                       </div>
                       <div className="flex justify-between items-center text-rose-300">
                         <span className="text-slate-500 flex items-center">
                           <Coins className="w-3 h-3 mr-1 text-slate-400" /> Amount:
                         </span>
-                        <span className={`font-bold ${elapsed >= 60 ? 'text-rose-400 text-xs' : ''}`}>K{liveCharge.toFixed(2)}</span>
+                        <span className={`font-bold tabular-nums ${elapsed >= 60 ? 'text-rose-400 text-xs' : ''}`}>K{liveCharge.toFixed(2)}</span>
                       </div>
                     </div>
                   ) : (
@@ -590,7 +590,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
               </div>
               <div className="flex justify-between items-center text-slate-800 border-t pt-2 font-bold text-sm">
                 <span>Total billing:</span>
-                <span className="text-rose-600 text-base">K {Number(billingConfirmation.amount).toFixed(2)}</span>
+                <span className="text-rose-600 text-base tabular-nums">K {Number(billingConfirmation.amount).toFixed(2)}</span>
               </div>
             </div>
 

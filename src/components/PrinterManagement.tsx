@@ -361,7 +361,7 @@ export default function PrinterManagement() {
                 </div>
 
                 {/* Meta */}
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs tabular-nums">
                   <div>
                     <span className="text-slate-400">Location</span>
                     <div className="font-semibold text-slate-700 mt-0.5">{printer.location || '—'}</div>

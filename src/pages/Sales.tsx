@@ -215,7 +215,7 @@ export default function Sales({ userRole }: SalesPageProps) {
     },
     {
       header: 'Billing Amount',
-      accessor: (sale: Sale) => <strong className="text-rose-600 font-mono">ZMW {Number(sale.total_amount).toFixed(2)}</strong>
+      accessor: (sale: Sale) => <strong className="text-rose-600 font-mono tabular-nums">ZMW {Number(sale.total_amount).toFixed(2)}</strong>
     },
     {
       header: 'Items Purchased',
@@ -311,7 +311,7 @@ export default function Sales({ userRole }: SalesPageProps) {
                         </div>
 
                         <div className="flex justify-between items-center pt-2 mt-2 border-t border-slate-100">
-                          <span className="text-rose-600 font-extrabold text-xs">ZMW {p.selling_price}</span>
+                          <span className="text-rose-600 font-extrabold text-xs tabular-nums">ZMW {p.selling_price}</span>
                           {!outOfStock && (
                             <div className="bg-rose-50 hover:bg-rose-100 p-1 rounded-lg text-rose-500 transition-all">
                               <Plus className="w-3.5 h-3.5 stroke-[3]" />
@@ -359,7 +359,7 @@ export default function Sales({ userRole }: SalesPageProps) {
                       <div key={item.product.id} className="py-2.5 flex items-start justify-between text-xs">
                         <div className="pr-2 truncate text-left">
                           <span className="font-semibold text-slate-700 block truncate">{item.product.name}</span>
-                          <span className="text-[10px] text-rose-500 font-mono font-bold">ZMW {item.product.selling_price} each</span>
+                          <span className="text-[10px] text-rose-500 font-mono font-bold tabular-nums">ZMW {item.product.selling_price} each</span>
                         </div>
                         
                         <div className="flex items-center space-x-2 shrink-0">
@@ -370,7 +370,7 @@ export default function Sales({ userRole }: SalesPageProps) {
                             >
                               <Minus className="w-3 h-3" />
                             </button>
-                            <span className="w-6 text-center text-xs font-bold text-slate-700 font-mono">{item.quantity}</span>
+                            <span className="w-6 text-center text-xs font-bold text-slate-700 font-mono tabular-nums">{item.quantity}</span>
                             <button 
                               onClick={() => updateCartQuantity(item.product.id, 1)}
                               className="p-1 text-slate-500 hover:bg-slate-200 rounded-sm cursor-pointer"
@@ -478,7 +478,7 @@ export default function Sales({ userRole }: SalesPageProps) {
                 </div>
 
                 {/* Pricing logs */}
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-1 font-mono">
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-1 font-mono tabular-nums">
                   <div className="flex justify-between text-slate-500">
                     <span>Subtotal ZMW:</span>
                     <span>{totalAmount.toFixed(2)}</span>

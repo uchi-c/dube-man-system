@@ -40,7 +40,7 @@ function KpiCard({ label, value, sub, icon: Icon, color, iconColor, delay = 0 }:
         <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
           {label}
         </div>
-        <div className="text-xl font-bold text-slate-800 mt-0.5 truncate">{value}</div>
+        <div className="text-xl font-bold text-slate-800 mt-0.5 truncate tabular-nums">{value}</div>
         {sub && (
           <div className="text-[10px] text-slate-400 mt-0.5 font-mono">{sub}</div>
         )}
@@ -55,7 +55,7 @@ function StatusBadge({ label, count, color }: { label: string; count: number; co
   return (
     <div className={`flex items-center justify-between px-4 py-3 rounded-xl border ${color}`}>
       <span className="text-xs font-semibold">{label}</span>
-      <span className="text-lg font-extrabold">{count}</span>
+      <span className="text-lg font-extrabold tabular-nums">{count}</span>
     </div>
   );
 }

@@ -183,7 +183,7 @@ export default function PrintReports() {
         ].map(kpi => (
           <div key={kpi.label} className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm">
             <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">{kpi.label}</div>
-            <div className="text-lg font-extrabold text-slate-800 mt-1">{kpi.value}</div>
+            <div className="text-lg font-extrabold text-slate-800 mt-1 tabular-nums">{kpi.value}</div>
           </div>
         ))}
       </div>
@@ -222,7 +222,7 @@ export default function PrintReports() {
           {/* Data table */}
           <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full tabular-nums">
                 <thead>
                   <tr className="bg-slate-50 text-slate-400 text-[10px] uppercase tracking-wider">
                     <th className="px-4 py-3 text-left font-semibold">

@@ -70,7 +70,7 @@ export default function DataTable<T>({
 
       {/* Main Table section */}
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse text-xs">
+        <table className="w-full text-left border-collapse text-xs tabular-nums">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-100 font-mono text-slate-400 uppercase tracking-wider text-[10px]">
               {columns.map((column, idx) => (
