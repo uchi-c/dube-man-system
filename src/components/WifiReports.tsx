@@ -92,7 +92,7 @@ export default function WifiReports({ sessions, usageLogs, packages }: WifiRepor
           </div>
           <div>
             <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Total Revenue</span>
-            <strong className="text-sm sm:text-base font-black">K {totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+            <strong className="text-sm sm:text-base font-black tabular-nums">K {totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
           </div>
         </div>
 
@@ -103,7 +103,7 @@ export default function WifiReports({ sessions, usageLogs, packages }: WifiRepor
           </div>
           <div>
             <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">WiFi Customers</span>
-            <strong className="text-sm sm:text-base font-black">{uniqueUsersCount} Unique</strong>
+            <strong className="text-sm sm:text-base font-black tabular-nums">{uniqueUsersCount} Unique</strong>
           </div>
         </div>
 
@@ -114,7 +114,7 @@ export default function WifiReports({ sessions, usageLogs, packages }: WifiRepor
           </div>
           <div>
             <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Avg Duration</span>
-            <strong className="text-sm sm:text-base font-black">{avgSessionDuration} Mins</strong>
+            <strong className="text-sm sm:text-base font-black tabular-nums">{avgSessionDuration} Mins</strong>
           </div>
         </div>
 
@@ -244,7 +244,7 @@ export default function WifiReports({ sessions, usageLogs, packages }: WifiRepor
 
         {/* Logs Table */}
         <div className="overflow-x-auto border border-slate-100 rounded-2xl">
-          <table className="w-full text-xs text-slate-600">
+          <table className="w-full text-xs text-slate-600 tabular-nums">
             <thead className="bg-slate-50 text-[10px] font-mono text-slate-400 border-b border-slate-100">
               <tr>
                 <th className="px-4 py-3 text-left font-black tracking-wider">Timestamp</th>

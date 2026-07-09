@@ -216,7 +216,7 @@ export default function PrintHistory() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-xs">
+            <table className="w-full text-xs tabular-nums">
               <thead>
                 <tr className="bg-slate-50 text-slate-500 text-[10px] uppercase tracking-wider">
                   <th className="px-4 py-3 text-left font-semibold">Date / Time</th>

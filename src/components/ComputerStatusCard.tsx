@@ -79,7 +79,7 @@ export default function ComputerStatusCard({ computer, activeSession }: Computer
       </div>
 
       {/* Heartbeat & Session details */}
-      <div className="space-y-2 bg-slate-950/50 border border-slate-800/60 rounded-xl p-3 text-[11px] font-mono">
+      <div className="space-y-2 bg-slate-950/50 border border-slate-800/60 rounded-xl p-3 text-[11px] font-mono tabular-nums">
         <div className="flex justify-between text-slate-400">
           <span className="flex items-center"><Activity className="w-3 h-3 mr-1 text-slate-500" /> Heartbeat:</span>
           <span className={agentStatus === 'ONLINE' ? 'text-emerald-400' : agentStatus === 'STANDBY' ? 'text-amber-400' : 'text-rose-400'}>

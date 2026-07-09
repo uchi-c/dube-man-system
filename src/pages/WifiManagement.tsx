@@ -358,7 +358,7 @@ export default function WifiManagement() {
         <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between text-left shadow-sm">
           <div>
             <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Active Sessions</span>
-            <strong className="text-xl font-extrabold text-slate-800 mt-1 block">{activeCount} Device(s)</strong>
+            <strong className="text-xl font-extrabold text-slate-800 mt-1 block tabular-nums">{activeCount} Device(s)</strong>
           </div>
           <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center border border-emerald-100">
             <Radio className="w-5 h-5" />
@@ -369,7 +369,7 @@ export default function WifiManagement() {
         <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between text-left shadow-sm">
           <div>
             <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Expired Leases</span>
-            <strong className="text-xl font-extrabold text-slate-800 mt-1 block">{expiredCount} Session(s)</strong>
+            <strong className="text-xl font-extrabold text-slate-800 mt-1 block tabular-nums">{expiredCount} Session(s)</strong>
           </div>
           <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center border border-amber-100">
             <Radio className="w-5 h-5 rotate-180" />
@@ -380,7 +380,7 @@ export default function WifiManagement() {
         <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between text-left shadow-sm">
           <div>
             <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Connected Vouchers</span>
-            <strong className="text-xl font-extrabold text-slate-800 mt-1 block">{customers.length} MAC Registry</strong>
+            <strong className="text-xl font-extrabold text-slate-800 mt-1 block tabular-nums">{customers.length} MAC Registry</strong>
           </div>
           <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-500 flex items-center justify-center border border-sky-100">
             <Cpu className="w-5 h-5" />
@@ -391,7 +391,7 @@ export default function WifiManagement() {
         <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between text-left shadow-sm">
           <div>
             <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">WiFi Income (Today)</span>
-            <strong className="text-xl font-extrabold text-slate-800 mt-1 block">K {todayRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
+            <strong className="text-xl font-extrabold text-slate-800 mt-1 block tabular-nums">K {todayRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
           </div>
           <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center border border-rose-100">
             <Radio className="w-5 h-5 animate-pulse" />

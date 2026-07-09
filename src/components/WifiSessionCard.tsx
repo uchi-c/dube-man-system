@@ -111,7 +111,7 @@ export default function WifiSessionCard({ session, onTerminate, onExpire }: Wifi
           <span className="text-[9px] font-mono uppercase text-slate-400 block tracking-wide">
             {session.status === 'ACTIVE' ? 'Time Remaining' : 'Package Allocated'}
           </span>
-          <span className={`text-xl font-extrabold font-mono tracking-tight block mt-0.5 ${
+          <span className={`text-xl font-extrabold font-mono tabular-nums tracking-tight block mt-0.5 ${
             session.status === 'ACTIVE'
               ? isCritical ? 'text-rose-600 animate-pulse' : 'text-slate-800'
               : 'text-slate-500'
@@ -122,7 +122,7 @@ export default function WifiSessionCard({ session, onTerminate, onExpire }: Wifi
 
         <div className="text-right">
           <span className="text-[9px] font-mono uppercase text-slate-400 block tracking-wide">Authorized Cost</span>
-          <span className="text-sm font-bold text-slate-700 block mt-0.5">
+          <span className="text-sm font-bold text-slate-700 block mt-0.5 tabular-nums">
             MWK {session.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </span>
         </div>

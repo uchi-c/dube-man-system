@@ -252,7 +252,7 @@ export default function Inventory({ userRole }: InventoryProps) {
 
                 {/* Pricing & Stock indicators */}
                 <div className="pt-3 border-t border-slate-100 mt-3">
-                  <div className="grid grid-cols-3 gap-2 text-center text-xs font-mono">
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs font-mono tabular-nums">
                     <div className="p-2 bg-slate-50 border border-slate-100 rounded-xl">
                       <span className="text-[9px] text-slate-400 block mb-0.5">Buy Price</span>
                       <strong className="text-slate-700 text-[10px]">ZMW {product.buying_price}</strong>
