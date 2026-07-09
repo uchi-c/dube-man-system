@@ -39,10 +39,10 @@ export default function DashboardCard({
       valueClr: 'text-amber-600',
     },
     blue: {
-      border: 'border-blue-100 hover:border-blue-200',
-      bg: 'bg-blue-50/10',
-      iconBox: 'bg-blue-100 text-blue-700',
-      valueClr: 'text-blue-600',
+      border: 'border-rose-100 hover:border-rose-200',
+      bg: 'bg-rose-50/10',
+      iconBox: 'bg-rose-100 text-rose-700',
+      valueClr: 'text-rose-600',
     },
     emerald: {
       border: 'border-emerald-100 hover:border-emerald-200',

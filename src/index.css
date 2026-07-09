@@ -13,9 +13,9 @@
   /* Brand */
   --uruu-primary:        #0f172a;   /* Deep Navy */
   --uruu-primary-light:  #1e293b;
-  --uruu-accent:         #2563eb;   /* Electric Blue */
-  --uruu-accent-light:   #3b82f6;
-  --uruu-accent-glow:    rgba(37, 99, 235, 0.18);
+  --uruu-accent:         #e11d48;   /* Electric Blue */
+  --uruu-accent-light:   #f43f5e;
+  --uruu-accent-glow:    rgba(225, 29, 72, 0.18);
 
   /* Semantic */
   --uruu-success:        #10b981;
@@ -43,7 +43,7 @@
   --uruu-shadow-md:      0 4px 16px -2px rgb(15 23 42 / 0.10), 0 2px 4px -1px rgb(15 23 42 / 0.06);
   --uruu-shadow-lg:      0 10px 40px -4px rgb(15 23 42 / 0.14), 0 4px 8px -2px rgb(15 23 42 / 0.08);
   --uruu-shadow-xl:      0 20px 60px -8px rgb(15 23 42 / 0.18), 0 8px 16px -4px rgb(15 23 42 / 0.10);
-  --uruu-shadow-accent:  0 8px 32px -4px rgba(37, 99, 235, 0.30);
+  --uruu-shadow-accent:  0 8px 32px -4px rgba(225, 29, 72, 0.30);
 
   /* Radius */
   --uruu-radius-sm:      8px;
@@ -191,11 +191,11 @@ p {
 .uruu-btn-primary {
   background: var(--uruu-accent);
   color: white;
-  box-shadow: 0 2px 12px rgba(37, 99, 235, 0.28);
+  box-shadow: 0 2px 12px rgba(225, 29, 72, 0.28);
 }
 
 .uruu-btn-primary:hover {
-  background: #1d4ed8;
+  background: #be123c;
   box-shadow: var(--uruu-shadow-accent);
   transform: translateY(-1px);
 }
@@ -248,7 +248,7 @@ p {
 .uruu-badge-success { background: var(--uruu-success-light); color: #065f46; }
 .uruu-badge-warning { background: var(--uruu-warning-light); color: #92400e; }
 .uruu-badge-error   { background: var(--uruu-error-light);   color: #991b1b; }
-.uruu-badge-info    { background: #dbeafe; color: #1e40af; }
+.uruu-badge-info    { background: #ffe4e6; color: #9f1239; }
 .uruu-badge-neutral { background: var(--uruu-surface-3); color: var(--uruu-text-secondary); }
 
 /* ---- Navigation ------------------------------------------- */
@@ -278,7 +278,7 @@ p {
 .uruu-nav-item.active {
   background: var(--uruu-accent);
   color: white;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.24);
+  box-shadow: 0 2px 8px rgba(225, 29, 72, 0.24);
 }
 
 .uruu-nav-item.active svg { color: white; }
@@ -309,8 +309,8 @@ p {
 }
 
 @keyframes uruu-pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.15); }
-  50%       { box-shadow: 0 0 0 6px rgba(37, 99, 235, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.15); }
+  50%       { box-shadow: 0 0 0 6px rgba(225, 29, 72, 0); }
 }
 
 @keyframes shimmer {

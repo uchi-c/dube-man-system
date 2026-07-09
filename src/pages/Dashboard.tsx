@@ -184,7 +184,7 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-3">
           {/* Quick actions */}
-          <QuickAction icon={Zap} label="Quick Sale" color="#2563eb" />
+          <QuickAction icon={Zap} label="Quick Sale" color="#e11d48" />
           <button
             onClick={load}
             className="p-2 rounded-xl cursor-pointer"
@@ -326,8 +326,8 @@ export default function Dashboard() {
           <AreaChart data={trendData} margin={{ top: 4, right: 8, left: -12, bottom: 0 }}>
             <defs>
               <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"  stopColor="#2563eb" stopOpacity={0.18} />
-                <stop offset="100%" stopColor="#2563eb" stopOpacity={0} />
+                <stop offset="0%"  stopColor="#e11d48" stopOpacity={0.18} />
+                <stop offset="100%" stopColor="#e11d48" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -344,11 +344,11 @@ export default function Dashboard() {
             <Area
               type="monotone"
               dataKey="amount"
-              stroke="#2563eb"
+              stroke="#e11d48"
               strokeWidth={2.5}
               fill="url(#areaGrad)"
               dot={false}
-              activeDot={{ r: 5, strokeWidth: 0, fill: '#2563eb' }}
+              activeDot={{ r: 5, strokeWidth: 0, fill: '#e11d48' }}
             />
           </AreaChart>
         </ResponsiveContainer>
@@ -418,7 +418,7 @@ export default function Dashboard() {
                 const statusColors: Record<string, { bg: string; text: string }> = {
                   Pending:   { bg: '#fffbeb', text: '#92400e' },
                   Designing: { bg: '#f5f3ff', text: '#5b21b6' },
-                  Printing:  { bg: '#dbeafe', text: '#1e40af' },
+                  Printing:  { bg: '#ffe4e6', text: '#9f1239' },
                   Completed: { bg: '#ecfdf5', text: '#065f46' },
                   Collected: { bg: '#f8fafc', text: '#475569' },
                 };

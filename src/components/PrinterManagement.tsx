@@ -72,7 +72,7 @@ function PrinterForm({ initial, onSave, onClose, saving }: PrinterFormProps) {
     onSave(initial ? { ...form, id: initial.id } : form);
   };
 
-  const inputCls = "w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 bg-slate-50";
+  const inputCls = "w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-400 bg-slate-50";
   const labelCls = "block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1";
 
   return (
@@ -86,8 +86,8 @@ function PrinterForm({ initial, onSave, onClose, saving }: PrinterFormProps) {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
           <div className="flex items-center space-x-3">
-            <div className="p-2.5 bg-blue-50 rounded-xl">
-              <PrinterIcon className="w-4 h-4 text-blue-500" />
+            <div className="p-2.5 bg-rose-50 rounded-xl">
+              <PrinterIcon className="w-4 h-4 text-rose-500" />
             </div>
             <h3 className="font-bold text-slate-800 text-sm">
               {initial ? 'Edit Printer' : 'Register Printer'}
@@ -193,7 +193,7 @@ function PrinterForm({ initial, onSave, onClose, saving }: PrinterFormProps) {
                   onClick={() => togglePaperSize(size)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${
                     form.paper_sizes.includes(size)
-                      ? 'bg-blue-500 text-white border-blue-500'
+                      ? 'bg-rose-500 text-white border-rose-500'
                       : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
                   }`}
                 >
@@ -215,7 +215,7 @@ function PrinterForm({ initial, onSave, onClose, saving }: PrinterFormProps) {
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition disabled:opacity-60 flex items-center justify-center space-x-2 cursor-pointer"
+              className="flex-1 py-2.5 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition disabled:opacity-60 flex items-center justify-center space-x-2 cursor-pointer"
             >
               {saving ? (
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -292,7 +292,7 @@ export default function PrinterManagement() {
           </button>
           <button
             onClick={() => { setEditTarget(null); setShowForm(true); }}
-            className="flex items-center space-x-1.5 bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-blue-700 transition shadow-sm cursor-pointer"
+            className="flex items-center space-x-1.5 bg-rose-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-rose-700 transition shadow-sm cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Printer</span>
@@ -313,7 +313,7 @@ export default function PrinterManagement() {
           <p className="text-xs mt-1">Add your first printer to start monitoring print jobs.</p>
           <button
             onClick={() => setShowForm(true)}
-            className="mt-5 flex items-center space-x-2 bg-blue-600 text-white text-xs font-bold px-5 py-2.5 rounded-xl hover:bg-blue-700 transition cursor-pointer"
+            className="mt-5 flex items-center space-x-2 bg-rose-600 text-white text-xs font-bold px-5 py-2.5 rounded-xl hover:bg-rose-700 transition cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Register First Printer</span>
@@ -336,8 +336,8 @@ export default function PrinterManagement() {
                 {/* Header row */}
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="p-2.5 bg-blue-50 rounded-xl">
-                      <PrinterIcon className="w-4 h-4 text-blue-500" />
+                    <div className="p-2.5 bg-rose-50 rounded-xl">
+                      <PrinterIcon className="w-4 h-4 text-rose-500" />
                     </div>
                     <div>
                       <div className="font-bold text-sm text-slate-800">{printer.printer_name}</div>

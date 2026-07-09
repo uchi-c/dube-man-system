@@ -137,7 +137,7 @@ export default function PrintDashboard() {
 
       {/* KPI grid — 4 columns */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <KpiCard delay={0} label="Pages Today"         value={fmtNum(stats.pages_today)}      sub={`BW: ${fmtNum(stats.bw_pages_today)} · Colour: ${fmtNum(stats.colour_pages_today)}`} icon={FileText}    color="bg-blue-50"    iconColor="text-blue-500" />
+        <KpiCard delay={0} label="Pages Today"         value={fmtNum(stats.pages_today)}      sub={`BW: ${fmtNum(stats.bw_pages_today)} · Colour: ${fmtNum(stats.colour_pages_today)}`} icon={FileText}    color="bg-rose-50"    iconColor="text-rose-500" />
         <KpiCard delay={1} label="Revenue Today"       value={fmtMoney(stats.revenue_today)}  sub={`Cost: ${fmtMoney(stats.cost_today)}`}                                                 icon={DollarSign}  color="bg-emerald-50" iconColor="text-emerald-500" />
         <KpiCard delay={2} label="Paper Used Today"    value={`${fmtNum(stats.estimated_paper_used)} pgs`}  sub="Estimated from completed jobs"                                           icon={Layers}      color="bg-amber-50"   iconColor="text-amber-500" />
         <KpiCard delay={3} label="Printer Status"      value={`${stats.total_printers - stats.offline_printers} / ${stats.total_printers} Online`} sub={stats.offline_printers > 0 ? `${stats.offline_printers} offline` : 'All printers running'} icon={PrinterIcon} color="bg-rose-50" iconColor="text-rose-500" />
@@ -156,7 +156,7 @@ export default function PrintDashboard() {
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-sm font-bold text-slate-800 flex items-center space-x-2">
-              <TrendingUp className="w-4 h-4 text-blue-500" />
+              <TrendingUp className="w-4 h-4 text-rose-500" />
               <span>7-Day Print Volume Trend</span>
             </h2>
             <p className="text-xs text-slate-400 mt-0.5">Pages printed per day (BW vs Colour)</p>
@@ -183,8 +183,8 @@ export default function PrintDashboard() {
             >
               <defs>
                 <linearGradient id="gradBW" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.15} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  <stop offset="5%"  stopColor="#f43f5e" stopOpacity={0.15} />
+                  <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="gradColour" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%"  stopColor="#f59e0b" stopOpacity={0.15} />
@@ -201,7 +201,7 @@ export default function PrintDashboard() {
               />
               <Area
                 type="monotone" dataKey="bw" name="B&W Pages"
-                stroke="#3b82f6" strokeWidth={2}
+                stroke="#f43f5e" strokeWidth={2}
                 fill="url(#gradBW)" dot={false}
               />
               <Area

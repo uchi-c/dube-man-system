@@ -211,7 +211,7 @@ export default function Sales({ userRole }: SalesPageProps) {
           sale.payment_method === 'Cash' 
             ? 'bg-amber-50 text-amber-700 border border-amber-100' 
             : sale.payment_method === 'Bank' 
-              ? 'bg-blue-50 text-blue-700 border border-blue-100' 
+              ? 'bg-rose-50 text-rose-700 border border-rose-100' 
               : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
         }`}>
           {sale.payment_method}

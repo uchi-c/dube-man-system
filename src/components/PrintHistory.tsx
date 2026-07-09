@@ -109,7 +109,7 @@ export default function PrintHistory() {
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated  = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  const inputCls = "px-3 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400";
+  const inputCls = "px-3 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-400";
 
   return (
     <div className="space-y-5" id="print-history">
@@ -117,7 +117,7 @@ export default function PrintHistory() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-sm font-bold text-slate-700 flex items-center space-x-2">
-            <History className="w-4 h-4 text-blue-500" />
+            <History className="w-4 h-4 text-rose-500" />
             <span>Print Job History</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
@@ -128,7 +128,7 @@ export default function PrintHistory() {
           <button
             onClick={() => setShowFilters(f => !f)}
             className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition cursor-pointer ${
-              showFilters ? 'border-blue-400 bg-blue-50 text-blue-600' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+              showFilters ? 'border-rose-400 bg-rose-50 text-rose-600' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
             }`}
           >
             <Filter className="w-3.5 h-3.5" />

@@ -58,7 +58,7 @@ export default function PrintManager() {
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                 active
-                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+                  ? 'bg-rose-600 text-white shadow-sm shadow-rose-500/20'
                   : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
               }`}
             >

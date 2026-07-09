@@ -52,7 +52,7 @@ export default function PrintSettings() {
     setSaving(false);
   };
 
-  const inputCls = "w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400";
+  const inputCls = "w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-400";
   const labelCls = "block text-xs font-bold text-slate-600 mb-1.5";
 
   const marginBW = form.bw_price_per_page - form.paper_cost_per_page;
@@ -71,7 +71,7 @@ export default function PrintSettings() {
     <div className="space-y-5 max-w-lg" id="print-settings">
       <div>
         <h2 className="text-sm font-bold text-slate-700 flex items-center space-x-2">
-          <Settings2 className="w-4 h-4 text-blue-500" />
+          <Settings2 className="w-4 h-4 text-rose-500" />
           <span>Print Pricing Settings</span>
         </h2>
         <p className="text-xs text-slate-400 mt-0.5">
@@ -149,7 +149,7 @@ export default function PrintSettings() {
         <button
           type="submit"
           disabled={saving}
-          className="w-full py-3 rounded-xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center space-x-2 cursor-pointer transition"
+          className="w-full py-3 rounded-xl bg-rose-600 text-white text-sm font-bold hover:bg-rose-700 disabled:opacity-60 flex items-center justify-center space-x-2 cursor-pointer transition"
         >
           {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           <span>{saving ? 'Saving…' : 'Save Settings'}</span>
@@ -157,7 +157,7 @@ export default function PrintSettings() {
       </form>
 
       {/* Note about printer-level overrides */}
-      <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-3 text-xs text-blue-700">
+      <div className="bg-rose-50 border border-rose-100 rounded-2xl px-4 py-3 text-xs text-rose-700">
         <strong>Note:</strong> These are organization-wide defaults. Individual printers can have their own
         BW / Colour cost-per-page values set in the Printers tab. When both are set, the pricing settings
         above take precedence for revenue calculations (they represent your sell price, while printer values

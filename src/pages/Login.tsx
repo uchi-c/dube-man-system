@@ -20,12 +20,12 @@ function AfricanBusinessIllustration() {
     >
       <defs>
         <linearGradient id="bg-grad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#1e3a8a" stopOpacity="0.15" />
-          <stop offset="100%" stopColor="#2563eb" stopOpacity="0.05" />
+          <stop offset="0%" stopColor="#881337" stopOpacity="0.15" />
+          <stop offset="100%" stopColor="#e11d48" stopOpacity="0.05" />
         </linearGradient>
         <linearGradient id="blue-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#3b82f6" />
-          <stop offset="100%" stopColor="#1d4ed8" />
+          <stop offset="0%" stopColor="#f43f5e" />
+          <stop offset="100%" stopColor="#be123c" />
         </linearGradient>
         <linearGradient id="gold-grad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#fbbf24" />
@@ -46,14 +46,14 @@ function AfricanBusinessIllustration() {
           width={28}
           height={28}
           rx={4}
-          fill="#2563eb"
+          fill="#e11d48"
           opacity={0.04 + (col + row) * 0.003}
           transform={`rotate(45 ${col * 96 + (row % 2 === 0 ? 0 : 48) + 14} ${row * 72 + 14})`}
         />
       )))}
 
       {/* Connection lines between business nodes */}
-      <g stroke="#3b82f6" strokeWidth="1.5" strokeDasharray="4 4" opacity="0.25">
+      <g stroke="#f43f5e" strokeWidth="1.5" strokeDasharray="4 4" opacity="0.25">
         <line x1="120" y1="200" x2="240" y2="150" />
         <line x1="240" y1="150" x2="360" y2="200" />
         <line x1="120" y1="200" x2="200" y2="310" />
@@ -70,11 +70,11 @@ function AfricanBusinessIllustration() {
 
       {/* Business node 1 — POS / Retail sales */}
       <circle cx="120" cy="200" r="28" fill="white" stroke="#e2e8f0" strokeWidth="1.5" />
-      <rect x="108" y="192" width="24" height="16" rx="3" fill="#dbeafe" />
-      <rect x="113" y="192" width="4" height="4" rx="1" fill="#2563eb" />
-      <rect x="119" y="192" width="4" height="4" rx="1" fill="#2563eb" />
-      <rect x="125" y="192" width="4" height="4" rx="1" fill="#2563eb" />
-      <rect x="112" y="200" width="16" height="8" rx="1" fill="#bfdbfe" />
+      <rect x="108" y="192" width="24" height="16" rx="3" fill="#ffe4e6" />
+      <rect x="113" y="192" width="4" height="4" rx="1" fill="#e11d48" />
+      <rect x="119" y="192" width="4" height="4" rx="1" fill="#e11d48" />
+      <rect x="125" y="192" width="4" height="4" rx="1" fill="#e11d48" />
+      <rect x="112" y="200" width="16" height="8" rx="1" fill="#fecdd3" />
 
       {/* Business node 2 — Printing */}
       <circle cx="360" cy="200" r="28" fill="white" stroke="#e2e8f0" strokeWidth="1.5" />
@@ -97,13 +97,13 @@ function AfricanBusinessIllustration() {
       {/* Bottom anchor — mobile device */}
       <circle cx="240" cy="370" r="28" fill="white" stroke="#e2e8f0" strokeWidth="1.5" />
       <rect x="230" y="360" width="20" height="28" rx="4" fill="#0f172a" />
-      <rect x="232" y="362" width="16" height="20" rx="2" fill="#2563eb" />
+      <rect x="232" y="362" width="16" height="20" rx="2" fill="#e11d48" />
       <rect x="237" y="384" width="6" height="2" rx="1" fill="#475569" />
 
       {/* Floating data packets (small animated dots) */}
       <circle cx="180" cy="175" r="4" fill="#fbbf24" opacity="0.8" />
       <circle cx="300" cy="175" r="3" fill="#10b981" opacity="0.8" />
-      <circle cx="155" cy="255" r="3.5" fill="#3b82f6" opacity="0.7" />
+      <circle cx="155" cy="255" r="3.5" fill="#f43f5e" opacity="0.7" />
       <circle cx="320" cy="255" r="3" fill="#fbbf24" opacity="0.7" />
       <circle cx="240" cy="340" r="3.5" fill="#10b981" opacity="0.8" />
 
@@ -119,8 +119,8 @@ function AfricanBusinessIllustration() {
       {/* Stat bubble — "Online" */}
       <g transform="translate(338, 270)">
         <rect width="90" height="32" rx="10" fill="white" filter="drop-shadow(0 2px 8px rgba(0,0,0,0.10))" />
-        <circle cx="16" cy="16" r="10" fill="#dbeafe" />
-        <circle cx="16" cy="16" r="4" fill="#2563eb" />
+        <circle cx="16" cy="16" r="10" fill="#ffe4e6" />
+        <circle cx="16" cy="16" r="4" fill="#e11d48" />
         <text x="56" y="13" textAnchor="middle" fontSize="8" fill="#94a3b8" fontFamily="Inter,sans-serif">Stations</text>
         <text x="56" y="24" textAnchor="middle" fontSize="9" fill="#0f172a" fontWeight="700" fontFamily="Manrope,Inter,sans-serif">All Online</text>
       </g>
@@ -136,7 +136,7 @@ const DEMO_ACCOUNTS = [
     email: 'admin@dubeman.com',
     password: 'admin123',
     label: 'Owner — Full Access',
-    color: '#2563eb',
+    color: '#e11d48',
   },
   {
     role: 'STAFF',
@@ -202,7 +202,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
         className="hidden lg:flex flex-col justify-between w-1/2 relative overflow-hidden"
-        style={{ background: 'linear-gradient(145deg, #0f172a 0%, #1e3a8a 60%, #1e293b 100%)' }}
+        style={{ background: 'linear-gradient(145deg, #0f172a 0%, #881337 60%, #1e293b 100%)' }}
       >
         {/* Geometric background texture */}
         <div className="absolute inset-0 opacity-5" style={{
@@ -215,7 +215,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             {/* Logo mark */}
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}
+              style={{ background: 'linear-gradient(135deg, #e11d48, #7c3aed)' }}
             >
               <span style={{ color: 'white', fontFamily: 'Manrope', fontWeight: 800, fontSize: '14px' }}>DM</span>
             </div>
@@ -244,7 +244,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 lineHeight: 1.2,
               }}>
                 Run Your Cyber Café<br />
-                <span style={{ background: 'linear-gradient(90deg, #60a5fa, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                <span style={{ background: 'linear-gradient(90deg, #fb7185, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                   & Business Centre
                 </span>
               </h2>
@@ -266,7 +266,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
         {/* Decorative glow orbs */}
         <div className="absolute top-1/4 right-0 w-72 h-72 rounded-full blur-3xl pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(37,99,235,0.20) 0%, transparent 70%)' }} />
+          style={{ background: 'radial-gradient(circle, rgba(225,29,72,0.20) 0%, transparent 70%)' }} />
         <div className="absolute bottom-1/4 left-0 w-48 h-48 rounded-full blur-3xl pointer-events-none"
           style={{ background: 'radial-gradient(circle, rgba(124,58,237,0.18) 0%, transparent 70%)' }} />
       </motion.div>
@@ -280,7 +280,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
         <div className="lg:hidden flex items-center space-x-3 mb-8">
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #2563eb, #7c3aed)' }}
+            style={{ background: 'linear-gradient(135deg, #e11d48, #7c3aed)' }}
           >
             <span style={{ color: 'white', fontFamily: 'Manrope', fontWeight: 800, fontSize: '14px' }}>DM</span>
           </div>
@@ -349,8 +349,8 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                       transition: 'border-color 0.15s, box-shadow 0.15s',
                     }}
                     onFocus={e => {
-                      e.target.style.borderColor = '#2563eb';
-                      e.target.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.12)';
+                      e.target.style.borderColor = '#e11d48';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(225,29,72,0.12)';
                     }}
                     onBlur={e => {
                       e.target.style.borderColor = '#e2e8f0';
@@ -368,7 +368,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                   </label>
                   <button
                     type="button"
-                    style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
+                    style={{ fontSize: '0.75rem', color: '#e11d48', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
                   >
                     Forgot password?
                   </button>
@@ -398,8 +398,8 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                       fontFamily: 'monospace',
                     }}
                     onFocus={e => {
-                      e.target.style.borderColor = '#2563eb';
-                      e.target.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.12)';
+                      e.target.style.borderColor = '#e11d48';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(225,29,72,0.12)';
                     }}
                     onBlur={e => {
                       e.target.style.borderColor = '#e2e8f0';
@@ -429,14 +429,14 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 className="w-full flex items-center justify-center gap-2"
                 style={{
                   padding: '0.75rem',
-                  background: loading ? '#93c5fd' : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                  background: loading ? '#fda4af' : 'linear-gradient(135deg, #e11d48 0%, #be123c 100%)',
                   color: 'white',
                   border: 'none',
                   borderRadius: '10px',
                   fontSize: '0.875rem',
                   fontWeight: 700,
                   cursor: loading ? 'not-allowed' : 'pointer',
-                  boxShadow: loading ? 'none' : '0 4px 16px rgba(37,99,235,0.30)',
+                  boxShadow: loading ? 'none' : '0 4px 16px rgba(225,29,72,0.30)',
                   transition: 'all 0.15s',
                 }}
                 onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; }}
