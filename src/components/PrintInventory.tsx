@@ -72,7 +72,7 @@ function RestockModal({ item, onConfirm, onClose, saving }: RestockModalProps) {
           <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Reams to add</label>
           <input
             type="number" min="0.5" step="0.5"
-            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400 bg-slate-50"
+            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-400 bg-slate-50"
             value={reams}
             onChange={e => setReams(Number(e.target.value))}
           />
@@ -131,7 +131,7 @@ function PaperForm({ initial, onSave, onClose, saving }: PaperFormProps) {
         }
   );
 
-  const inputCls = "w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400";
+  const inputCls = "w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-400";
   const labelCls = "block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1";
 
   return (
@@ -225,7 +225,7 @@ function PaperForm({ initial, onSave, onClose, saving }: PaperFormProps) {
               Cancel
             </button>
             <button type="submit" disabled={saving}
-              className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 disabled:opacity-60 flex items-center justify-center space-x-2 cursor-pointer">
+              className="flex-1 py-2.5 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 disabled:opacity-60 flex items-center justify-center space-x-2 cursor-pointer">
               {saving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
               <span>{saving ? 'Saving…' : 'Save'}</span>
             </button>
@@ -280,7 +280,7 @@ export default function PrintInventory() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-sm font-bold text-slate-700 flex items-center space-x-2">
-            <Package className="w-4 h-4 text-blue-500" />
+            <Package className="w-4 h-4 text-rose-500" />
             <span>Paper Inventory</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
@@ -293,7 +293,7 @@ export default function PrintInventory() {
           </button>
           <button
             onClick={() => { setEditItem(null); setShowForm(true); }}
-            className="flex items-center space-x-1.5 bg-blue-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-blue-700 shadow-sm cursor-pointer"
+            className="flex items-center space-x-1.5 bg-rose-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-rose-700 shadow-sm cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add Stock</span>
@@ -336,7 +336,7 @@ export default function PrintInventory() {
           <p className="text-xs mt-1">Add stock for each paper size you use.</p>
           <button
             onClick={() => setShowForm(true)}
-            className="mt-5 flex items-center space-x-2 bg-blue-600 text-white text-xs font-bold px-5 py-2.5 rounded-xl hover:bg-blue-700 cursor-pointer"
+            className="mt-5 flex items-center space-x-2 bg-rose-600 text-white text-xs font-bold px-5 py-2.5 rounded-xl hover:bg-rose-700 cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add First Stock</span>
@@ -361,8 +361,8 @@ export default function PrintInventory() {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className={`p-2.5 rounded-xl ${isLow ? 'bg-rose-50' : 'bg-blue-50'}`}>
-                      <Layers className={`w-4 h-4 ${isLow ? 'text-rose-500' : 'text-blue-500'}`} />
+                    <div className={`p-2.5 rounded-xl ${isLow ? 'bg-rose-50' : 'bg-rose-50'}`}>
+                      <Layers className={`w-4 h-4 ${isLow ? 'text-rose-500' : 'text-rose-500'}`} />
                     </div>
                     <div>
                       <div className="font-bold text-sm text-slate-800">{item.paper_size}</div>

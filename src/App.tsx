@@ -126,10 +126,10 @@ function SidebarSection({ group, tabs, activeTab, onSelect }: SidebarSectionProp
               fontWeight: active ? 600 : 500,
               color: active ? 'white' : '#475569',
               background: active
-                ? 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)'
+                ? 'linear-gradient(135deg, #e11d48 0%, #be123c 100%)'
                 : 'transparent',
               border: 'none',
-              boxShadow: active ? '0 2px 8px rgba(37,99,235,0.22)' : 'none',
+              boxShadow: active ? '0 2px 8px rgba(225,29,72,0.22)' : 'none',
               transition: 'all 0.15s cubic-bezier(0.4,0,0.2,1)',
             }}
             onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = '#f1f5f9'; }}
@@ -191,7 +191,7 @@ function Sidebar({ user, activeTab, onSelect, onLogout, mobile, onClose }: Sideb
         <div
           style={{
             width: 34, height: 34, borderRadius: 10,
-            background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+            background: 'linear-gradient(135deg, #e11d48, #7c3aed)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
           }}
@@ -232,12 +232,12 @@ function Sidebar({ user, activeTab, onSelect, onLogout, mobile, onClose }: Sideb
           <div
             style={{
               width: 32, height: 32, borderRadius: 10,
-              background: 'linear-gradient(135deg, #dbeafe, #ede9fe)',
+              background: 'linear-gradient(135deg, #ffe4e6, #ede9fe)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0,
             }}
           >
-            <span style={{ fontSize: '12px', fontWeight: 800, color: '#2563eb' }}>
+            <span style={{ fontSize: '12px', fontWeight: 800, color: '#e11d48' }}>
               {user.name.charAt(0).toUpperCase()}
             </span>
           </div>
@@ -335,12 +335,12 @@ function Topbar({ user, activeTab, onMenuToggle }: TopbarProps) {
           <div
             style={{
               width: 24, height: 24, borderRadius: 6,
-              background: 'linear-gradient(135deg, #dbeafe, #ede9fe)',
+              background: 'linear-gradient(135deg, #ffe4e6, #ede9fe)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0,
             }}
           >
-            <span style={{ fontSize: '10px', fontWeight: 800, color: '#2563eb' }}>
+            <span style={{ fontSize: '10px', fontWeight: 800, color: '#e11d48' }}>
               {user.name.charAt(0).toUpperCase()}
             </span>
           </div>
@@ -409,7 +409,7 @@ function LoadingScreen() {
       <div
         style={{
           width: 48, height: 48, borderRadius: 14,
-          background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+          background: 'linear-gradient(135deg, #e11d48, #7c3aed)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           marginBottom: 16,
         }}
@@ -421,7 +421,7 @@ function LoadingScreen() {
           <div
             key={i}
             style={{
-              width: 7, height: 7, borderRadius: '50%', background: '#2563eb',
+              width: 7, height: 7, borderRadius: '50%', background: '#e11d48',
               animation: `uruu-fade-in 0.8s ${i * 0.2}s ease-in-out infinite alternate`,
               opacity: 0.5,
             }}

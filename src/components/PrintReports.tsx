@@ -39,7 +39,7 @@ function SummaryRow({ row, rank }: { row: PrintReportRow; rank: number }) {
     <tr className="hover:bg-slate-50/50 transition text-xs">
       <td className="px-4 py-3">
         <div className="flex items-center space-x-3">
-          <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-600 text-[10px] font-extrabold flex items-center justify-center flex-shrink-0">
+          <div className="w-6 h-6 rounded-lg bg-rose-100 text-rose-600 text-[10px] font-extrabold flex items-center justify-center flex-shrink-0">
             #{rank}
           </div>
           <span className="font-semibold text-slate-700 truncate">{row.label || '—'}</span>
@@ -120,7 +120,7 @@ export default function PrintReports() {
     Revenue: Math.round(r.revenue * 100) / 100,
   }));
 
-  const inputCls = "px-3 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/30";
+  const inputCls = "px-3 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-rose-500/30";
 
   return (
     <div className="space-y-5" id="print-reports">
@@ -128,7 +128,7 @@ export default function PrintReports() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-sm font-bold text-slate-700 flex items-center space-x-2">
-            <BarChart2 className="w-4 h-4 text-blue-500" />
+            <BarChart2 className="w-4 h-4 text-rose-500" />
             <span>Print Reports</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
@@ -158,7 +158,7 @@ export default function PrintReports() {
               onClick={() => setGroup(g.id)}
               className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${
                 group === g.id
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                  ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
                   : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
               }`}
             >
@@ -209,7 +209,7 @@ export default function PrintReports() {
                 <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="B&W"    stackId="a" fill="#3b82f6" radius={[0,0,4,4]} />
+                <Bar dataKey="B&W"    stackId="a" fill="#f43f5e" radius={[0,0,4,4]} />
                 <Bar dataKey="Colour" stackId="a" fill="#f59e0b" radius={[4,4,0,0]} />
               </BarChart>
             </ResponsiveContainer>

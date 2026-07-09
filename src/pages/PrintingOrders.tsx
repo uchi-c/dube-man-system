@@ -244,7 +244,7 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-tight uppercase ${
                       order.status === 'Pending' ? 'bg-amber-100 text-amber-800' :
                       order.status === 'Designing' ? 'bg-purple-100 text-purple-800 animate-pulse' :
-                      order.status === 'Printing' ? 'bg-blue-100 text-blue-800' :
+                      order.status === 'Printing' ? 'bg-rose-100 text-rose-800' :
                       order.status === 'Completed' ? 'bg-emerald-100/80 text-emerald-800 font-extrabold border border-emerald-200' :
                       'bg-slate-100 text-slate-500'
                     }`}>

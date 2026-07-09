@@ -239,7 +239,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
 
         {/* Metric 2 */}
         <div className="bg-white border border-slate-200 rounded-3xl p-4 text-left shadow-2xs">
-          <div className="flex items-center space-x-2 text-blue-500 mb-1">
+          <div className="flex items-center space-x-2 text-rose-500 mb-1">
             <Clock className="w-4 h-4" />
             <span className="text-[10px] uppercase font-bold tracking-wider font-sans text-slate-400">Minutes Used</span>
           </div>
