@@ -2,6 +2,8 @@
 
 React + Vite business console for Dube Man General Dealers, backed by Supabase Auth, PostgreSQL, RLS, and Supabase Realtime-ready tables.
 
+**Live:** https://dube-man-system-two.vercel.app
+
 ## Modules
 
 - Authentication and role-gated navigation
