@@ -11,6 +11,12 @@ Run each file's contents, in this order (paste and **Run**):
 2. `database/print_schema.sql` — Print Manager tables (printers, jobs, paper, pricing)
 3. `database/seed.sql` — demo data so every module shows real records
 
+> **Re-running after a failed/partial attempt?** If you hit
+> `relation "..." already exists`, run `database/reset.sql` **first** — it
+> drops only this app's tables/functions/types (never Supabase's `auth`
+> schema or your login users), giving a clean slate. Then run the three
+> files above in order. `reset.sql` is safe to run repeatedly.
+
 ## 2. Create your login user (Supabase → Authentication → Users)
 
 The schema uses Supabase Auth — the old demo buttons no longer apply.
