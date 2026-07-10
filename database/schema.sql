@@ -12,6 +12,16 @@ begin
     end if;
 end $$;
 
+create table public.users (
+    id uuid primary key references auth.users(id) on delete cascade,
+    name text not null,
+    email text not null unique,
+    role public.user_role default 'STAFF'::public.user_role not null,
+    created_at timestamptz default timezone('utc'::text, now()) not null
+);
+
+-- Role helper functions. Defined AFTER public.users because their SQL bodies
+-- reference that table, and Postgres validates function bodies at creation.
 create or replace function public.current_user_role()
 returns public.user_role
 language sql
@@ -31,14 +41,6 @@ set search_path = public
 as $$
     select coalesce(public.current_user_role() = any(allowed), false)
 $$;
-
-create table public.users (
-    id uuid primary key references auth.users(id) on delete cascade,
-    name text not null,
-    email text not null unique,
-    role public.user_role default 'STAFF'::public.user_role not null,
-    created_at timestamptz default timezone('utc'::text, now()) not null
-);
 
 alter table public.users enable row level security;
 
