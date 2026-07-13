@@ -3,7 +3,7 @@ import { Computer, CafeSession } from '../types';
 import { 
   fetchComputers, fetchRunningCafeSessions, fetchCompletedCafeSessions,
   startWorkstationSession, endWorkstationSession, updateComputerLockStatus,
-  supabase, isSupabaseConfigured
+  fetchPrintCountsByComputer, supabase, isSupabaseConfigured
 } from '../services/supabase';
 import {
   Monitor, Play, Square, Wrench, ShieldAlert,
@@ -34,17 +34,22 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
   // Tick helper to redraw active stopwatch indicators
   const [, setTick] = useState(0);
 
+  const syncCafe = async () => {
+    const [compData, sessData, pastSessData, printCounts] = await Promise.all([
+      fetchComputers(),
+      fetchRunningCafeSessions(),
+      fetchCompletedCafeSessions(),
+      fetchPrintCountsByComputer(),
+    ]);
+    setComputers(compData.map(c => ({ ...c, print_count: printCounts[c.id] ?? 0 })));
+    setRunningSessions(sessData);
+    setCompletedSessions(pastSessData);
+  };
+
   const pullCafeFromDb = async () => {
     setLoading(true);
     try {
-      const [compData, sessData, pastSessData] = await Promise.all([
-        fetchComputers(),
-        fetchRunningCafeSessions(),
-        fetchCompletedCafeSessions()
-      ]);
-      setComputers(compData);
-      setRunningSessions(sessData);
-      setCompletedSessions(pastSessData);
+      await syncCafe();
     } catch (err) {
       console.error('Error syncing Internet Cafe data:', err);
     } finally {
@@ -54,14 +59,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
 
   const pullCafeFromDbSilently = async () => {
     try {
-      const [compData, sessData, pastSessData] = await Promise.all([
-        fetchComputers(),
-        fetchRunningCafeSessions(),
-        fetchCompletedCafeSessions()
-      ]);
-      setComputers(compData);
-      setRunningSessions(sessData);
-      setCompletedSessions(pastSessData);
+      await syncCafe();
     } catch (err) {
       console.error('Error silently syncing Internet Cafe data:', err);
     }

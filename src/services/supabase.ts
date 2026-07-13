@@ -706,7 +706,12 @@ export async function fetchComputers(): Promise<Computer[]> {
           status: c.status as ComputerStatus,
           hourly_rate: Number(c.hourly_rate || 60),
           rate_per_minute: Number(c.rate_per_minute !== undefined ? c.rate_per_minute : 1.00),
-          last_seen: c.last_seen
+          last_seen: c.last_seen,
+          cpu_usage: c.cpu_usage != null ? Number(c.cpu_usage) : null,
+          ram_usage: c.ram_usage != null ? Number(c.ram_usage) : null,
+          disk_usage: c.disk_usage != null ? Number(c.disk_usage) : null,
+          hostname: c.hostname ?? null,
+          ip_address: c.ip_address ?? null
         }));
       }
     } catch (err) {
@@ -714,6 +719,28 @@ export async function fetchComputers(): Promise<Computer[]> {
     }
   }
   return localDb.getComputers();
+}
+
+/**
+ * Count print jobs per workstation (computer_id -> job count).
+ * Powers the "prints tracked" figure on each café station card.
+ */
+export async function fetchPrintCountsByComputer(): Promise<Record<string, number>> {
+  if (!isSupabaseConfigured) return {};
+  try {
+    const { data, error } = await supabase
+      .from('print_jobs')
+      .select('computer_id');
+    if (error) throw error;
+    const counts: Record<string, number> = {};
+    (data ?? []).forEach((row: any) => {
+      if (row.computer_id) counts[row.computer_id] = (counts[row.computer_id] || 0) + 1;
+    });
+    return counts;
+  } catch (err) {
+    handleDbError(err, 'Failed counting print jobs per workstation');
+    return {};
+  }
 }
 
 export async function updateComputerLockStatus(computerId: string, inMaintenance: boolean): Promise<boolean> {

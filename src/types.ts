@@ -88,6 +88,14 @@ export interface Computer {
   hourly_rate: number;
   rate_per_minute: number;
   last_seen: string;
+  // Live usage metrics reported by the PC agent heartbeat (optional)
+  cpu_usage?: number | null;
+  ram_usage?: number | null;
+  disk_usage?: number | null;
+  hostname?: string | null;
+  ip_address?: string | null;
+  // Derived: total print jobs originating from this workstation
+  print_count?: number;
 }
 
 export type CafeSessionStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
@@ -103,6 +111,7 @@ export interface CafeSession {
   rate_per_minute: number;
   amount?: number;
   status: CafeSessionStatus;
+  seconds_remaining?: number | null;
 }
 
 export interface ActivityLog {

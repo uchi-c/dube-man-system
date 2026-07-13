@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from supabase import create_client
 from config import (
     SUPABASE_URL,
@@ -106,7 +108,7 @@ def update_heartbeat(
                 "disk_usage": metrics["disk"],
                 "hostname": metrics["hostname"],
                 "ip_address": metrics["ip_address"],
-                "last_seen": "now()"
+                "last_seen": datetime.now(timezone.utc).isoformat()
             }
         )
         .eq("computer_code", computer_code)

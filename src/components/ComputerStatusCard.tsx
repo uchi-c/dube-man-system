@@ -1,6 +1,6 @@
 import React from 'react';
 import { Computer, CafeSession } from '../types';
-import { Monitor, Activity, Clock, User, ShieldAlert } from 'lucide-react';
+import { Monitor, Activity, Clock, User, ShieldAlert, Printer } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatCurrency } from '../utils/format';
 
@@ -8,6 +8,21 @@ interface ComputerStatusCardProps {
   key?: React.Key;
   computer: Computer;
   activeSession?: CafeSession;
+}
+
+// Thin usage meter for CPU / RAM / Disk (value is a 0-100 percentage).
+function UsageBar({ label, value }: { label: string; value: number }) {
+  const pct = Math.max(0, Math.min(100, value));
+  const color = pct >= 90 ? 'bg-rose-500' : pct >= 70 ? 'bg-amber-400' : 'bg-emerald-500';
+  return (
+    <div className="flex items-center gap-2">
+      <span className="w-8 text-[9px] uppercase text-slate-500">{label}</span>
+      <div className="flex-1 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="w-9 text-right text-[10px] text-slate-300 tabular-nums">{pct.toFixed(0)}%</span>
+    </div>
+  );
 }
 
 export default function ComputerStatusCard({ computer, activeSession }: ComputerStatusCardProps) {
@@ -92,6 +107,27 @@ export default function ComputerStatusCard({ computer, activeSession }: Computer
           <span className="flex items-center"><Clock className="w-3 h-3 mr-1 text-slate-500" /> Rate:</span>
           <span className="text-white">{formatCurrency(computer.rate_per_minute || 1.0)} / min</span>
         </div>
+
+        <div className="flex justify-between text-slate-400">
+          <span className="flex items-center"><Printer className="w-3 h-3 mr-1 text-slate-500" /> Prints:</span>
+          <span className="text-white">{computer.print_count ?? 0}</span>
+        </div>
+
+        {/* Live usage metrics (reported by the PC agent) */}
+        {(computer.cpu_usage != null || computer.ram_usage != null || computer.disk_usage != null) && (
+          <div className="border-t border-slate-800/80 pt-2 space-y-1.5">
+            <span className="text-[9px] text-slate-500 uppercase tracking-wide">Live Usage</span>
+            {computer.cpu_usage != null && <UsageBar label="CPU" value={computer.cpu_usage} />}
+            {computer.ram_usage != null && <UsageBar label="RAM" value={computer.ram_usage} />}
+            {computer.disk_usage != null && <UsageBar label="Disk" value={computer.disk_usage} />}
+            {(computer.hostname || computer.ip_address) && (
+              <div className="flex justify-between text-[9px] text-slate-500 pt-0.5 font-mono">
+                <span className="truncate">{computer.hostname || '—'}</span>
+                <span>{computer.ip_address || ''}</span>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="border-t border-slate-800/80 pt-2 flex flex-col space-y-1">
           <span className="text-[9px] text-slate-500 uppercase tracking-wide">Session Status</span>

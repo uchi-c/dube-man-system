@@ -109,13 +109,13 @@ insert into public.paper_inventory (id, paper_size, description, reams_purchased
 on conflict do nothing;
 
 -- ---- Print jobs (history + reports + 7-day trend; revenue auto-calculated) --
-insert into public.print_jobs (id, printer_id, customer_id, document_name, page_count, color_mode, paper_size, status, print_time) values
-  ('99990001-0000-4000-8000-000000000001', 'eeee0001-0000-4000-8000-000000000001', 'aaaa0001-0000-4000-8000-000000000004', 'End of Term Reports Batch A', 240, 'BW',     'A4', 'Completed', now() - interval '6 days'),
-  ('99990001-0000-4000-8000-000000000002', 'eeee0001-0000-4000-8000-000000000002', 'aaaa0001-0000-4000-8000-000000000001', 'Wedding Invitations Proof',   60,  'Colour', 'A4', 'Completed', now() - interval '5 days'),
-  ('99990001-0000-4000-8000-000000000003', 'eeee0001-0000-4000-8000-000000000001', null,                                    'Walk-in CV Prints',           12,  'BW',     'A4', 'Completed', now() - interval '4 days'),
-  ('99990001-0000-4000-8000-000000000004', 'eeee0001-0000-4000-8000-000000000002', 'aaaa0001-0000-4000-8000-000000000003', 'A3 Business Posters',         20,  'Colour', 'A3', 'Completed', now() - interval '3 days'),
-  ('99990001-0000-4000-8000-000000000005', 'eeee0001-0000-4000-8000-000000000001', 'aaaa0001-0000-4000-8000-000000000004', 'End of Term Reports Batch B', 260, 'BW',     'A4', 'Completed', now() - interval '2 days'),
-  ('99990001-0000-4000-8000-000000000006', 'eeee0001-0000-4000-8000-000000000002', null,                                    'Flyers Full Colour Run',      80,  'Colour', 'A4', 'Completed', now() - interval '1 days'),
-  ('99990001-0000-4000-8000-000000000007', 'eeee0001-0000-4000-8000-000000000001', 'aaaa0001-0000-4000-8000-000000000002', 'Contract Documents',          35,  'BW',     'A4', 'Completed', now() - interval '6 hours'),
-  ('99990001-0000-4000-8000-000000000008', 'eeee0001-0000-4000-8000-000000000002', 'aaaa0001-0000-4000-8000-000000000001', 'Photo Reprints Glossy',       18,  'Colour', 'A4', 'Completed', now() - interval '2 hours')
+insert into public.print_jobs (id, printer_id, computer_id, customer_id, document_name, page_count, color_mode, paper_size, status, print_time) values
+  ('99990001-0000-4000-8000-000000000001', 'eeee0001-0000-4000-8000-000000000001', 'bbbb0001-0000-4000-8000-000000000001', 'aaaa0001-0000-4000-8000-000000000004', 'End of Term Reports Batch A', 240, 'BW',     'A4', 'Completed', now() - interval '6 days'),
+  ('99990001-0000-4000-8000-000000000002', 'eeee0001-0000-4000-8000-000000000002', null,                                    'aaaa0001-0000-4000-8000-000000000001', 'Wedding Invitations Proof',   60,  'Colour', 'A4', 'Completed', now() - interval '5 days'),
+  ('99990001-0000-4000-8000-000000000003', 'eeee0001-0000-4000-8000-000000000001', 'bbbb0001-0000-4000-8000-000000000001', null,                                    'Walk-in CV Prints',           12,  'BW',     'A4', 'Completed', now() - interval '4 days'),
+  ('99990001-0000-4000-8000-000000000004', 'eeee0001-0000-4000-8000-000000000002', 'bbbb0001-0000-4000-8000-000000000004', 'aaaa0001-0000-4000-8000-000000000003', 'A3 Business Posters',         20,  'Colour', 'A3', 'Completed', now() - interval '3 days'),
+  ('99990001-0000-4000-8000-000000000005', 'eeee0001-0000-4000-8000-000000000001', 'bbbb0001-0000-4000-8000-000000000001', 'aaaa0001-0000-4000-8000-000000000004', 'End of Term Reports Batch B', 260, 'BW',     'A4', 'Completed', now() - interval '2 days'),
+  ('99990001-0000-4000-8000-000000000006', 'eeee0001-0000-4000-8000-000000000002', null,                                    null,                                    'Flyers Full Colour Run',      80,  'Colour', 'A4', 'Completed', now() - interval '1 days'),
+  ('99990001-0000-4000-8000-000000000007', 'eeee0001-0000-4000-8000-000000000001', 'bbbb0001-0000-4000-8000-000000000004', 'aaaa0001-0000-4000-8000-000000000002', 'Contract Documents',          35,  'BW',     'A4', 'Completed', now() - interval '6 hours'),
+  ('99990001-0000-4000-8000-000000000008', 'eeee0001-0000-4000-8000-000000000002', null,                                    'aaaa0001-0000-4000-8000-000000000001', 'Photo Reprints Glossy',       18,  'Colour', 'A4', 'Completed', now() - interval '2 hours')
 on conflict do nothing;
