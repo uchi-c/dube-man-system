@@ -10,6 +10,9 @@ Run each file's contents, in this order (paste and **Run**):
 1. `database/schema.sql` — core tables (users, products, sales, café, WiFi…)
 2. `database/print_schema.sql` — Print Manager tables (printers, jobs, paper, pricing)
 3. `database/seed.sql` — demo data so every module shows real records
+4. `database/agent_schema.sql` — PC-agent support: live usage metrics, the
+   session countdown, the remote-command queue, and agent access policies
+   (also seeds sample CPU/RAM/disk so the café cards show usage immediately)
 
 > **Re-running after a failed/partial attempt?** If you hit
 > `relation "..." already exists`, run `database/reset.sql` **first** — it
@@ -61,3 +64,29 @@ after adding them (Vercel → Deployments → ⋯ → Redeploy, or push any comm
 - Inventory, Print Manager, Café, and WiFi should show the seeded records.
 - Create a POS sale or start a café session — it should persist in Supabase
   (visible under **Table Editor**), confirming live writes and RLS are working.
+
+## 5. (Optional) PC Agent on café workstations
+
+The agent (`pc-agent/`) is a **Windows** Python service that reports live
+usage (CPU/RAM/disk), tracks print jobs from the Windows spooler, runs the
+per-second session countdown, and executes remote LOCK/RESTART commands.
+
+On each café PC (Windows, Python 3.11+):
+
+1. Copy the `pc-agent/` folder to the machine.
+2. `pip install -r requirements.txt`
+3. Copy `.env.example` to `.env` and set:
+   - `SUPABASE_URL` — same project URL as the web app
+   - `SUPABASE_ANON_KEY` — the same anon/publishable key
+   - `COMPUTER_CODE` — must match a station in the app (e.g. `PC-01`)
+4. Run it: `python agent.py` (foreground test), or install as a service:
+   `python service.py install` then `python service.py start`.
+
+The station's card in **Internet Café** will show its live CPU/RAM/disk and a
+running **Prints** count; print jobs also flow into **Print Manager**.
+
+> ⚠ **Security:** the agent uses the public anon/publishable key, so
+> `agent_schema.sql` grants the `anon` role the narrow writes it needs. This
+> suits trusted café LAN machines. For production, move agent writes behind a
+> Supabase Edge Function using the `service_role` key (or per-device signed
+> tokens) and drop the `anon` policies in `agent_schema.sql`.
