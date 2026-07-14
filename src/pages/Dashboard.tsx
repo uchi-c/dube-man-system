@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
-  ShoppingCart, Package, Printer, Monitor,
+  Package, Printer, Monitor,
   Users, TrendingUp, AlertTriangle, RefreshCw,
-  ArrowUpRight, ArrowDownRight, Zap,
+  ArrowUpRight, ArrowDownRight, Receipt, Crown,
 } from 'lucide-react';
 import {
   fetchProducts, fetchSales, fetchPrintingOrders,
@@ -18,62 +18,46 @@ import {
 import { motion } from 'motion/react';
 import { formatCurrency } from '../utils/format';
 
-// ---- helpers ----------------------------------------------------------------
-
 const currency = formatCurrency;
 
-const today = () => new Date().toISOString().slice(0, 10);
+type Range = 'today' | '7d' | '30d' | 'custom';
+const RANGES: { id: Range; label: string }[] = [
+  { id: 'today', label: 'Today' },
+  { id: '7d', label: '7d' },
+  { id: '30d', label: '30d' },
+  { id: 'custom', label: 'Custom' },
+];
 
-// ---- skeleton card ----------------------------------------------------------
-
-function SkeletonCard() {
-  return (
-    <div className="rounded-2xl p-5" style={{ background: 'white', border: '1px solid #e2e8f0', minHeight: 120 }}>
-      <div className="uruu-skeleton h-4 w-2/3 mb-3" />
-      <div className="uruu-skeleton h-8 w-1/2 mb-2" />
-      <div className="uruu-skeleton h-3 w-3/4" />
-    </div>
-  );
-}
-
-// ---- custom chart tooltip ---------------------------------------------------
+// ---- custom chart tooltip (accent-only) ------------------------------------
 
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div style={{
-      background: '#0f172a', color: 'white', borderRadius: 10,
-      padding: '8px 12px', fontSize: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-    }}>
-      <div style={{ color: '#94a3b8', marginBottom: 4, fontSize: 11 }}>{label}</div>
-      <div style={{ fontWeight: 700 }}>{currency(payload[0].value)}</div>
+    <div style={{ background: 'var(--panel)', border: '1px solid var(--panel-line-strong)', color: 'var(--text-hi)', borderRadius: 10, padding: '8px 12px', fontSize: 12, boxShadow: 'var(--shadow-card)' }}>
+      <div style={{ color: 'var(--text-low)', marginBottom: 4, fontSize: 11 }}>{label}</div>
+      <div className="dm-nums" style={{ fontWeight: 700, color: 'var(--blue-400)' }}>{currency(payload[0].value)}</div>
     </div>
   );
 }
 
-// ---- Quick action chip ------------------------------------------------------
+// ---- hero KPI ---------------------------------------------------------------
 
-function QuickAction({ icon: Icon, label, color, onClick }: {
-  icon: React.ElementType; label: string; color: string; onClick?: () => void;
+function HeroStat({ icon: Icon, label, value, tone = 'blue', sub }: {
+  icon: React.ElementType; label: string; value: string; tone?: 'blue' | 'cyan' | 'success'; sub?: string;
 }) {
+  const fg = tone === 'cyan' ? 'var(--cyan-300)' : tone === 'success' ? 'var(--success)' : 'var(--blue-400)';
+  const bg = tone === 'cyan' ? 'var(--cyan-bg)' : tone === 'success' ? 'var(--success-bg)' : 'var(--blue-bg)';
   return (
-    <button
-      onClick={onClick}
-      className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl cursor-pointer transition-all"
-      style={{
-        background: color + '12',
-        border: `1px solid ${color}28`,
-        color: color,
-        fontSize: '0.8125rem',
-        fontWeight: 600,
-        transition: 'all 0.15s',
-      }}
-      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = color + '22'; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = color + '12'; }}
-    >
-      <Icon style={{ width: 15, height: 15 }} />
-      {label}
-    </button>
+    <div className="dm-card p-6 flex flex-col gap-3">
+      <div className="flex items-center gap-2.5">
+        <div className="flex items-center justify-center" style={{ width: 36, height: 36, borderRadius: 10, background: bg, color: fg }}>
+          <Icon style={{ width: 18, height: 18 }} />
+        </div>
+        <span className="dm-label" style={{ padding: 0 }}>{label}</span>
+      </div>
+      <div className="dm-kpi-lg dm-truncate" title={value}>{value}</div>
+      {sub && <p className="dm-nums" style={{ fontSize: '0.75rem', color: 'var(--text-low)' }}>{sub}</p>}
+    </div>
   );
 }
 
@@ -81,6 +65,9 @@ function QuickAction({ icon: Icon, label, color, onClick }: {
 
 export default function Dashboard() {
   const [loading, setLoading]           = useState(true);
+  const [range, setRange]               = useState<Range>('7d');
+  const [customFrom, setCustomFrom]     = useState('');
+  const [customTo, setCustomTo]         = useState('');
   const [products, setProducts]         = useState<Product[]>([]);
   const [sales, setSales]               = useState<Sale[]>([]);
   const [printOrders, setPrintOrders]   = useState<PrintingOrder[]>([]);
@@ -92,19 +79,11 @@ export default function Dashboard() {
     setLoading(true);
     try {
       const [prods, sls, prnts, sess, custs, printStats] = await Promise.all([
-        fetchProducts(),
-        fetchSales(),
-        fetchPrintingOrders(),
-        fetchRunningCafeSessions(),
-        fetchCustomers(),
-        fetchPrintDashboardStats(),
+        fetchProducts(), fetchSales(), fetchPrintingOrders(),
+        fetchRunningCafeSessions(), fetchCustomers(), fetchPrintDashboardStats(),
       ]);
-      setProducts(prods);
-      setSales(sls);
-      setPrintOrders(prnts);
-      setSessions(sess);
-      setCustomers(custs);
-      setPrintRevenue(printStats.revenue_today);
+      setProducts(prods); setSales(sls); setPrintOrders(prnts);
+      setSessions(sess); setCustomers(custs); setPrintRevenue(printStats.revenue_today);
     } catch (err) {
       console.error('Dashboard load error:', err);
     } finally {
@@ -114,341 +93,217 @@ export default function Dashboard() {
 
   useEffect(() => { load(); }, []);
 
-  // ---- Derived metrics ----
-  const todayStr = today();
+  // ---- Range window ----
+  const { start, end } = useMemo(() => {
+    const end = new Date();
+    const start = new Date();
+    if (range === 'today') start.setHours(0, 0, 0, 0);
+    else if (range === '7d') start.setDate(start.getDate() - 6);
+    else if (range === '30d') start.setDate(start.getDate() - 29);
+    else {
+      if (customFrom) return { start: new Date(customFrom + 'T00:00:00'), end: customTo ? new Date(customTo + 'T23:59:59') : new Date() };
+      start.setDate(start.getDate() - 6);
+    }
+    if (range !== 'today' && range !== 'custom') start.setHours(0, 0, 0, 0);
+    return { start, end };
+  }, [range, customFrom, customTo]);
 
-  const todaySales = sales
-    .filter(s => s.created_at.slice(0, 10) === todayStr)
-    .reduce((sum, s) => sum + s.total_amount, 0);
+  const windowSales = useMemo(
+    () => sales.filter(s => { const d = new Date(s.created_at); return d >= start && d <= end; }),
+    [sales, start, end],
+  );
+
+  const rangeRevenue = windowSales.reduce((sum, s) => sum + s.total_amount, 0);
+  const rangeTxns = windowSales.length;
+
+  const topProduct = useMemo(() => {
+    const tally: Record<string, number> = {};
+    windowSales.forEach(s => s.items?.forEach(it => {
+      const name = it.product_name || 'Item';
+      tally[name] = (tally[name] || 0) + it.quantity;
+    }));
+    const top = Object.entries(tally).sort((a, b) => b[1] - a[1])[0];
+    return top ? { name: top[0], qty: top[1] } : null;
+  }, [windowSales]);
 
   const lowStockItems = products.filter(p => {
     const threshold = p.min_stock_level !== undefined ? p.min_stock_level : 5;
     return threshold !== -1 && p.quantity <= threshold;
   });
-
   const activeSessions = sessions.length;
+  const pendingPrint = printOrders.filter(p => ['Pending', 'Designing', 'Printing'].includes(p.status)).length;
 
-  const pendingPrint = printOrders.filter(p =>
-    ['Pending','Designing','Printing'].includes(p.status)
-  ).length;
-
-  // 7-day sales trend
-  const trendData = React.useMemo(() => {
-    const dayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  // ---- Trend chart buckets ----
+  const chartDays = range === '30d' ? 30 : range === 'custom' ? 14 : 7;
+  const trendData = useMemo(() => {
     const map: Record<string, { date: string; amount: number }> = {};
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
+    for (let i = chartDays - 1; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
-      map[key] = { date: dayLabels[d.getDay()], amount: 0 };
+      const label = d.toLocaleDateString('en', chartDays > 10 ? { day: 'numeric', month: 'short' } : { weekday: 'short' });
+      map[key] = { date: label, amount: 0 };
     }
-    sales.forEach(s => {
-      const k = s.created_at.slice(0, 10);
-      if (map[k]) map[k].amount += s.total_amount;
-    });
+    sales.forEach(s => { const k = s.created_at.slice(0, 10); if (map[k]) map[k].amount += s.total_amount; });
     return Object.values(map);
-  }, [sales]);
+  }, [sales, chartDays]);
 
-  const isUp = trendData.length > 1
-    && trendData[trendData.length - 1].amount >= trendData[trendData.length - 2].amount;
+  const isUp = trendData.length > 1 && trendData[trendData.length - 1].amount >= trendData[trendData.length - 2].amount;
 
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          {[0,1,2,3].map(i => <SkeletonCard key={i} />)}
-        </div>
-        <SkeletonCard />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">{[0, 1, 2].map(i => <div key={i} className="dm-skeleton" style={{ height: 140 }} />)}</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">{[0, 1, 2, 3].map(i => <div key={i} className="dm-skeleton" style={{ height: 120 }} />)}</div>
+        <div className="dm-skeleton" style={{ height: 300 }} />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* ---- Page header ---- */}
+    <div className="space-y-6 dm-animate-in">
+      {/* Header + date range */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 style={{
-            fontFamily: 'Manrope',
-            fontWeight: 800,
-            fontSize: '1.5rem',
-            letterSpacing: '-0.025em',
-            color: '#0f172a',
-            lineHeight: 1.2,
-          }}>
-            Overview
-          </h1>
-          <p style={{ color: '#64748b', fontSize: '0.875rem', marginTop: 4 }}>
+          <h1 className="dm-h1">Reports</h1>
+          <p style={{ color: 'var(--text-mid)', fontSize: '0.875rem', marginTop: 4 }}>
             {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          {/* Quick actions */}
-          <QuickAction icon={Zap} label="Quick Sale" color="#e11d48" />
-          <button
-            onClick={load}
-            className="p-2 rounded-xl cursor-pointer"
-            style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b' }}
-            aria-label="Refresh dashboard"
-          >
-            <RefreshCw style={{ width: 15, height: 15 }} />
-          </button>
+        <div className="flex items-center gap-2">
+          <div className="dm-seg">
+            {RANGES.map(r => (
+              <button key={r.id} onClick={() => setRange(r.id)} className={`dm-seg-item ${range === r.id ? 'active' : ''}`}>{r.label}</button>
+            ))}
+          </div>
+          <button onClick={load} className="dm-icon-btn" aria-label="Refresh"><RefreshCw style={{ width: 16, height: 16 }} /></button>
         </div>
       </div>
 
-      {/* ---- Low stock alert ---- */}
+      {/* Custom range inputs */}
+      {range === 'custom' && (
+        <div className="dm-card p-4 flex flex-wrap items-end gap-3">
+          <div>
+            <label className="dm-label" style={{ padding: 0 }}>From</label>
+            <input type="date" className="dm-input" style={{ marginTop: 6, minWidth: 160 }} value={customFrom} onChange={e => setCustomFrom(e.target.value)} />
+          </div>
+          <div>
+            <label className="dm-label" style={{ padding: 0 }}>To</label>
+            <input type="date" className="dm-input" style={{ marginTop: 6, minWidth: 160 }} value={customTo} onChange={e => setCustomTo(e.target.value)} />
+          </div>
+        </div>
+      )}
+
+      {/* Low stock alert */}
       {lowStockItems.length > 0 && (
         <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
           className="flex items-start gap-3 px-4 py-3 rounded-2xl"
-          style={{ background: '#fffbeb', border: '1px solid #fde68a' }}
+          style={{ background: 'var(--warning-bg)', border: '1px solid rgba(255,176,32,0.3)' }}
         >
-          <AlertTriangle style={{ width: 16, height: 16, color: '#d97706', flexShrink: 0, marginTop: 2 }} />
-          <div style={{ fontSize: '0.8125rem', color: '#92400e' }}>
-            <strong>{lowStockItems.length} item{lowStockItems.length > 1 ? 's' : ''} running low:</strong>
-            {' '}
+          <AlertTriangle style={{ width: 16, height: 16, color: 'var(--warning)', flexShrink: 0, marginTop: 2 }} />
+          <div style={{ fontSize: '0.8125rem', color: 'var(--text-hi)' }}>
+            <strong style={{ color: 'var(--warning)' }}>{lowStockItems.length} item{lowStockItems.length > 1 ? 's' : ''} running low.</strong>{' '}
             {lowStockItems.slice(0, 4).map(p => (
-              <span key={p.id} style={{
-                display: 'inline-flex', alignItems: 'center', gap: 4,
-                background: '#fef3c7', borderRadius: 6, padding: '1px 8px',
-                fontSize: '0.75rem', fontWeight: 700, marginRight: 4,
-              }}>
+              <span key={p.id} className="dm-nums" style={{ display: 'inline-block', background: 'rgba(255,176,32,0.12)', borderRadius: 6, padding: '1px 8px', fontSize: '0.72rem', fontWeight: 600, marginRight: 4, marginTop: 4 }}>
                 {p.name} · {p.quantity} left
               </span>
             ))}
-            {lowStockItems.length > 4 && (
-              <span style={{ fontSize: '0.75rem', color: '#d97706' }}>
-                +{lowStockItems.length - 4} more
-              </span>
-            )}
+            {lowStockItems.length > 4 && <span style={{ fontSize: '0.72rem', color: 'var(--warning)' }}>+{lowStockItems.length - 4} more</span>}
           </div>
         </motion.div>
       )}
 
-      {/* ---- KPI row ---- */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <DashboardCard
-          title="Today's Revenue"
-          value={currency(todaySales)}
-          subValue="POS sales today"
-          icon={ShoppingCart}
-          colorScheme="blue"
-          trend={isUp ? 'up' : 'neutral'}
-        />
-        <DashboardCard
-          title="Print Revenue"
-          value={currency(printRevenue)}
-          subValue="Completed print jobs"
-          icon={Printer}
-          colorScheme="violet"
-          trend="up"
-        />
-        <DashboardCard
-          title="Active Café Sessions"
-          value={`${activeSessions}`}
-          subValue={activeSessions === 1 ? '1 terminal occupied' : `${activeSessions} terminals occupied`}
-          icon={Monitor}
-          colorScheme="emerald"
-          trend="neutral"
-        />
-        <DashboardCard
-          title="Pending Print Orders"
-          value={`${pendingPrint}`}
-          subValue={`${printOrders.length} total orders`}
-          icon={Printer}
-          colorScheme={pendingPrint > 0 ? 'amber' : 'slate'}
-          trend="neutral"
-        />
+      {/* ---- Hero numbers ---- */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <HeroStat icon={TrendingUp} label={`Revenue · ${RANGES.find(r => r.id === range)?.label}`} value={currency(rangeRevenue)} tone="blue" sub="POS sales in range" />
+        <HeroStat icon={Receipt} label="Transactions" value={String(rangeTxns)} tone="cyan" sub={rangeTxns === 1 ? '1 checkout' : `${rangeTxns} checkouts`} />
+        <HeroStat icon={Crown} label="Top product" value={topProduct ? topProduct.name : '—'} tone="success" sub={topProduct ? `${topProduct.qty} sold` : 'No sales in range'} />
       </div>
 
-      {/* ---- Secondary KPIs ---- */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <DashboardCard
-          title="Inventory Items"
-          value={`${products.length}`}
-          subValue={`${lowStockItems.length} low stock`}
-          icon={Package}
-          colorScheme={lowStockItems.length > 0 ? 'amber' : 'slate'}
-          trend="neutral"
-        />
-        <DashboardCard
-          title="Registered Customers"
-          value={`${customers.length}`}
-          subValue="All time"
-          icon={Users}
-          colorScheme="slate"
-          trend="up"
-        />
-        <DashboardCard
-          title="Total Sales Volume"
-          value={`${sales.length}`}
-          subValue="All recorded transactions"
-          icon={TrendingUp}
-          colorScheme="blue"
-          trend="up"
-        />
+      {/* ---- Secondary KPI row ---- */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <DashboardCard title="Print Revenue" value={currency(printRevenue)} subValue="Completed print jobs today" icon={Printer} colorScheme="violet" trend="up" />
+        <DashboardCard title="Active Café Sessions" value={`${activeSessions}`} subValue={activeSessions === 1 ? '1 terminal occupied' : `${activeSessions} terminals occupied`} icon={Monitor} colorScheme="emerald" trend="neutral" />
+        <DashboardCard title="Pending Print Orders" value={`${pendingPrint}`} subValue={`${printOrders.length} total orders`} icon={Printer} colorScheme={pendingPrint > 0 ? 'amber' : 'slate'} trend="neutral" />
+        <DashboardCard title="Registered Customers" value={`${customers.length}`} subValue="All time" icon={Users} colorScheme="blue" trend="up" />
       </div>
 
       {/* ---- Revenue trend chart ---- */}
-      <div
-        className="rounded-3xl p-6"
-        style={{ background: 'white', border: '1px solid #e2e8f0', boxShadow: '0 1px 4px rgba(15,23,42,0.05)' }}
-      >
+      <div className="dm-card p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h2 style={{ fontFamily: 'Manrope', fontWeight: 700, fontSize: '0.9375rem', color: '#0f172a' }}>
-              7-Day Revenue Trend
-            </h2>
-            <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: 2 }}>
-              Daily POS sales in ZMW
-            </p>
+            <h2 className="dm-h2">Revenue trend</h2>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-low)', marginTop: 2 }}>Daily POS sales in ZMW</p>
           </div>
-          <div
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
-            style={{
-              background: isUp ? '#ecfdf5' : '#fef2f2',
-              border: `1px solid ${isUp ? '#bbf7d0' : '#fecaca'}`,
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              color: isUp ? '#065f46' : '#991b1b',
-            }}
-          >
-            {isUp
-              ? <ArrowUpRight style={{ width: 13, height: 13 }} />
-              : <ArrowDownRight style={{ width: 13, height: 13 }} />
-            }
-            <span>{isUp ? 'Up vs yesterday' : 'Down vs yesterday'}</span>
+          <div className="dm-badge" style={{ padding: '0.3rem 0.6rem', background: isUp ? 'var(--success-bg)' : 'var(--danger-bg)', color: isUp ? 'var(--success)' : 'var(--danger)', border: `1px solid ${isUp ? 'rgba(61,220,151,0.3)' : 'rgba(255,107,107,0.3)'}` }}>
+            {isUp ? <ArrowUpRight style={{ width: 13, height: 13 }} /> : <ArrowDownRight style={{ width: 13, height: 13 }} />}
+            {isUp ? 'Up vs prior day' : 'Down vs prior day'}
           </div>
         </div>
 
-        <ResponsiveContainer width="100%" height={220}>
+        <ResponsiveContainer width="100%" height={240}>
           <AreaChart data={trendData} margin={{ top: 4, right: 8, left: -12, bottom: 0 }}>
             <defs>
               <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%"  stopColor="#e11d48" stopOpacity={0.18} />
-                <stop offset="100%" stopColor="#e11d48" stopOpacity={0} />
+                <stop offset="0%" stopColor="#4C6FFF" stopOpacity={0.35} />
+                <stop offset="100%" stopColor="#4C6FFF" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-            <XAxis
-              dataKey="date"
-              tick={{ fontSize: 11, fill: '#94a3b8' }}
-              axisLine={false} tickLine={false}
-            />
-            <YAxis
-              tick={{ fontSize: 11, fill: '#94a3b8' }}
-              axisLine={false} tickLine={false}
-            />
-            <Tooltip content={<ChartTooltip />} />
-            <Area
-              type="monotone"
-              dataKey="amount"
-              stroke="#e11d48"
-              strokeWidth={2.5}
-              fill="url(#areaGrad)"
-              dot={false}
-              activeDot={{ r: 5, strokeWidth: 0, fill: '#e11d48' }}
-            />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+            <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#8A93BE' }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 11, fill: '#8A93BE' }} axisLine={false} tickLine={false} />
+            <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.12)' }} />
+            <Area type="monotone" dataKey="amount" stroke="#4C6FFF" strokeWidth={2.5} fill="url(#areaGrad)" dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: '#7DD3FC' }} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
 
-      {/* ---- Bottom row: low stock + recent orders ---- */}
+      {/* ---- Bottom row: inventory alerts + recent print orders ---- */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Low stock table */}
-        <div
-          className="rounded-3xl p-5"
-          style={{ background: 'white', border: '1px solid #e2e8f0' }}
-        >
-          <h3 style={{ fontFamily: 'Manrope', fontWeight: 700, fontSize: '0.9rem', color: '#0f172a', marginBottom: 16 }}>
-            Inventory Alerts
-          </h3>
+        <div className="dm-card p-5">
+          <h3 className="dm-h3" style={{ marginBottom: 14 }}>Inventory alerts</h3>
           {lowStockItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10" style={{ color: '#94a3b8' }}>
-              <Package style={{ width: 28, height: 28, marginBottom: 8, color: '#d1d5db' }} />
-              <p style={{ fontSize: '0.8125rem', fontWeight: 500 }}>All stock levels healthy</p>
+            <div className="flex flex-col items-center justify-center py-10" style={{ color: 'var(--text-low)' }}>
+              <Package style={{ width: 28, height: 28, marginBottom: 8, opacity: 0.6 }} />
+              <p style={{ fontSize: '0.8125rem' }}>All stock levels healthy.</p>
             </div>
           ) : (
             <div className="space-y-2">
               {lowStockItems.slice(0, 6).map(p => (
-                <div
-                  key={p.id}
-                  className="flex items-center justify-between py-2.5 px-3 rounded-xl"
-                  style={{ background: '#fafafa', border: '1px solid #f1f5f9' }}
-                >
+                <div key={p.id} className="flex items-center justify-between py-2.5 px-3 rounded-xl" style={{ background: 'var(--panel-2)', border: '1px solid var(--panel-line)' }}>
                   <div>
-                    <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#0f172a' }}>{p.name}</div>
-                    <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontFamily: 'monospace' }}>
-                      {p.category}
-                    </div>
+                    <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-hi)' }}>{p.name}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-low)' }}>{p.category}</div>
                   </div>
-                  <span
-                    style={{
-                      fontSize: '0.6875rem', fontWeight: 700, padding: '3px 8px',
-                      borderRadius: 999,
-                      background: p.quantity === 0 ? '#fee2e2' : '#fef3c7',
-                      color:      p.quantity === 0 ? '#991b1b' : '#92400e',
-                    }}
-                  >
-                    {p.quantity === 0 ? 'SOLD OUT' : `${p.quantity} left`}
-                  </span>
+                  <span className={`dm-badge ${p.quantity === 0 ? 'dm-badge-danger' : 'dm-badge-warning'}`}>{p.quantity === 0 ? 'Out of stock' : `${p.quantity} left`}</span>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Recent print orders */}
-        <div
-          className="rounded-3xl p-5"
-          style={{ background: 'white', border: '1px solid #e2e8f0' }}
-        >
-          <h3 style={{ fontFamily: 'Manrope', fontWeight: 700, fontSize: '0.9rem', color: '#0f172a', marginBottom: 16 }}>
-            Recent Print & Brand Orders
-          </h3>
+        <div className="dm-card p-5">
+          <h3 className="dm-h3" style={{ marginBottom: 14 }}>Recent print &amp; brand orders</h3>
           {printOrders.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10" style={{ color: '#94a3b8' }}>
-              <Printer style={{ width: 28, height: 28, marginBottom: 8, color: '#d1d5db' }} />
-              <p style={{ fontSize: '0.8125rem', fontWeight: 500 }}>No orders yet</p>
+            <div className="flex flex-col items-center justify-center py-10" style={{ color: 'var(--text-low)' }}>
+              <Printer style={{ width: 28, height: 28, marginBottom: 8, opacity: 0.6 }} />
+              <p style={{ fontSize: '0.8125rem' }}>No orders yet.</p>
             </div>
           ) : (
             <div className="space-y-2">
               {printOrders.slice(0, 5).map(order => {
-                const statusColors: Record<string, { bg: string; text: string }> = {
-                  Pending:   { bg: '#fffbeb', text: '#92400e' },
-                  Designing: { bg: '#f5f3ff', text: '#5b21b6' },
-                  Printing:  { bg: '#ffe4e6', text: '#9f1239' },
-                  Completed: { bg: '#ecfdf5', text: '#065f46' },
-                  Collected: { bg: '#f8fafc', text: '#475569' },
-                };
-                const s = statusColors[order.status] ?? statusColors.Pending;
+                const cls = order.status === 'Completed' ? 'dm-badge-success'
+                  : order.status === 'Printing' || order.status === 'Designing' ? 'dm-badge-info'
+                  : order.status === 'Collected' ? 'dm-badge-neutral' : 'dm-badge-warning';
                 return (
-                  <div
-                    key={order.id}
-                    className="flex items-center justify-between py-2.5 px-3 rounded-xl"
-                    style={{ background: '#fafafa', border: '1px solid #f1f5f9' }}
-                  >
+                  <div key={order.id} className="flex items-center justify-between py-2.5 px-3 rounded-xl" style={{ background: 'var(--panel-2)', border: '1px solid var(--panel-line)' }}>
                     <div className="min-w-0 flex-1 pr-3">
-                      <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#0f172a' }} className="truncate">
-                        {order.description}
-                      </div>
-                      <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>
-                        {order.customer_name} · {order.quantity} units
-                      </div>
+                      <div className="dm-truncate" style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-hi)' }}>{order.description}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-low)' }}>{order.customer_name} · {order.quantity} units</div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span
-                        style={{
-                          fontSize: '0.6875rem', fontWeight: 700, padding: '2px 8px',
-                          borderRadius: 999, background: s.bg, color: s.text,
-                        }}
-                      >
-                        {order.status}
-                      </span>
-                      <div className="tabular-nums" style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0f172a' }}>
-                        {currency(order.amount)}
-                      </div>
+                      <span className={`dm-badge ${cls}`}>{order.status}</span>
+                      <div className="dm-nums" style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-hi)' }}>{currency(order.amount)}</div>
                     </div>
                   </div>
                 );

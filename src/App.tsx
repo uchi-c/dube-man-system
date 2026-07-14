@@ -73,6 +73,54 @@ const ROLE_DEFAULT_PATH: Record<string, string> = {
 };
 const defaultPathFor = (role: string) => ROLE_DEFAULT_PATH[role] ?? '/dashboard';
 
+// ---- Brand mark ------------------------------------------------------------
+
+function BrandMark({ size = 34, radius = 10, font = 13 }: { size?: number; radius?: number; font?: number }) {
+  return (
+    <div
+      style={{
+        width: size, height: size, borderRadius: radius,
+        background: 'linear-gradient(135deg, #4C6FFF 0%, #7DD3FC 100%)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
+        boxShadow: '0 6px 18px -6px rgba(76,111,255,0.7)',
+      }}
+    >
+      <span style={{ color: 'white', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: font }}>DM</span>
+    </div>
+  );
+}
+
+// ---- Role labels -----------------------------------------------------------
+
+const ROLE_BADGE: Record<string, string> = {
+  ADMIN: 'Owner',
+  STAFF: 'Staff Operator',
+  CAFE_OPERATOR: 'Café Desk',
+};
+
+function RoleBadge({ role }: { role: string }) {
+  return <span className="dm-badge dm-badge-info">{ROLE_BADGE[role] ?? role}</span>;
+}
+
+function Avatar({ name, size = 32 }: { name: string; size?: number }) {
+  return (
+    <div
+      style={{
+        width: size, height: size, borderRadius: 9,
+        background: 'rgba(76,111,255,0.18)',
+        border: '1px solid rgba(76,111,255,0.30)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
+      }}
+    >
+      <span style={{ fontSize: size * 0.4, fontWeight: 700, color: '#7B93FF', fontFamily: "'Space Grotesk',sans-serif" }}>
+        {name.charAt(0).toUpperCase()}
+      </span>
+    </div>
+  );
+}
+
 // ---- Sync indicator --------------------------------------------------------
 
 function SyncIndicator() {
@@ -93,11 +141,18 @@ function SyncIndicator() {
   }, []);
 
   return (
-    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
-      style={{ background: '#f8fafc', border: '1px solid #e2e8f0', fontSize: '0.6875rem', color: '#64748b', fontWeight: 500 }}>
-      <span className="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0"
-        style={{ background: syncing ? '#f59e0b' : '#10b981', animation: 'pulse 2s infinite' }} />
-      <span>{label}</span>
+    <div
+      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full"
+      style={{
+        background: syncing ? 'var(--warning-bg)' : 'var(--success-bg)',
+        border: `1px solid ${syncing ? 'rgba(255,176,32,0.28)' : 'rgba(61,220,151,0.28)'}`,
+        fontSize: '0.6875rem', fontWeight: 600,
+        color: syncing ? 'var(--warning)' : 'var(--success)',
+      }}
+      title={syncing ? 'Sync in progress' : 'Data is up to date'}
+    >
+      <span className={`dm-dot ${syncing ? 'dm-dot-warning' : 'dm-dot-success dm-dot-pulse'}`} />
+      <span className="dm-nums">{label}</span>
     </div>
   );
 }
@@ -115,11 +170,7 @@ function SidebarSection({ group, tabs, activeTab, onSelect }: SidebarSectionProp
   if (tabs.length === 0) return null;
   return (
     <div className="space-y-0.5">
-      <div style={{
-        fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.1em',
-        textTransform: 'uppercase', color: '#94a3b8',
-        padding: '0.25rem 0.875rem', marginTop: '0.75rem',
-      }}>
+      <div className="dm-label" style={{ padding: '0.25rem 0.85rem', marginTop: '0.75rem' }}>
         {group}
       </div>
       {tabs.map(tab => {
@@ -129,25 +180,10 @@ function SidebarSection({ group, tabs, activeTab, onSelect }: SidebarSectionProp
           <button
             key={tab.id}
             onClick={() => onSelect(tab.id)}
-            className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-left transition-all cursor-pointer"
-            style={{
-              fontSize: '0.8125rem',
-              fontWeight: active ? 600 : 500,
-              color: active ? 'white' : '#475569',
-              background: active
-                ? 'linear-gradient(135deg, #e11d48 0%, #be123c 100%)'
-                : 'transparent',
-              border: 'none',
-              boxShadow: active ? '0 2px 8px rgba(225,29,72,0.22)' : 'none',
-              transition: 'all 0.15s cubic-bezier(0.4,0,0.2,1)',
-            }}
-            onMouseEnter={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = '#f1f5f9'; }}
-            onMouseLeave={e => { if (!active) (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
+            className={`dm-nav-item ${active ? 'active' : ''}`}
             aria-current={active ? 'page' : undefined}
           >
-            <Icon
-              style={{ width: 15, height: 15, flexShrink: 0, color: active ? 'white' : '#94a3b8' }}
-            />
+            <Icon style={{ width: 16, height: 16, flexShrink: 0, color: active ? '#7B93FF' : '#8A93BE' }} />
             <span>{tab.label}</span>
           </button>
         );
@@ -174,12 +210,6 @@ function Sidebar({ user, activeTab, onSelect, onLogout, mobile, onClose }: Sideb
     tabs: visibleTabs.filter(t => t.group === g),
   }));
 
-  const roleLabel: Record<string, string> = {
-    ADMIN: 'Administrator',
-    STAFF: 'Staff Operator',
-    CAFE_OPERATOR: 'Café Operator',
-  };
-
   const handleSelect = (id: string) => {
     onSelect(id);
     onClose?.();
@@ -189,35 +219,24 @@ function Sidebar({ user, activeTab, onSelect, onLogout, mobile, onClose }: Sideb
     <div
       className="flex flex-col h-full"
       style={{
-        background: 'white',
-        borderRight: '1px solid #e2e8f0',
-        width: mobile ? '100%' : '248px',
+        background: 'var(--bg-1)',
+        borderRight: '1px solid var(--panel-line)',
+        width: mobile ? '100%' : 'var(--rail-width)',
         minHeight: '100%',
       }}
     >
       {/* Brand slot */}
-      <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid #f1f5f9' }}>
-        <div
-          style={{
-            width: 34, height: 34, borderRadius: 10,
-            background: 'linear-gradient(135deg, #e11d48, #7c3aed)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
-          }}
-        >
-          <span style={{ color: 'white', fontFamily: 'Manrope', fontWeight: 800, fontSize: '13px' }}>DM</span>
-        </div>
+      <div className="flex items-center gap-3 px-5 py-4" style={{ borderBottom: '1px solid var(--panel-line)' }}>
+        <BrandMark />
         <div>
-          <div style={{ fontFamily: 'Manrope', fontWeight: 800, fontSize: '15px', color: '#0f172a', letterSpacing: '-0.02em' }}>
+          <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '15px', color: 'var(--text-hi)', letterSpacing: '-0.02em' }}>
             Dube Man
           </div>
-          <div style={{ fontSize: '0.625rem', color: '#94a3b8', fontWeight: 600, letterSpacing: '0.05em' }}>
-            Workspace
-          </div>
+          <div className="dm-label" style={{ padding: 0 }}>CaféOS</div>
         </div>
         {mobile && (
-          <button onClick={onClose} className="ml-auto p-1.5 rounded-lg hover:bg-slate-100 cursor-pointer" style={{ border: 'none', background: 'transparent' }}>
-            <X style={{ width: 16, height: 16, color: '#94a3b8' }} />
+          <button onClick={onClose} className="dm-icon-btn ml-auto" style={{ width: 34, height: 34 }} aria-label="Close navigation">
+            <X style={{ width: 16, height: 16 }} />
           </button>
         )}
       </div>
@@ -236,40 +255,18 @@ function Sidebar({ user, activeTab, onSelect, onLogout, mobile, onClose }: Sideb
       </nav>
 
       {/* User profile footer */}
-      <div className="px-4 py-3" style={{ borderTop: '1px solid #f1f5f9' }}>
+      <div className="px-4 py-3" style={{ borderTop: '1px solid var(--panel-line)' }}>
         <div className="flex items-center gap-2.5 mb-3">
-          <div
-            style={{
-              width: 32, height: 32, borderRadius: 10,
-              background: 'linear-gradient(135deg, #ffe4e6, #ede9fe)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <span style={{ fontSize: '12px', fontWeight: 800, color: '#e11d48' }}>
-              {user.name.charAt(0).toUpperCase()}
-            </span>
-          </div>
+          <Avatar name={user.name} />
           <div className="min-w-0">
-            <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a' }} className="truncate">
+            <div className="dm-truncate" style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-hi)' }}>
               {user.name}
             </div>
-            <div style={{ fontSize: '0.6875rem', color: '#94a3b8', fontWeight: 500 }}>
-              {roleLabel[user.role] ?? user.role}
-            </div>
+            <div style={{ marginTop: 2 }}><RoleBadge role={user.role} /></div>
           </div>
         </div>
-        <button
-          onClick={onLogout}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all"
-          style={{
-            background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626',
-            transition: 'all 0.15s',
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#fee2e2'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#fef2f2'; }}
-        >
-          <LogOut style={{ width: 13, height: 13 }} />
+        <button onClick={onLogout} className="dm-btn dm-btn-danger w-full" style={{ minHeight: 40 }}>
+          <LogOut style={{ width: 14, height: 14 }} />
           Sign Out
         </button>
       </div>
@@ -293,9 +290,11 @@ function Topbar({ user, activeTab, onMenuToggle }: TopbarProps) {
     <header
       className="flex items-center justify-between px-5 lg:px-6"
       style={{
-        height: '60px',
-        background: 'white',
-        borderBottom: '1px solid #e2e8f0',
+        height: 'var(--topbar-h)',
+        background: 'rgba(12,19,56,0.75)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        borderBottom: '1px solid var(--panel-line)',
         position: 'sticky',
         top: 0,
         zIndex: 30,
@@ -303,57 +302,45 @@ function Topbar({ user, activeTab, onMenuToggle }: TopbarProps) {
       }}
     >
       {/* Left: hamburger + breadcrumb */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-0">
         <button
           onClick={onMenuToggle}
-          className="lg:hidden p-2 rounded-xl cursor-pointer"
-          style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#475569' }}
+          className="dm-icon-btn lg:hidden"
+          style={{ width: 40, height: 40 }}
           aria-label="Open navigation"
         >
           <Menu style={{ width: 16, height: 16 }} />
         </button>
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-1.5" aria-label="Breadcrumb">
-          <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 500 }}>{crumbs[0]}</span>
+        <nav className="flex items-center gap-1.5 min-w-0" aria-label="Breadcrumb">
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-low)', fontWeight: 500 }}>{crumbs[0]}</span>
           {crumbs.length > 1 && (
             <>
-              <ChevronRight style={{ width: 12, height: 12, color: '#cbd5e1' }} />
-              <span style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#0f172a' }}>{crumbs[1]}</span>
+              <ChevronRight style={{ width: 12, height: 12, color: 'var(--text-low)' }} />
+              <span className="dm-truncate" style={{ fontFamily: "'Space Grotesk',sans-serif", fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-hi)' }}>{crumbs[1]}</span>
             </>
           )}
         </nav>
       </div>
 
       {/* Right: sync + notifications + user chip */}
-      <div className="flex items-center gap-3">
-        <SyncIndicator />
+      <div className="flex items-center gap-2.5">
+        <div className="hidden sm:block"><SyncIndicator /></div>
 
-        <button
-          className="p-2 rounded-xl cursor-pointer"
-          style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b' }}
-          aria-label="Notifications"
-        >
-          <Bell style={{ width: 15, height: 15 }} />
+        <button className="dm-icon-btn" style={{ width: 40, height: 40 }} aria-label="Notifications">
+          <Bell style={{ width: 16, height: 16 }} />
         </button>
 
         {/* User chip — desktop only */}
         <div
-          className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl"
-          style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}
+          className="hidden sm:flex items-center gap-2 pl-1.5 pr-2.5 py-1.5 rounded-xl"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--panel-line)' }}
         >
-          <div
-            style={{
-              width: 24, height: 24, borderRadius: 6,
-              background: 'linear-gradient(135deg, #ffe4e6, #ede9fe)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <span style={{ fontSize: '10px', fontWeight: 800, color: '#e11d48' }}>
-              {user.name.charAt(0).toUpperCase()}
-            </span>
+          <Avatar name={user.name} size={26} />
+          <div className="flex flex-col leading-tight">
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-hi)' }}>{user.name}</span>
           </div>
-          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#0f172a' }}>{user.name}</span>
+          <RoleBadge role={user.role} />
         </div>
       </div>
     </header>
@@ -364,33 +351,19 @@ function Topbar({ user, activeTab, onMenuToggle }: TopbarProps) {
 
 function UnauthorizedScreen({ user, onBack }: { user: User; onBack: () => void }) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8">
+    <div className="dm-glow flex flex-col items-center justify-center min-h-[60vh] text-center p-8">
       <div
         className="w-14 h-14 rounded-2xl mb-4 flex items-center justify-center"
-        style={{ background: '#fff1f2', border: '1px solid #fecaca' }}
+        style={{ background: 'var(--danger-bg)', border: '1px solid rgba(255,107,107,0.30)' }}
       >
-        <Shield style={{ width: 24, height: 24, color: '#dc2626' }} />
+        <Shield style={{ width: 24, height: 24, color: 'var(--danger)' }} />
       </div>
-      <h2 style={{ fontFamily: 'Manrope', fontWeight: 800, fontSize: '1.25rem', color: '#0f172a', letterSpacing: '-0.01em' }}>
-        Access Restricted
-      </h2>
-      <p style={{ color: '#64748b', fontSize: '0.875rem', marginTop: 8, maxWidth: 360 }}>
-        Your role (<strong>{user.role}</strong>) does not have permission to access this section.
+      <h2 className="dm-h1">Access restricted</h2>
+      <p style={{ color: 'var(--text-mid)', fontSize: '0.875rem', marginTop: 8, maxWidth: 360 }}>
+        Your role (<strong style={{ color: 'var(--text-hi)' }}>{ROLE_BADGE[user.role] ?? user.role}</strong>) can't open this section. Head back to your workspace.
       </p>
-      <button
-        onClick={onBack}
-        className="mt-6 flex items-center gap-2 cursor-pointer"
-        style={{
-          padding: '0.625rem 1.25rem',
-          background: '#0f172a',
-          color: 'white',
-          border: 'none',
-          borderRadius: '10px',
-          fontSize: '0.875rem',
-          fontWeight: 700,
-        }}
-      >
-        Return to Workspace
+      <button onClick={onBack} className="dm-btn dm-btn-primary mt-6">
+        Return to workspace
       </button>
     </div>
   );
@@ -400,8 +373,8 @@ function UnauthorizedScreen({ user, onBack }: { user: User; onBack: () => void }
 
 function PageFallback() {
   return (
-    <div className="flex items-center justify-center py-24" style={{ color: '#94a3b8' }}>
-      <RefreshCw className="animate-spin" style={{ width: 18, height: 18, marginRight: 8 }} />
+    <div className="flex items-center justify-center py-24" style={{ color: 'var(--text-low)' }}>
+      <RefreshCw className="dm-spin" style={{ width: 18, height: 18, marginRight: 8 }} />
       <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>Loading…</span>
     </div>
   );
@@ -411,34 +384,22 @@ function PageFallback() {
 
 function LoadingScreen() {
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center"
-      style={{ background: '#0f172a' }}
-    >
-      <div
-        style={{
-          width: 48, height: 48, borderRadius: 14,
-          background: 'linear-gradient(135deg, #e11d48, #7c3aed)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          marginBottom: 16,
-        }}
-      >
-        <span style={{ color: 'white', fontFamily: 'Manrope', fontWeight: 800, fontSize: '18px' }}>DM</span>
-      </div>
+    <div className="dm-app-bg dm-glow min-h-screen flex flex-col items-center justify-center">
+      <div style={{ marginBottom: 18 }}><BrandMark size={52} radius={16} font={20} /></div>
       <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-        {[0,1,2].map(i => (
+        {[0, 1, 2].map(i => (
           <div
             key={i}
             style={{
-              width: 7, height: 7, borderRadius: '50%', background: '#e11d48',
-              animation: `uruu-fade-in 0.8s ${i * 0.2}s ease-in-out infinite alternate`,
+              width: 7, height: 7, borderRadius: '50%', background: '#4C6FFF',
+              animation: `dm-fade-up 0.8s ${i * 0.2}s ease-in-out infinite alternate`,
               opacity: 0.5,
             }}
           />
         ))}
       </div>
-      <span style={{ color: '#475569', fontSize: '0.75rem', fontWeight: 500, letterSpacing: '0.05em' }}>
-        Starting Dube Man…
+      <span style={{ color: 'var(--text-low)', fontSize: '0.75rem', fontWeight: 500, letterSpacing: '0.05em' }}>
+        Starting CaféOS…
       </span>
     </div>
   );
@@ -544,7 +505,7 @@ export default function App() {
   const homePath = defaultPathFor(user.role);
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: '#f8fafc', fontFamily: "'Inter','Manrope',sans-serif" }}>
+    <div className="dm-app-bg flex h-screen overflow-hidden" style={{ fontFamily: "'Inter',sans-serif" }}>
       {/* ---- Desktop sidebar ---- */}
       <aside className="hidden lg:flex flex-col flex-shrink-0" style={{ width: 248, height: '100vh', position: 'sticky', top: 0 }}>
         <Sidebar
@@ -600,7 +561,7 @@ export default function App() {
 
         <main
           className="flex-1 overflow-y-auto"
-          style={{ padding: '24px', background: '#f8fafc' }}
+          style={{ padding: '24px' }}
         >
           <div className="max-w-7xl mx-auto">
             <AnimatePresence mode="wait">
