@@ -19,6 +19,12 @@ repeatable (~10 minutes).
 | `create-admin.sql` | Promotes the client's owner login to `ADMIN`. |
 | `frontend.env.template` | Env vars for the client's Vercel deploy. |
 | `agent.env.template` | Env vars for each PC's `pc-agent/.env`. |
+| `tenant-dashboard.html` | Operator console — open in a browser to see/launch all tenants. Edit the `TENANTS` array (mirror of `tenants.json`). |
+| `tenants.example.json` | Canonical registry shape; copy to `tenants.json`. |
+
+For the per-PC agent install itself, use **`pc-agent/install.ps1`** (elevated
+PowerShell) — it installs deps, writes `.env`, generates/records the
+`AGENT_SECRET`, and registers the `DubeManAgent` service. See `pc-agent/README.md`.
 
 ## Checklist
 
