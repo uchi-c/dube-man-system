@@ -4,6 +4,17 @@
 
 export type UserRole = 'ADMIN' | 'STAFF' | 'CAFE_OPERATOR';
 
+// ============================================================
+// MULTI-TENANCY — Types
+// ============================================================
+
+/** A tenant workspace. Every business record is scoped to one of these. */
+export interface Organization {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -294,5 +305,108 @@ export interface PrintReportRow {
   revenue: number;
   cost: number;
   profit: number;
+}
+
+// ============================================================
+// PHARMACY — Types
+// ============================================================
+
+export type MedicineDosageForm =
+  | 'TABLET' | 'CAPSULE' | 'SYRUP' | 'INJECTION' | 'OINTMENT'
+  | 'DROPS' | 'INHALER' | 'CREAM' | 'POWDER' | 'OTHER';
+
+export type PrescriptionStatus = 'PENDING' | 'PARTIALLY_DISPENSED' | 'DISPENSED' | 'CANCELLED';
+
+export type StockStatus = 'OUT_OF_STOCK' | 'LOW_STOCK' | 'OK';
+
+export type ExpiryAlertLevel = 'EXPIRED' | 'CRITICAL' | 'WARNING' | 'OK';
+
+/** A drug in the pharmacy catalog (not stock — see MedicineBatch for that). */
+export interface Medicine {
+  id: string;
+  name: string;
+  generic_name?: string;
+  dosage_form: MedicineDosageForm;
+  strength?: string;          // e.g. '500mg'
+  unit: string;                // e.g. Tablet, Bottle, Vial, Box
+  category?: string;           // therapeutic class e.g. 'Analgesic'
+  requires_prescription: boolean;
+  controlled_substance: boolean;
+  reorder_level: number;
+  buying_price: number;
+  selling_price: number;
+  barcode?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+
+  // Derived (joined from medicine_stock_levels view)
+  total_quantity?: number;
+  stock_status?: StockStatus;
+}
+
+/** A received lot of a medicine, with its own expiry date. */
+export interface MedicineBatch {
+  id: string;
+  medicine_id: string;
+  medicine_name?: string;
+  batch_number: string;
+  quantity: number;
+  expiry_date: string;
+  manufacture_date?: string;
+  supplier?: string;
+  cost_price: number;
+  received_at: string;
+  created_at: string;
+
+  // Derived (joined from expiring_medicine_batches view)
+  days_until_expiry?: number;
+  alert_level?: ExpiryAlertLevel;
+}
+
+export interface Prescription {
+  id: string;
+  customer_id: string | null;
+  customer_name?: string;
+  patient_name: string;
+  prescribing_doctor?: string;
+  diagnosis?: string;
+  issued_date: string;
+  status: PrescriptionStatus;
+  notes?: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  items?: PrescriptionItem[];
+}
+
+export interface PrescriptionItem {
+  id: string;
+  prescription_id: string;
+  medicine_id: string;
+  medicine_name?: string;
+  quantity_prescribed: number;
+  quantity_dispensed: number;
+  dosage_instructions?: string;
+  created_at: string;
+}
+
+export interface DispensingRecord {
+  id: string;
+  prescription_id: string | null;
+  prescription_item_id: string | null;
+  medicine_id: string;
+  medicine_name?: string;
+  batch_id: string;
+  batch_number?: string;
+  customer_id: string | null;
+  customer_name?: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  dispensed_by: string | null;
+  dispensed_by_name?: string;
+  dispensed_at: string;
+  notes?: string;
 }
 

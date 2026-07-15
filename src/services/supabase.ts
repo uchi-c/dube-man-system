@@ -9,6 +9,12 @@ import {
   WifiUsageLog, RouterSetting
 } from '../types';
 
+// getCurrentOrganizationId lives in services/organizations.ts, which itself
+// imports `supabase`/`isSupabaseConfigured` from this file. Both imports are
+// only ever touched inside function bodies (never at module-eval time), so
+// this circular reference resolves safely under Vite/ESM.
+import { getCurrentOrganizationId, clearOrganizationCache } from './organizations';
+
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
@@ -143,6 +149,7 @@ export async function logoutUser(): Promise<void> {
     await supabase.auth.signOut();
   }
   localStorage.removeItem('dubeman_current_user');
+  clearOrganizationCache();
 }
 
 export async function fetchAllUsers(): Promise<User[]> {
@@ -242,6 +249,7 @@ export async function fetchProducts(): Promise<Product[]> {
 export async function insertProduct(product: Omit<Product, 'id' | 'created_at' | 'updated_at'>): Promise<Product | null> {
   if (isSupabaseConfigured) {
     try {
+      const organization_id = await getCurrentOrganizationId();
       const { data, error } = await supabase
         .from('products')
         .insert([{
@@ -250,7 +258,8 @@ export async function insertProduct(product: Omit<Product, 'id' | 'created_at' |
           quantity: product.quantity,
           buying_price: product.buying_price,
           selling_price: product.selling_price,
-          supplier: product.supplier
+          supplier: product.supplier,
+          organization_id
         }])
         .select()
         .single();
@@ -339,11 +348,13 @@ export async function adjustStockLevel(productId: string, delta: number, type: '
 
       // Insert transaction
       const user = localDb.getCurrentUser();
+      const organization_id = await getCurrentOrganizationId();
       await supabase.from('inventory_transactions').insert([{
         product_id: productId,
         type: type,
         quantity: type === 'STOCK_IN' ? delta : -delta,
-        created_by: user.id
+        created_by: user.id,
+        organization_id
       }]);
 
       await insertLog(user.id, `Stock ${type === 'STOCK_IN' ? 'Replenishment' : 'Deduction'} for ${current.name}: ${delta} pieces. New stock: ${finalQuantity}`);
@@ -380,9 +391,10 @@ export async function fetchCustomers(): Promise<Customer[]> {
 export async function insertCustomer(name: string, phone: string, email: string): Promise<Customer | null> {
   if (isSupabaseConfigured) {
     try {
+      const organization_id = await getCurrentOrganizationId();
       const { data, error } = await supabase
         .from('customers')
-        .insert([{ name, phone, email }])
+        .insert([{ name, phone, email, organization_id }])
         .select()
         .single();
       if (error) throw error;
@@ -461,6 +473,8 @@ export async function insertSale(
 
   if (isSupabaseConfigured) {
     try {
+      const organization_id = await getCurrentOrganizationId();
+
       // 1. Calculate active totals
       const totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
 
@@ -484,7 +498,8 @@ export async function insertSale(
           customer_id: customerId || null,
           total_amount: totalAmount,
           payment_method: paymentMethod,
-          created_by: currentUser.id
+          created_by: currentUser.id,
+          organization_id
         }])
         .select()
         .single();
@@ -497,7 +512,8 @@ export async function insertSale(
         sale_id: saleRow.id,
         product_id: item.product_id,
         quantity: item.quantity,
-        unit_price: item.unit_price
+        unit_price: item.unit_price,
+        organization_id
       }));
 
       const { data: insertedItems, error: itemsErr } = await supabase
@@ -593,6 +609,7 @@ export async function insertPrintingOrder(
 
   if (isSupabaseConfigured) {
     try {
+      const organization_id = await getCurrentOrganizationId();
       const { data, error } = await supabase
         .from('printing_orders')
         .insert([{
@@ -601,7 +618,8 @@ export async function insertPrintingOrder(
           quantity,
           amount,
           amount_paid: amountPaid,
-          created_by: user.id
+          created_by: user.id,
+          organization_id
         }])
         .select('*, customers(*)')
         .single();
@@ -857,6 +875,7 @@ export async function startWorkstationSession(computerId: string, customerName: 
       if (cErr) throw cErr;
 
       // 3. Insert new running session row
+      const organization_id = await getCurrentOrganizationId();
       const { error: sErr } = await supabase
         .from('cafe_sessions')
         .insert([{
@@ -864,7 +883,8 @@ export async function startWorkstationSession(computerId: string, customerName: 
           customer_name: customerName,
           start_time: new Date().toISOString(),
           rate_per_minute: ratePerMinute,
-          status: 'ACTIVE'
+          status: 'ACTIVE',
+          organization_id
         }]);
 
       if (sErr) throw sErr;
@@ -974,17 +994,19 @@ export async function fetchActivityLogs(): Promise<ActivityLog[]> {
   return localDb.getActivityLogs();
 }
 
-export async function insertLog(userId: string, action: string): Promise<void> {
+export async function insertLog(userId: string | null, action: string): Promise<void> {
   const currentUser = localDb.getCurrentUser();
   const name = currentUser ? currentUser.name : 'Worker_Profile';
 
   if (isSupabaseConfigured) {
     try {
+      const organization_id = await getCurrentOrganizationId();
       const { error } = await supabase
         .from('activity_logs')
         .insert([{
           user_id: userId,
-          action: action
+          action: action,
+          organization_id
         }]);
       if (error) throw error;
       return;
@@ -993,7 +1015,7 @@ export async function insertLog(userId: string, action: string): Promise<void> {
     }
   }
 
-  localDb.addLog(userId, name, action);
+  localDb.addLog(userId || '', name, action);
 }
 
 // ==========================================
@@ -1056,9 +1078,10 @@ export async function createWifiCustomer(name: string, phone: string, device_nam
         return updated;
       }
 
+      const organization_id = await getCurrentOrganizationId();
       const { data, error } = await supabase
         .from('wifi_customers')
-        .insert([{ name, phone, device_name, mac_address: cleanMac }])
+        .insert([{ name, phone, device_name, mac_address: cleanMac, organization_id }])
         .select()
         .single();
       if (error) throw error;
@@ -1089,9 +1112,10 @@ export async function fetchWifiPackages(): Promise<WifiPackage[]> {
 export async function createWifiPackage(name: string, duration_minutes: number, price: number): Promise<WifiPackage> {
   if (isSupabaseConfigured) {
     try {
+      const organization_id = await getCurrentOrganizationId();
       const { data, error } = await supabase
         .from('wifi_packages')
-        .insert([{ name, duration_minutes, price }])
+        .insert([{ name, duration_minutes, price, organization_id }])
         .select()
         .single();
       if (error) throw error;
@@ -1157,6 +1181,7 @@ export async function startWifiSession(
 
       const now = new Date();
       const endTime = new Date(now.getTime() + pkg.duration_minutes * 60 * 1000);
+      const organization_id = await getCurrentOrganizationId();
 
       // 3. Insert Wifi Session
       const { data: session, error: sessError } = await supabase
@@ -1168,7 +1193,8 @@ export async function startWifiSession(
           end_time: endTime.toISOString(),
           duration_minutes: pkg.duration_minutes,
           amount: pkg.price,
-          status: 'ACTIVE'
+          status: 'ACTIVE',
+          organization_id
         }])
         .select('*, wifi_customers(*), wifi_packages(*)')
         .single();
@@ -1180,7 +1206,8 @@ export async function startWifiSession(
         customer_id: cust.id,
         device_name: deviceName,
         mac_address: macAddress.toUpperCase(),
-        action: 'CONNECTED'
+        action: 'CONNECTED',
+        organization_id
       }]);
 
       await insertLog(currentUser.id, `Authorized WiFi Session for ${customerName} (${pkg.name})`);
@@ -1230,11 +1257,13 @@ export async function updateWifiSessionStatus(sessionId: string, newStatus: 'ACT
       if (newStatus === 'EXPIRED' || newStatus === 'COMPLETED' || newStatus === 'CANCELLED') {
         const cust = oldSess.wifi_customers;
         if (cust) {
+          const organization_id = await getCurrentOrganizationId();
           await supabase.from('wifi_usage_logs').insert([{
             customer_id: cust.id,
             device_name: cust.device_name,
             mac_address: cust.mac_address,
-            action: newStatus === 'EXPIRED' ? 'EXPIRED' : 'DISCONNECTED'
+            action: newStatus === 'EXPIRED' ? 'EXPIRED' : 'DISCONNECTED',
+            organization_id
           }]);
         }
       }
@@ -1316,13 +1345,15 @@ export async function saveRouterSettings(
         if (error) throw error;
         return data;
       } else {
+        const organization_id = await getCurrentOrganizationId();
         const { data, error } = await supabase
           .from('router_settings')
           .insert([{
             router_name: routerName,
             router_brand: routerBrand,
             router_model: routerModel,
-            integration_type: integrationType
+            integration_type: integrationType,
+            organization_id
           }])
           .select()
           .single();
@@ -1440,9 +1471,10 @@ export async function insertPrinter(
 ): Promise<Printer | null> {
   if (!isSupabaseConfigured) return null;
   try {
+    const organization_id = await getCurrentOrganizationId();
     const { data, error } = await supabase
       .from('printers')
-      .insert([p])
+      .insert([{ ...p, organization_id }])
       .select()
       .single();
     if (error) throw error;
@@ -1544,6 +1576,12 @@ export async function insertPrintJob(
 ): Promise<PrintJob | null> {
   if (!isSupabaseConfigured) return null;
   try {
+    // Note: the actual Python pc-agent inserts print jobs via its own raw
+    // REST call under the anon key and never runs this function, so it has
+    // no organization context — those rows fall back to the default
+    // organization (see database/migrations/001_multi_tenancy.sql). This
+    // path is for the authenticated manual-entry form only.
+    const organization_id = await getCurrentOrganizationId();
     const { data, error } = await supabase
       .from('print_jobs')
       .insert([{
@@ -1559,7 +1597,8 @@ export async function insertPrintJob(
         cost: job.cost,
         revenue: job.revenue,
         status: job.status,
-        print_time: job.print_time
+        print_time: job.print_time,
+        organization_id
       }])
       .select(`
         *,
@@ -1599,9 +1638,10 @@ export async function upsertPaperInventory(
 ): Promise<PaperInventory | null> {
   if (!isSupabaseConfigured) return null;
   try {
+    const organization_id = await getCurrentOrganizationId();
     const { data, error } = await supabase
       .from('paper_inventory')
-      .upsert([item], { onConflict: 'paper_size' })
+      .upsert([{ ...item, organization_id }], { onConflict: 'organization_id,paper_size' })
       .select()
       .single();
     if (error) throw error;
@@ -1685,7 +1725,7 @@ export async function upsertPrintPricingSettings(
 
     const { error } = existing
       ? await supabase.from('print_pricing_settings').update(s).eq('id', existing.id)
-      : await supabase.from('print_pricing_settings').insert([s]);
+      : await supabase.from('print_pricing_settings').insert([{ ...s, organization_id: await getCurrentOrganizationId() }]);
     if (error) throw error;
     const user = localDb.getCurrentUser();
     await insertLog(user.id, 'Updated print pricing settings');

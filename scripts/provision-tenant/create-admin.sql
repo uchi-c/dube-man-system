@@ -22,3 +22,14 @@ on conflict (id) do update
   set role = 'ADMIN',
       name = excluded.name,
       email = excluded.email;
+
+-- If schema-bundle.sql included migrations/001_multi_tenancy.sql (it does by
+-- default), every user must also belong to an organization or RLS hides all
+-- data from them. This silo has exactly one tenant, so map the owner to the
+-- auto-created "Default Organization":
+insert into public.user_organization_memberships (user_id, org_id)
+values (
+  '00000000-0000-0000-0000-000000000000',  -- <-- same auth user UID as above
+  public.default_organization_id()
+)
+on conflict (user_id, org_id) do nothing;

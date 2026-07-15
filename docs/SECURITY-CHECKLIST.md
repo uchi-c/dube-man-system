@@ -11,6 +11,9 @@ This document outlines the security parameters implemented throughout the codeba
 - [x] **Admins** maintain exclusive rights to query system actions & configuration fields (`activity_logs`).
 - [x] **Staff members** have standard write permissions for recording customers, logging sales, and advancing printing milestones.
 - [x] **Cafe operators** are restricted to viewing computers and initiating/terminating internet sessions. They are denied access to viewing products prices, full financial logs, or database variables.
+- [x] **Multi-tenant isolation**: every business table carries `organization_id` and RLS filters on the caller's memberships (`public.current_org_ids()`), so one tenant's Supabase project data can never be read or written by another tenant's users. See `database/migrations/001_multi_tenancy.sql`.
+- [x] **Pharmacy dispensing is append-only**: `dispensing_records` only grants `SELECT`/`INSERT` policies — no `UPDATE`/`DELETE` — so the audit trail of every unit dispensed can't be altered after the fact.
+- [ ] **Known gap — anon-key devices have no organization context**: the pc-agent (and other `anon`-role writers granted in `agent_schema.sql`) self-registers/writes without an `organization_id`, so those rows fall back to the single "Default Organization" (`public.default_organization_id()`). This is correct for the common single-tenant deployment but means a genuinely multi-org shared project needs its device provisioning hardened (e.g. issue each agent a per-org signed token) before onboarding a second tenant's café hardware onto the same project. Tracked alongside the HMAC item below.
 
 ---
 

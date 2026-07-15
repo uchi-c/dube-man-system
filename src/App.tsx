@@ -18,13 +18,14 @@ const CafeManagement = lazy(() => import('./pages/CafeManagement'));
 const Customers      = lazy(() => import('./pages/Customers'));
 const WifiManagement = lazy(() => import('./pages/WifiManagement'));
 const PrintManager   = lazy(() => import('./pages/PrintManager'));
+const Pharmacy       = lazy(() => import('./pages/Pharmacy'));
 const PCAgentConsole = lazy(() => import('./components/PCAgentConsole'));
 const ActivityLogs   = lazy(() => import('./components/ActivityLogs'));
 
 import {
   LayoutDashboard, Package, ShoppingCart, Printer, Monitor,
   Wifi, History, Users, Shield, LogOut, Menu, X,
-  RefreshCw, PrinterIcon, ChevronRight, Bell,
+  RefreshCw, PrinterIcon, ChevronRight, Bell, Pill,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Analytics } from '@vercel/analytics/react';
@@ -47,6 +48,7 @@ const TABS: TabDef[] = [
   { id: 'pos',           label: 'POS & Sales',      icon: ShoppingCart,    group: 'Operations', path: '/sales',         roles: ['ADMIN','STAFF'] },
   { id: 'inventory',     label: 'Inventory',        icon: Package,         group: 'Operations', path: '/inventory',     roles: ['ADMIN','STAFF'] },
   { id: 'customers',     label: 'Customers',        icon: Users,           group: 'Operations', path: '/customers',     roles: ['ADMIN','STAFF'] },
+  { id: 'pharmacy',      label: 'Pharmacy',         icon: Pill,            group: 'Operations', path: '/pharmacy',      roles: ['ADMIN','STAFF'] },
   // Printing
   { id: 'print-manager', label: 'Print Manager',    icon: PrinterIcon,     group: 'Printing',   path: '/print-manager', roles: ['ADMIN'] },
   { id: 'printing',      label: 'Branding & Orders',icon: Printer,         group: 'Printing',   path: '/printing-orders',roles: ['ADMIN'] },
@@ -416,6 +418,7 @@ function renderPage(id: string, role: string) {
     case 'print-manager': return <PrintManager />;
     case 'cafe':          return <CafeManagement userRole={role} />;
     case 'customers':     return <Customers />;
+    case 'pharmacy':      return <Pharmacy userRole={role} />;
     case 'wifi':          return <WifiManagement />;
     case 'pc-agent':      return <PCAgentConsole />;
     case 'logs':          return <ActivityLogs userRole={role} />;

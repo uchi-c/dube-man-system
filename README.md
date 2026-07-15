@@ -1,16 +1,18 @@
 # Dube Man Innovation Business Management System
 
-React + Vite business console for Dube Man General Dealers, backed by Supabase Auth, PostgreSQL, RLS, and Supabase Realtime-ready tables.
+React + Vite business console for Dube Man General Dealers, backed by Supabase Auth, PostgreSQL, RLS, and Supabase Realtime-ready tables. Multi-tenant: every table is scoped to an `organization_id` and isolated by row-level security, so one Supabase project can safely host several independent businesses.
 
 **Live:** https://dube-man-system-two.vercel.app
 
 ## Modules
 
+- Multi-tenant organizations with row-level-security isolation per tenant
 - Authentication and role-gated navigation
 - Dashboard and operational KPIs
 - Inventory and stock adjustments
 - Sales / POS ledger
 - Customer registry
+- Pharmacy: medicine catalog, batch/lot expiry tracking, prescriptions, dispensing ledger
 - Printing and branding orders
 - Internet cafe workstation sessions
 - WiFi voucher/session management foundation
@@ -28,7 +30,10 @@ React + Vite business console for Dube Man General Dealers, backed by Supabase A
    VITE_SUPABASE_URL=https://your-project-id.supabase.co
    VITE_SUPABASE_ANON_KEY=your-supabase-anon-or-publishable-key
    ```
-3. Apply `database/schema.sql` in the Supabase SQL editor for a fresh project.
+3. Apply, in order, in the Supabase SQL editor for a fresh project:
+   `database/schema.sql` → `database/print_schema.sql` → `database/agent_schema.sql` →
+   `database/migrations/001_multi_tenancy.sql` → `database/migrations/002_pharmacy_module.sql`.
+   See `docs/SUPABASE-SETUP.md` for the full runbook.
 4. Run the app:
    ```bash
    npm run dev
