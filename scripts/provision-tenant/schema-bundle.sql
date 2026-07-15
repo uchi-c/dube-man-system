@@ -3,7 +3,8 @@
 -- Regenerate with: scripts/provision-tenant/build-bundle.sh
 -- Order: schema.sql -> print_schema.sql -> agent_schema.sql ->
 --        migrations/001_multi_tenancy.sql ->
---        migrations/002_pharmacy_module.sql
+--        migrations/002_pharmacy_module.sql ->
+--        migrations/003_organization_signup.sql
 -- Paste this whole file into a fresh Supabase project's SQL editor,
 -- then run create-admin.sql to promote the owner account.
 -- ============================================================
@@ -882,6 +883,45 @@ begin
 end;
 $$;
 
+-- The one-off backfill above only covers users that already existed when
+-- this migration ran. public.users rows are also created later — on first
+-- login (see fetchProfileForAuthUser in src/services/supabase.ts) and via
+-- the tenant-onboarding SQL in docs/DEPLOYMENT.md — and those get no
+-- membership without this trigger, which would leave current_org_ids()
+-- empty for them (every org-scoped read returns nothing, and
+-- getCurrentOrganizationId() throws on write).
+--
+-- This only auto-enrolls while the deployment is still single-tenant
+-- (exactly one organization exists) — that's the unambiguous case where
+-- "the org this new user belongs to" has exactly one right answer. Once a
+-- second organization exists, auto-enrolling every new user into org #1
+-- would leak subsequent tenants' users into the first tenant, so the
+-- trigger steps back and membership must be assigned explicitly (as
+-- docs/DEPLOYMENT.md's onboarding flow already does).
+create or replace function public.auto_enroll_default_organization()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    v_org_count integer;
+begin
+    select count(*) into v_org_count from public.organizations;
+    if v_org_count = 1 then
+        insert into public.user_organization_memberships (user_id, org_id)
+        select new.id, o.id from public.organizations o
+        on conflict (user_id, org_id) do nothing;
+    end if;
+    return new;
+end;
+$$;
+
+drop trigger if exists tr_auto_enroll_default_organization on public.users;
+create trigger tr_auto_enroll_default_organization
+    after insert on public.users
+    for each row execute function public.auto_enroll_default_organization();
+
 -- ---------------------------------------------------------------------------
 -- 2. TAG EVERY BUSINESS TABLE WITH organization_id
 -- Each ADD COLUMN carries a DEFAULT of default_organization_id(), so
@@ -1145,14 +1185,21 @@ security definer
 set search_path = public
 as $$
 begin
+    -- organization_id match is required here, not just relied on via RLS:
+    -- the INSERT policy on sale_items only checks that sale_items.organization_id
+    -- is one of the caller's orgs, not that product_id actually belongs to that
+    -- org. Without this filter, a crafted sale_items row could reference a
+    -- product_id from a different tenant and this SECURITY DEFINER trigger
+    -- would silently deduct that other tenant's stock.
     update public.products
     set quantity = quantity - new.quantity,
         updated_at = timezone('utc'::text, now())
     where id = new.product_id
+      and organization_id = new.organization_id
       and quantity >= new.quantity;
 
     if not found then
-        raise exception 'Insufficient stock for product %', new.product_id;
+        raise exception 'Insufficient stock for product % (or product does not belong to organization %)', new.product_id, new.organization_id;
     end if;
 
     insert into public.inventory_transactions (product_id, type, quantity, created_by, organization_id)
@@ -1541,9 +1588,21 @@ as $$
 declare
     v_expiry date;
 begin
+    -- organization_id and medicine_id must both be checked here, not just
+    -- relied on via RLS: the INSERT policy on dispensing_records only
+    -- validates dispensing_records.organization_id, not that batch_id
+    -- actually belongs to that org or to the stated medicine_id. Without
+    -- these filters, a crafted insert could drain another tenant's batch,
+    -- or log one medicine while silently deducting a different one.
     select expiry_date into v_expiry
     from public.medicine_batches
-    where id = new.batch_id;
+    where id = new.batch_id
+      and organization_id = new.organization_id
+      and medicine_id = new.medicine_id;
+
+    if not found then
+        raise exception 'Batch % not found for medicine % in organization %', new.batch_id, new.medicine_id, new.organization_id;
+    end if;
 
     if v_expiry is not null and v_expiry < current_date then
         raise exception 'Cannot dispense from expired batch (expired %)', v_expiry;
@@ -1552,6 +1611,8 @@ begin
     update public.medicine_batches
     set quantity = quantity - new.quantity
     where id = new.batch_id
+      and organization_id = new.organization_id
+      and medicine_id = new.medicine_id
       and quantity >= new.quantity;
 
     if not found then
@@ -1688,4 +1749,99 @@ comment on view public.medicine_stock_levels is 'Live stock per medicine (non-ex
 comment on view public.expiring_medicine_batches is 'Batches expired or expiring within 90 days, for the pharmacy dashboard alert feed.';
 
 -- <<<<<<<<<< END migrations/002_pharmacy_module.sql <<<<<<<<<<
+
+-- >>>>>>>>>> BEGIN migrations/003_organization_signup.sql >>>>>>>>>>
+-- ============================================================================
+-- MIGRATION 003: SELF-SERVICE ORGANIZATION SIGNUP
+-- Lets a brand-new Supabase Auth user create their own organization and
+-- become its ADMIN in one transaction, from the app's Signup page —
+-- previously this required an admin to run SQL by hand (see
+-- docs/DEPLOYMENT.md "Onboarding a new tenant").
+--
+-- Why a SECURITY DEFINER function instead of plain inserts: a brand-new
+-- user has no public.users row yet (or, at best, only enough privilege to
+-- insert themselves as STAFF — see "Users can create own staff profile" in
+-- schema.sql). Both public.organizations and
+-- public.user_organization_memberships only allow INSERT from an existing
+-- ADMIN. A signing-up user is, by definition, neither yet — so this
+-- function runs with elevated privileges to bootstrap all three rows
+-- (organizations, users, user_organization_memberships), but is scoped
+-- tightly to auth.uid() so it can only ever act on the CALLING user's own
+-- account, not anyone else's.
+--
+-- Apply AFTER migration 001_multi_tenancy.sql.
+-- Safe to re-run.
+-- ============================================================================
+
+create or replace function public.signup_new_organization(org_name text, owner_name text default null)
+returns table (organization_id uuid, role public.user_role)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    v_user_id uuid := auth.uid();
+    v_email text;
+    v_org_id uuid;
+    v_org_name text := trim(coalesce(org_name, ''));
+begin
+    if v_user_id is null then
+        raise exception 'Must be signed in to create an organization';
+    end if;
+
+    -- One organization-creation per auth account. An account that already
+    -- has a profile (whether from a prior signup or an admin-provisioned
+    -- invite) must be added to additional organizations by an existing
+    -- ADMIN instead — see docs/DEPLOYMENT.md "Onboarding a new tenant".
+    if exists (select 1 from public.users where id = v_user_id) then
+        raise exception 'This account already has a profile. Sign in instead, or ask an admin to add you to another organization.';
+    end if;
+
+    if v_org_name = '' then
+        raise exception 'Organization name is required';
+    end if;
+
+    select email into v_email from auth.users where id = v_user_id;
+    if v_email is null then
+        raise exception 'Could not resolve the signed-in account''s email';
+    end if;
+
+    insert into public.organizations (name)
+    values (v_org_name)
+    returning id into v_org_id;
+
+    insert into public.users (id, name, email, role)
+    values (
+        v_user_id,
+        coalesce(nullif(trim(owner_name), ''), split_part(v_email, '@', 1)),
+        v_email,
+        'ADMIN'
+    );
+
+    -- Usually redundant with tr_auto_enroll_default_organization (which
+    -- fires on the users insert above and already enrolls into the org when
+    -- it's the only one), but explicit here so this function is correct
+    -- standalone even if that trigger is ever changed — and it's a no-op
+    -- via ON CONFLICT when the trigger already did it.
+    insert into public.user_organization_memberships (user_id, org_id)
+    values (v_user_id, v_org_id)
+    on conflict (user_id, org_id) do nothing;
+
+    return query select v_org_id, 'ADMIN'::public.user_role;
+end;
+$$;
+
+-- Belt-and-suspenders: the function already raises an exception when
+-- auth.uid() is null, so an anon caller gets a clean error either way. But
+-- Supabase re-applies its default anon/authenticated/service_role execute
+-- grants around function creation, so a single REVOKE ALL FROM PUBLIC issued
+-- alongside the CREATE doesn't reliably strip anon's grant — REVOKE EXECUTE
+-- FROM anon explicitly, as its own statement, does.
+revoke all on function public.signup_new_organization(text, text) from public;
+grant execute on function public.signup_new_organization(text, text) to authenticated;
+revoke execute on function public.signup_new_organization(text, text) from anon;
+
+comment on function public.signup_new_organization(text, text) is 'Self-service signup: creates an organization and makes the calling (already-authenticated) user its ADMIN. Scoped to auth.uid() — cannot act on any other account.';
+
+-- <<<<<<<<<< END migrations/003_organization_signup.sql <<<<<<<<<<
 

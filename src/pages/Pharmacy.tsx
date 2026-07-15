@@ -23,6 +23,17 @@ interface PharmacyProps {
 
 type PharmacyTab = 'catalog' | 'batches' | 'prescriptions' | 'log';
 
+// Carries prescription linkage into the dispense flow when it's opened from
+// a prescription item, so the server-side trigger can advance
+// quantity_dispensed / prescription status (see database/migrations/
+// 002_pharmacy_module.sql — it only does that when both ids are present).
+interface DispensingTarget {
+  medicine: Medicine;
+  prescriptionId?: string;
+  prescriptionItemId?: string;
+  maxQuantity?: number;
+}
+
 const TABS: { id: PharmacyTab; label: string; icon: React.ElementType }[] = [
   { id: 'catalog',       label: 'Medicine Catalog', icon: Pill },
   { id: 'batches',       label: 'Stock & Expiry',   icon: PackagePlus },
@@ -76,7 +87,7 @@ export default function Pharmacy({ userRole }: PharmacyProps) {
   // ---- modals ----
   const [isAddingMedicine, setIsAddingMedicine] = useState(false);
   const [isReceivingStock, setIsReceivingStock] = useState(false);
-  const [isDispensing, setIsDispensing] = useState<Medicine | null>(null);
+  const [isDispensing, setIsDispensing] = useState<DispensingTarget | null>(null);
   const [isNewPrescription, setIsNewPrescription] = useState(false);
 
   const loadAll = async () => {
@@ -219,7 +230,7 @@ export default function Pharmacy({ userRole }: PharmacyProps) {
                         {canManage && (
                           <td className="dm-num-cell" style={{ padding: '12px 16px' }}>
                             <button
-                              onClick={() => setIsDispensing(m)}
+                              onClick={() => setIsDispensing({ medicine: m })}
                               disabled={(m.total_quantity ?? 0) <= 0}
                               className="dm-btn dm-btn-ghost" style={{ minHeight: 34, padding: '0 0.75rem' }}
                             >
@@ -307,7 +318,12 @@ export default function Pharmacy({ userRole }: PharmacyProps) {
                           <button
                             onClick={() => {
                               const med = medicines.find(m => m.id === item.medicine_id);
-                              if (med) setIsDispensing(med);
+                              if (med) setIsDispensing({
+                                medicine: med,
+                                prescriptionId: rx.id,
+                                prescriptionItemId: item.id,
+                                maxQuantity: item.quantity_prescribed - item.quantity_dispensed,
+                              });
                             }}
                             className="dm-btn dm-btn-ghost" style={{ minHeight: 28, padding: '0 0.6rem', fontSize: '0.72rem' }}
                           >
@@ -381,7 +397,10 @@ export default function Pharmacy({ userRole }: PharmacyProps) {
         )}
         {isDispensing && (
           <DispenseModal
-            medicine={isDispensing}
+            medicine={isDispensing.medicine}
+            prescriptionId={isDispensing.prescriptionId}
+            prescriptionItemId={isDispensing.prescriptionItemId}
+            defaultQuantity={isDispensing.maxQuantity}
             customers={customers}
             onClose={() => setIsDispensing(null)}
             onSaved={() => { setIsDispensing(null); loadAll(); }}
@@ -631,12 +650,13 @@ function ReceiveStockModal({ medicines, onClose, onSaved }: { medicines: Medicin
 
 // ---- Dispense modal -------------------------------------------------------------
 
-function DispenseModal({ medicine, customers, onClose, onSaved }: {
-  medicine: Medicine; customers: Customer[]; onClose: () => void; onSaved: () => void;
+function DispenseModal({ medicine, prescriptionId, prescriptionItemId, defaultQuantity, customers, onClose, onSaved }: {
+  medicine: Medicine; prescriptionId?: string; prescriptionItemId?: string; defaultQuantity?: number;
+  customers: Customer[]; onClose: () => void; onSaved: () => void;
 }) {
   const [batches, setBatches] = useState<MedicineBatch[]>([]);
   const [batchId, setBatchId] = useState('');
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(defaultQuantity && defaultQuantity > 0 ? defaultQuantity : 1);
   const [unitPrice, setUnitPrice] = useState(medicine.selling_price);
   const [customerId, setCustomerId] = useState('');
   const [saving, setSaving] = useState(false);
@@ -660,6 +680,8 @@ function DispenseModal({ medicine, customers, onClose, onSaved }: {
       const result = await dispenseMedicine({
         medicine_id: medicine.id, batch_id: batchId, quantity, unit_price: unitPrice,
         customer_id: customerId || null,
+        prescription_id: prescriptionId || null,
+        prescription_item_id: prescriptionItemId || null,
       });
       if (typeof result === 'string') setError(result);
       else onSaved();
@@ -671,8 +693,11 @@ function DispenseModal({ medicine, customers, onClose, onSaved }: {
   return (
     <ModalShell onClose={onClose}>
       <span className="dm-badge dm-badge-info"><Pill style={{ width: 12, height: 12 }} /> Dispense</span>
+      {prescriptionItemId && (
+        <span className="dm-badge dm-badge-success" style={{ marginLeft: 6 }}>Linked to prescription</span>
+      )}
       <h3 className="dm-h2" style={{ marginTop: 10 }}>{medicine.name}{medicine.strength ? ` · ${medicine.strength}` : ''}</h3>
-      {medicine.requires_prescription && (
+      {medicine.requires_prescription && !prescriptionItemId && (
         <p style={{ fontSize: '0.78rem', color: 'var(--warning)', marginTop: 4 }}>Prescription-only medicine — confirm the customer has a valid prescription.</p>
       )}
       <form onSubmit={handleSubmit} className="space-y-4 mt-3">
@@ -689,9 +714,18 @@ function DispenseModal({ medicine, customers, onClose, onSaved }: {
           <div>
             <label className="dm-label flex justify-between" style={{ padding: 0 }}>
               <span>Quantity</span>
-              {selectedBatch && <span className="dm-nums" style={{ textTransform: 'none', letterSpacing: 0 }}>{selectedBatch.quantity} available</span>}
+              {selectedBatch && (
+                <span className="dm-nums" style={{ textTransform: 'none', letterSpacing: 0 }}>
+                  {selectedBatch.quantity} available{defaultQuantity ? ` · ${defaultQuantity} prescribed` : ''}
+                </span>
+              )}
             </label>
-            <input type="number" required min={1} max={selectedBatch?.quantity} className="dm-input" style={{ marginTop: 6 }} value={quantity} onChange={e => setQuantity(parseInt(e.target.value) || 0)} />
+            <input
+              type="number" required min={1}
+              max={defaultQuantity ? Math.min(selectedBatch?.quantity ?? defaultQuantity, defaultQuantity) : selectedBatch?.quantity}
+              className="dm-input" style={{ marginTop: 6 }} value={quantity}
+              onChange={e => setQuantity(parseInt(e.target.value) || 0)}
+            />
           </div>
           <div>
             <label className="dm-label" style={{ padding: 0 }}>Unit price</label>

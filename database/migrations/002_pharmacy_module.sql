@@ -233,9 +233,21 @@ as $$
 declare
     v_expiry date;
 begin
+    -- organization_id and medicine_id must both be checked here, not just
+    -- relied on via RLS: the INSERT policy on dispensing_records only
+    -- validates dispensing_records.organization_id, not that batch_id
+    -- actually belongs to that org or to the stated medicine_id. Without
+    -- these filters, a crafted insert could drain another tenant's batch,
+    -- or log one medicine while silently deducting a different one.
     select expiry_date into v_expiry
     from public.medicine_batches
-    where id = new.batch_id;
+    where id = new.batch_id
+      and organization_id = new.organization_id
+      and medicine_id = new.medicine_id;
+
+    if not found then
+        raise exception 'Batch % not found for medicine % in organization %', new.batch_id, new.medicine_id, new.organization_id;
+    end if;
 
     if v_expiry is not null and v_expiry < current_date then
         raise exception 'Cannot dispense from expired batch (expired %)', v_expiry;
@@ -244,6 +256,8 @@ begin
     update public.medicine_batches
     set quantity = quantity - new.quantity
     where id = new.batch_id
+      and organization_id = new.organization_id
+      and medicine_id = new.medicine_id
       and quantity >= new.quantity;
 
     if not found then

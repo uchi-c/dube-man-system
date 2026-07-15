@@ -57,6 +57,7 @@ Every business table carries an `organization_id` foreign key into `public.organ
 - **Backward-compatible default**: columns default to `public.default_organization_id()`, which auto-creates/reuses a single "Default Organization" for anything that omits the column — this keeps the common single-tenant deployment (and the anon-key pc-agent, which has no organization context) working unmodified.
 - **Trust model**: the `ADMIN` role is platform-wide within a Supabase project (it can see all organizations in that project), not scoped per-tenant. This app targets an owner-operator provisioning their own project — not a multi-tenant SaaS marketplace with mutually-untrusted tenant admins. For that stronger model, `ADMIN`-level policies would need their own `organization_id` scoping too.
 - Two deployment models coexist: **shared multi-tenant** (this migration; many orgs, one database) and **silo-per-tenant** (`scripts/provision-tenant/`; one Supabase project per client). Pick whichever isolation guarantee a client needs.
+- **Self-service tenant signup**: `public.signup_new_organization()` (`database/migrations/003_organization_signup.sql`) lets a brand-new Supabase Auth user create their own organization and become its `ADMIN` in one transaction, from the app's Signup page. It's `SECURITY DEFINER` because a signing-up user isn't an `ADMIN` of anything yet — but it's scoped tightly to `auth.uid()`, so it can only ever act on the calling account, and it refuses to run a second time for an account that already has a profile.
 
 ---
 

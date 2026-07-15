@@ -5,7 +5,8 @@
 -- objects — it does NOT touch Supabase's auth schema or your login users.
 -- After running this, apply in order: schema.sql, print_schema.sql,
 -- agent_schema.sql, migrations/001_multi_tenancy.sql,
--- migrations/002_pharmacy_module.sql, seed.sql.
+-- migrations/002_pharmacy_module.sql, migrations/003_organization_signup.sql,
+-- seed.sql.
 -- Safe to run repeatedly.
 --
 -- Going live and just want to remove seed.sql's demo rows (not tear down
@@ -60,7 +61,9 @@ drop function if exists public.set_updated_at() cascade;
 drop function if exists public.current_org_ids() cascade;
 drop function if exists public.default_organization_id() cascade;
 drop function if exists public.bootstrap_default_organization() cascade;
+drop function if exists public.auto_enroll_default_organization() cascade;
 drop function if exists public.process_dispensing_deduction() cascade;
+drop function if exists public.signup_new_organization(text, text) cascade;
 
 -- Enum types (drop after the tables that use them)
 drop type if exists public.color_mode cascade;

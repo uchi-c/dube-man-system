@@ -6,6 +6,7 @@ import { User } from '../types';
 
 interface LoginProps {
   onLoginSuccess: (user: User) => void;
+  onSwitchToSignup: () => void;
 }
 
 // Sign-in must never hang on a dead connection — cap it and recover.
@@ -97,7 +98,7 @@ function CafeNetworkIllustration() {
 
 // ---- Main component ---------------------------------------------------------
 
-export default function Login({ onLoginSuccess }: LoginProps) {
+export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) {
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading]   = useState(false);
@@ -290,6 +291,13 @@ export default function Login({ onLoginSuccess }: LoginProps) {
               </button>
             </form>
           </div>
+
+          <p style={{ textAlign: 'center', fontSize: '0.8125rem', color: 'var(--text-mid)' }}>
+            New business?{' '}
+            <button onClick={onSwitchToSignup} type="button" style={{ color: 'var(--blue-400)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
+              Create your workspace
+            </button>
+          </p>
 
           {/* Footer */}
           <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-low)' }}>

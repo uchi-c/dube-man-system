@@ -59,11 +59,12 @@ paste and run again.
 | 3 | `database/agent_schema.sql` | PC-agent support: live usage metrics, session countdown, remote command queue, anon-key agent policies |
 | 4 | `database/migrations/001_multi_tenancy.sql` | `organizations` + `user_organization_memberships`; tags **every** table above with `organization_id`; re-scopes all RLS policies for tenant isolation |
 | 5 | `database/migrations/002_pharmacy_module.sql` | Pharmacy: medicines, medicine_batches, prescriptions, prescription_items, dispensing_records |
-| 6 | `database/seed.sql` *(optional)* | Demo data across every module so a fresh project shows a working system immediately |
+| 6 | `database/migrations/003_organization_signup.sql` | `signup_new_organization()` — powers the app's self-service Signup page (§3a) |
+| 7 | `database/seed.sql` *(optional)* | Demo data across every module so a fresh project shows a working system immediately |
 
 If a run fails partway through (`relation "..." already exists`), run
 `database/reset.sql` first — it drops only this app's objects (never
-Supabase's `auth` schema or your login users) — then re-apply files 1–6 in
+Supabase's `auth` schema or your login users) — then re-apply files 1–7 in
 order.
 
 Migration 001 is safe to run against an **already-live** project too: every
@@ -71,7 +72,33 @@ pre-existing row is auto-assigned to a "Default Organization" it creates on
 first use, so nothing already deployed breaks. See `docs/ARCHITECTURE.md` §
 Multi-Tenancy for how the isolation model works.
 
-### Create your login and organization membership
+### 3a. Self-service signup (no SQL needed)
+
+Once migration 003 is applied, the app's Login page has a **"Create your
+workspace"** link that lets anyone sign up, create their own organization,
+and become its `ADMIN` — no admin/SQL step required. This is the easiest way
+to create your first login too. Two paths, both handled automatically:
+
+- **Email confirmation off** (or auto-confirmed): the organization is created
+  immediately and they're signed straight in.
+- **Email confirmation on** (Supabase's default for a fresh project): they
+  see "check your email"; the organization is created automatically the
+  moment they confirm and log in for the first time (the app stashes the
+  organization name in the auth user's metadata at sign-up and completes
+  setup on first login — see `fetchProfileForAuthUser` in
+  `src/services/supabase.ts`).
+
+This only ever acts on the *signing-up user's own* account — see the
+`signup_new_organization` function's comments in
+`database/migrations/003_organization_signup.sql` for why a
+`SECURITY DEFINER` function is needed here (a brand-new user isn't an
+`ADMIN` of anything yet, so the normal RLS rules would block them from
+creating an organization at all).
+
+### Alternative: create a login by hand (no self-service signup)
+
+Prefer to provision the first login yourself via SQL instead of the Signup
+page:
 
 ```sql
 -- 1. Promote the auth user you created in Authentication > Users to ADMIN
@@ -146,8 +173,14 @@ This system supports two deployment models — pick per client, or mix both:
 ### Shared multi-tenant (this migration): several orgs, one Supabase project
 
 Isolation is enforced by Postgres row-level security via
-`organization_id`, not by project boundaries. To onboard another tenant
-into an **existing** project:
+`organization_id`, not by project boundaries.
+
+**Easiest path**: point the new tenant at your app's URL and have them click
+**"Create your workspace"** on the Login page (§3a) — this is genuinely
+self-service once migration 003 is applied, no SQL required.
+
+**Manual path** (if you're provisioning on their behalf): to onboard another
+tenant into an **existing** project by hand:
 
 ```sql
 -- 1. Create the tenant

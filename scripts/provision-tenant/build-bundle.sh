@@ -19,6 +19,7 @@ files=(
   agent_schema.sql
   migrations/001_multi_tenancy.sql
   migrations/002_pharmacy_module.sql
+  migrations/003_organization_signup.sql
 )
 
 {
@@ -27,7 +28,8 @@ files=(
   echo "-- Regenerate with: scripts/provision-tenant/build-bundle.sh"
   echo "-- Order: schema.sql -> print_schema.sql -> agent_schema.sql ->"
   echo "--        migrations/001_multi_tenancy.sql ->"
-  echo "--        migrations/002_pharmacy_module.sql"
+  echo "--        migrations/002_pharmacy_module.sql ->"
+  echo "--        migrations/003_organization_signup.sql"
   echo "-- Paste this whole file into a fresh Supabase project's SQL editor,"
   echo "-- then run create-admin.sql to promote the owner account."
   echo "-- ============================================================"
