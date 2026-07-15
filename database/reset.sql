@@ -60,6 +60,7 @@ drop function if exists public.set_updated_at() cascade;
 drop function if exists public.current_org_ids() cascade;
 drop function if exists public.default_organization_id() cascade;
 drop function if exists public.bootstrap_default_organization() cascade;
+drop function if exists public.auto_enroll_default_organization() cascade;
 drop function if exists public.process_dispensing_deduction() cascade;
 
 -- Enum types (drop after the tables that use them)
