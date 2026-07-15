@@ -288,7 +288,13 @@ create trigger tr_on_dispensing_insert
 -- 6. STOCK + EXPIRY VIEWS (dashboard alerts)
 -- ---------------------------------------------------------------------------
 
-create or replace view public.medicine_stock_levels as
+-- security_invoker = true is required: without it, Postgres checks
+-- permissions against the underlying tables as the VIEW OWNER (the role
+-- that ran this migration, which bypasses RLS), not the querying user —
+-- silently leaking every organization's stock/expiry data to any
+-- authenticated caller. Confirmed against Supabase's security advisor.
+create or replace view public.medicine_stock_levels
+with (security_invoker = true) as
 select
     m.id as medicine_id,
     m.organization_id,
@@ -306,7 +312,8 @@ left join public.medicine_batches b
 where m.is_active
 group by m.id, m.organization_id, m.name, m.reorder_level;
 
-create or replace view public.expiring_medicine_batches as
+create or replace view public.expiring_medicine_batches
+with (security_invoker = true) as
 select
     b.id as batch_id,
     b.organization_id,

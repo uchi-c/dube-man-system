@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Pill, Plus, Search, AlertTriangle, Check, RefreshCw, PackagePlus,
   Stethoscope, ClipboardList, History, X, ShieldAlert, ChevronRight,
@@ -414,7 +415,13 @@ function EmptyState({ icon: Icon, title, subtitle }: { icon: React.ElementType; 
 // ---- Shared dark modal shell --------------------------------------------------
 
 function ModalShell({ children, onClose, wide }: { children: React.ReactNode; onClose: () => void; wide?: boolean }) {
-  return (
+  // Portal straight to <body>: the page root this modal would otherwise
+  // render inside carries a Framer Motion transform (for the page-transition
+  // animation), and any transformed ancestor becomes the containing block
+  // for `position: fixed` descendants — so without a portal this modal gets
+  // sized/centered against the page's own content height instead of the
+  // viewport, clipping its top on short pages (e.g. an empty catalog).
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       transition={{ duration: 0.18 }}
@@ -432,7 +439,8 @@ function ModalShell({ children, onClose, wide }: { children: React.ReactNode; on
       >
         {children}
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }
 
