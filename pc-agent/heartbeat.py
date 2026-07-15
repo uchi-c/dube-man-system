@@ -1,5 +1,4 @@
 import time
-import traceback
 
 from config import (
     COMPUTER_CODE,
@@ -15,14 +14,12 @@ from metrics import (
     get_metrics
 )
 
+import logger
+
 
 def start_heartbeat():
 
-    print(
-        f"[HEARTBEAT] "
-        f"Starting "
-        f"{COMPUTER_CODE}"
-    )
+    logger.info(f"[HEARTBEAT] Starting {COMPUTER_CODE}")
 
     register_computer(
         COMPUTER_CODE
@@ -39,20 +36,13 @@ def start_heartbeat():
                 metrics
             )
 
-            print(
-                f"[HEARTBEAT] "
-                f"CPU:{metrics['cpu']}% "
-                f"RAM:{metrics['ram']}% "
-                f"DISK:{metrics['disk']}%"
+            logger.info(
+                f"[HEARTBEAT] CPU:{metrics['cpu']}% "
+                f"RAM:{metrics['ram']}% DISK:{metrics['disk']}%"
             )
 
         except Exception as e:
-            print(
-                "[HEARTBEAT ERROR]",
-                str(e)
-            )
-
-            traceback.print_exc()
+            logger.error(f"[HEARTBEAT ERROR] {e}")
 
         time.sleep(
             HEARTBEAT_INTERVAL

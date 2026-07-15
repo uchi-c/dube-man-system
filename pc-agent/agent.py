@@ -1,5 +1,3 @@
-import threading
-
 from heartbeat import (
     start_heartbeat
 )
@@ -16,34 +14,33 @@ from print_monitor import (
     start_print_monitor
 )
 
+from watchdog import (
+    Watchdog
+)
+
+import logger
+
 
 def main():
 
-    heartbeat_thread = threading.Thread(
-        target=start_heartbeat,
-        daemon=True,
-        name="Heartbeat"
-    )
+    logger.info("[AGENT] Starting Dube Man PC Agent")
 
-    command_thread = threading.Thread(
-        target=CommandManager().start,
-        daemon=True,
-        name="Commands"
-    )
+    session_manager = SessionManager()
+    command_manager = CommandManager(session_manager)
 
-    # Print Monitor — watches the Windows print spooler and pushes jobs
-    print_monitor_thread = threading.Thread(
-        target=start_print_monitor,
-        daemon=True,
-        name="PrintMonitor"
-    )
+    watched = [
+        ("Heartbeat", start_heartbeat),
+        ("Commands", command_manager.start),
+        ("PrintMonitor", start_print_monitor),
+    ]
 
-    heartbeat_thread.start()
-    command_thread.start()
-    print_monitor_thread.start()
+    watchdog = Watchdog(watched)
+    watchdog.start()
 
-    manager = SessionManager()
-    manager.start()
+    # The session countdown runs on the main thread (not as a daemon thread)
+    # so an unhandled error here surfaces as the service actually stopping,
+    # rather than silently going quiet like an unwatched daemon thread would.
+    session_manager.start()
 
 
 if __name__ == "__main__":

@@ -39,17 +39,17 @@ from typing import Any, Dict, List, Optional
 # ---------------------------------------------------------------------------
 # Optional win32 import — graceful degradation on non-Windows dev machines.
 # ---------------------------------------------------------------------------
+import logger
+
 try:
     import win32print  # type: ignore
     WIN32_AVAILABLE = True
 except ImportError:
     WIN32_AVAILABLE = False
-    print("[PRINT_MONITOR] pywin32 not available — print monitoring disabled.")
+    logger.error("[PRINT_MONITOR] pywin32 not available — print monitoring disabled.")
 
 from config import (
     COMPUTER_CODE,
-    SUPABASE_URL,
-    SUPABASE_ANON_KEY,
     BASE_DIR,
 )
 from database import supabase
@@ -91,7 +91,7 @@ def _save_cache(jobs: List[Dict]) -> None:
         with CACHE_FILE.open("w", encoding="utf-8") as f:
             json.dump(jobs, f, indent=2, default=str)
     except Exception as e:
-        print(f"[PRINT_CACHE] Failed saving cache: {e}")
+        logger.error(f"[PRINT_CACHE] Failed saving cache: {e}")
 
 
 def _append_to_cache(job: Dict) -> None:
@@ -117,7 +117,7 @@ def _get_computer_id() -> Optional[str]:
         if result.data:
             return result.data[0]["id"]
     except Exception as e:
-        print(f"[PRINT_MONITOR] Could not resolve computer id: {e}")
+        logger.error(f"[PRINT_MONITOR] Could not resolve computer id: {e}")
     return None
 
 
@@ -134,7 +134,7 @@ def _get_printer_id(windows_printer_name: str) -> Optional[str]:
         if result.data:
             return result.data[0]["id"]
     except Exception as e:
-        print(f"[PRINT_MONITOR] Could not resolve printer id for '{windows_printer_name}': {e}")
+        logger.error(f"[PRINT_MONITOR] Could not resolve printer id for '{windows_printer_name}': {e}")
     return None
 
 
@@ -152,7 +152,7 @@ def _push_job(job: Dict) -> bool:
         supabase.table("print_jobs").insert([job]).execute()
         return True
     except Exception as e:
-        print(f"[PRINT_MONITOR] Push failed: {e}")
+        logger.error(f"[PRINT_MONITOR] Push failed: {e}")
         return False
 
 
@@ -179,7 +179,7 @@ def _flush_cache(computer_id: Optional[str]) -> None:
         # Strip internal metadata keys before inserting
         clean = {k: v for k, v in job.items() if not k.startswith("_")}
         if _push_job(clean):
-            print(f"[PRINT_MONITOR] Flushed cached job: {clean.get('document_name','?')}")
+            logger.info(f"[PRINT_MONITOR] Flushed cached job: {clean.get('document_name','?')}")
         else:
             remaining.append(job)
 
@@ -257,10 +257,10 @@ class PrintMonitor:
     # ------------------------------------------------------------------
     def start(self) -> None:
         if not WIN32_AVAILABLE:
-            print("[PRINT_MONITOR] Halted — pywin32 not installed.")
+            logger.error("[PRINT_MONITOR] Halted — pywin32 not installed.")
             return
 
-        print(f"[PRINT_MONITOR] Started on {COMPUTER_CODE} (poll={POLL_INTERVAL}s)")
+        logger.info(f"[PRINT_MONITOR] Started on {COMPUTER_CODE} (poll={POLL_INTERVAL}s)")
 
         # Resolve once at startup; retry if unavailable
         self._resolve_context()
@@ -269,7 +269,7 @@ class PrintMonitor:
             try:
                 self._tick()
             except Exception as e:
-                print(f"[PRINT_MONITOR] Tick error: {e}")
+                logger.error(f"[PRINT_MONITOR] Tick error: {e}")
                 traceback.print_exc()
             time.sleep(POLL_INTERVAL)
 
@@ -280,13 +280,13 @@ class PrintMonitor:
             try:
                 self.computer_id = _get_computer_id()
                 if self.computer_id:
-                    print(f"[PRINT_MONITOR] Resolved context — computer={self.computer_id[:8]}…")
+                    logger.info(f"[PRINT_MONITOR] Resolved context — computer={self.computer_id[:8]}…")
                     return
             except Exception:
                 pass
             time.sleep(3 + attempt * 2)
 
-        print("[PRINT_MONITOR] Could not resolve computer context — operating offline only.")
+        logger.error("[PRINT_MONITOR] Could not resolve computer context — operating offline only.")
 
     # ------------------------------------------------------------------
     def _get_printer_id(self, windows_name: str) -> Optional[str]:
@@ -309,7 +309,7 @@ class PrintMonitor:
                 None, 2
             )
         except Exception as e:
-            print(f"[PRINT_MONITOR] EnumPrinters failed: {e}")
+            logger.error(f"[PRINT_MONITOR] EnumPrinters failed: {e}")
             return
 
         for printer_info in printers:
@@ -317,7 +317,7 @@ class PrintMonitor:
             try:
                 self._poll_printer(printer_name, current_keys)
             except Exception as e:
-                print(f"[PRINT_MONITOR] Error polling '{printer_name}': {e}")
+                logger.error(f"[PRINT_MONITOR] Error polling '{printer_name}': {e}")
 
         # Jobs that were in seen_jobs but not in current_keys have left the queue
         gone_keys = set(self.seen_jobs.keys()) - current_keys
@@ -360,7 +360,7 @@ class PrintMonitor:
 
             if key not in self.seen_jobs:
                 self.seen_jobs[key] = snapshot
-                print(
+                logger.info(
                     f"[PRINT_MONITOR] Queued: '{snapshot['document_name']}' "
                     f"on {printer_name} ({snapshot['color_mode']}, "
                     f"{snapshot['page_count']}p)"
@@ -389,7 +389,7 @@ class PrintMonitor:
         printer_name: str = snapshot["printer_name"]
         page_count: int   = max(1, snapshot["page_count"])
 
-        print(
+        logger.info(
             f"[PRINT_MONITOR] Finalizing: '{snapshot.get('document_name','?')}' "
             f"on {printer_name} → {status} ({page_count}p)"
         )
@@ -417,7 +417,7 @@ class PrintMonitor:
             # No printer registered in Supabase yet — cache with metadata
             record["_windows_printer_name"] = printer_name
             _append_to_cache(record)
-            print(
+            logger.info(
                 f"[PRINT_MONITOR] Cached (printer not registered): {printer_name}"
             )
             return

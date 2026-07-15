@@ -1,8 +1,8 @@
-/* Dube Man Innovation — service worker.
+/* CaféOS — service worker.
    Network-first so online users always get fresh content (important for a
    data-driven app), with a same-origin cache for offline fallback. Cross-origin
    requests (Supabase, Google Fonts) are left untouched. */
-const CACHE = 'dube-man-v1';
+const CACHE = 'cafeos-v1';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
