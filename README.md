@@ -44,6 +44,13 @@ React + Vite business console for Dube Man General Dealers, backed by Supabase A
 ```bash
 npm run lint
 npm run build
+npm run test
 ```
 
 Secrets for PC agents, router credentials, service-role operations, and HMAC signing must not use `VITE_*` variables. Keep them in backend, Edge Function, or per-device secure configuration.
+
+## Deploying to production
+
+See **`docs/DEPLOYMENT.md`** for the full guide: Vercel deployment, PC agent
+setup/install for café workstations, onboarding additional tenants (and how
+many a project can hold), and removing demo seed data before going live.

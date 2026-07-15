@@ -7,6 +7,9 @@
 -- agent_schema.sql, migrations/001_multi_tenancy.sql,
 -- migrations/002_pharmacy_module.sql, seed.sql.
 -- Safe to run repeatedly.
+--
+-- Going live and just want to remove seed.sql's demo rows (not tear down
+-- the whole schema)? Use database/unseed.sql instead.
 -- ============================================================================
 
 -- Tables (CASCADE also removes their policies, triggers, indexes, and
