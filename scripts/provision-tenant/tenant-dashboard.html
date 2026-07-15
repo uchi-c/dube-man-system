@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CaféOS — Tenant Console</title>
+<style>
+  :root{
+    --bg-0:#070B24; --bg-1:#0C1338; --panel:#101A44; --panel-2:#0E1637;
+    --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.16);
+    --blue-500:#4C6FFF; --blue-400:#7B93FF; --cyan-300:#7DD3FC;
+    --hi:#F4F6FF; --mid:#A9B2D6; --low:#8A93BE;
+    --success:#3DDC97; --warning:#FFB020; --danger:#FF6B6B;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Space Grotesk',Inter,system-ui,-apple-system,sans-serif;
+    color:var(--hi);
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(76,111,255,.10), transparent 60%),
+      linear-gradient(160deg,var(--bg-0),var(--bg-1));
+    min-height:100vh; padding:32px; line-height:1.5;
+  }
+  .wrap{max-width:1100px;margin:0 auto}
+  h1{font-size:1.6rem;font-weight:700;letter-spacing:-.02em}
+  .sub{color:var(--mid);font-size:.9rem;margin-top:4px}
+  .stats{display:flex;gap:12px;flex-wrap:wrap;margin:22px 0}
+  .stat{
+    background:linear-gradient(180deg,rgba(255,255,255,.04),transparent),var(--panel);
+    border:1px solid var(--line);border-radius:16px;padding:16px 20px;min-width:140px;flex:1
+  }
+  .stat b{font-size:1.8rem;font-weight:700;font-variant-numeric:tabular-nums;display:block}
+  .stat span{color:var(--low);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em}
+  .toolbar{display:flex;gap:10px;align-items:center;margin:18px 0}
+  input[type=search]{
+    flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;
+    color:var(--hi);padding:11px 14px;font:inherit;font-size:.9rem;outline:none
+  }
+  input[type=search]:focus{border-color:var(--blue-500);box-shadow:0 0 0 3px rgba(76,111,255,.16)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+  .card{
+    background:linear-gradient(180deg,rgba(255,255,255,.04),transparent),var(--panel);
+    border:1px solid var(--line);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:12px
+  }
+  .card h3{font-size:1rem;font-weight:600}
+  .row{display:flex;justify-content:space-between;gap:8px;font-size:.82rem}
+  .row .k{color:var(--low)} .row .v{color:var(--mid);font-variant-numeric:tabular-nums;text-align:right}
+  .pill{display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .6rem;border-radius:999px;
+    font-size:.7rem;font-weight:600;font-family:Inter,sans-serif}
+  .p-live{background:rgba(61,220,151,.14);color:var(--success);border:1px solid rgba(61,220,151,.28)}
+  .p-prov{background:rgba(255,176,32,.14);color:var(--warning);border:1px solid rgba(255,176,32,.28)}
+  .p-paused{background:rgba(255,107,107,.14);color:var(--danger);border:1px solid rgba(255,107,107,.30)}
+  .p-set{background:rgba(76,111,255,.16);color:var(--blue-400);border:1px solid rgba(76,111,255,.30)}
+  .p-nogo{background:rgba(255,107,107,.14);color:var(--danger);border:1px solid rgba(255,107,107,.30)}
+  .links{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+  a.btn,button.btn{
+    font-family:Inter,sans-serif;font-size:.78rem;font-weight:600;text-decoration:none;cursor:pointer;
+    padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.04);
+    color:var(--mid);transition:.15s
+  }
+  a.btn:hover,button.btn:hover{background:rgba(255,255,255,.09);color:var(--hi)}
+  a.btn.pri{background:linear-gradient(135deg,var(--blue-500),#3B5BE0);color:#fff;border-color:transparent}
+  .notes{color:var(--low);font-size:.78rem;border-top:1px solid var(--line);padding-top:10px}
+  footer{color:var(--low);font-size:.75rem;margin-top:28px;border-top:1px solid var(--line);padding-top:16px}
+  code{background:var(--panel-2);padding:1px 6px;border-radius:6px;font-size:.85em}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>CaféOS · Tenant Console</h1>
+  <div class="sub">Your isolated client instances at a glance. A launcher &amp; registry — not a live data feed.</div>
+
+  <div class="stats">
+    <div class="stat"><b id="s-total">0</b><span>Tenants</span></div>
+    <div class="stat"><b id="s-live">0</b><span>Live</span></div>
+    <div class="stat"><b id="s-pcs">0</b><span>PCs total</span></div>
+    <div class="stat"><b id="s-nosecret">0</b><span>Missing secret</span></div>
+  </div>
+
+  <div class="toolbar">
+    <input type="search" id="q" placeholder="Filter by name, plan or status…" />
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <footer>
+    <b>Edit tenants:</b> update the <code>TENANTS</code> array at the top of this file (mirror of
+    <code>tenants.json</code>), save, refresh. <br>
+    <b>Why no live metrics?</b> Each tenant is a separate Supabase project and its tables require an
+    authenticated session (RLS), so this page can't safely read them with anon keys. It links you
+    straight into each tenant's app and Supabase instead. Live cross-tenant metrics would need a
+    small server holding each project's service-role key — never ship that key to a browser.
+  </footer>
+</div>
+
+<script>
+  /* ===== EDIT ME — one entry per client (mirror of tenants.json) ===== */
+  const TENANTS = [
+    {
+      name: "Dube Man (flagship)", status: "live", plan: "Full suite",
+      appUrl: "https://dube-man-system-two.vercel.app",
+      supabaseRef: "your-project-ref", vercelProject: "dube-man-system",
+      pcs: 6, onboarded: "2026-01-10", secretSet: true,
+      notes: "Original single-tenant install."
+    },
+    {
+      name: "Client B — Cyber Corner", status: "provisioning", plan: "Printer agent only",
+      appUrl: "https://client-b.example.com",
+      supabaseRef: "clientb-project-ref", vercelProject: "cafeos-client-b",
+      pcs: 3, onboarded: "2026-07-14", secretSet: true,
+      notes: "Wants printer agent today. Silo instance."
+    },
+  ];
+  /* =================================================================== */
+
+  const el = (h) => { const t = document.createElement('template'); t.innerHTML = h.trim(); return t.content.firstChild; };
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const statusPill = (s) => s === 'live' ? '<span class="pill p-live">● Live</span>'
+    : s === 'paused' ? '<span class="pill p-paused">● Paused</span>'
+    : '<span class="pill p-prov">● Provisioning</span>';
+
+  function render(list){
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+    list.forEach(t => {
+      const sb = t.supabaseRef ? `https://supabase.com/dashboard/project/${encodeURIComponent(t.supabaseRef)}` : null;
+      const vc = t.vercelProject ? `https://vercel.com/dashboard?filter=${encodeURIComponent(t.vercelProject)}` : null;
+      const card = el(`<div class="card">
+        <div class="row" style="align-items:center">
+          <h3>${esc(t.name)}</h3>${statusPill(t.status)}
+        </div>
+        <div class="row"><span class="k">Plan</span><span class="v">${esc(t.plan||'—')}</span></div>
+        <div class="row"><span class="k">PCs</span><span class="v">${esc(t.pcs ?? '—')}</span></div>
+        <div class="row"><span class="k">Onboarded</span><span class="v">${esc(t.onboarded||'—')}</span></div>
+        <div class="row"><span class="k">Agent secret</span><span class="v">${t.secretSet
+          ? '<span class="pill p-set">set</span>' : '<span class="pill p-nogo">missing</span>'}</span></div>
+        <div class="links">
+          ${t.appUrl ? `<a class="btn pri" target="_blank" rel="noopener" href="${esc(t.appUrl)}">Open app ↗</a>` : ''}
+          ${sb ? `<a class="btn" target="_blank" rel="noopener" href="${sb}">Supabase ↗</a>` : ''}
+          ${vc ? `<a class="btn" target="_blank" rel="noopener" href="${vc}">Vercel ↗</a>` : ''}
+          <button class="btn" data-env>Copy agent .env</button>
+        </div>
+        ${t.notes ? `<div class="notes">${esc(t.notes)}</div>` : ''}
+      </div>`);
+      card.querySelector('[data-env]').addEventListener('click', () => {
+        const url = t.supabaseRef ? `https://${t.supabaseRef}.supabase.co` : '<tenant-url>';
+        const env =
+`SUPABASE_URL=${url}
+SUPABASE_ANON_KEY=<tenant-anon-key>
+COMPUTER_CODE=PC-01
+HEARTBEAT_INTERVAL=30
+AGENT_SECRET=<unique-per-tenant>`;
+        navigator.clipboard.writeText(env).then(() => {
+          const b = card.querySelector('[data-env]'); const o = b.textContent;
+          b.textContent = 'Copied ✓'; setTimeout(() => b.textContent = o, 1200);
+        });
+      });
+      grid.appendChild(card);
+    });
+  }
+
+  function refresh(){
+    const q = document.getElementById('q').value.toLowerCase();
+    const list = TENANTS.filter(t =>
+      [t.name, t.plan, t.status].join(' ').toLowerCase().includes(q));
+    render(list);
+    document.getElementById('s-total').textContent = TENANTS.length;
+    document.getElementById('s-live').textContent = TENANTS.filter(t => t.status === 'live').length;
+    document.getElementById('s-pcs').textContent = TENANTS.reduce((n,t) => n + (Number(t.pcs)||0), 0);
+    document.getElementById('s-nosecret').textContent = TENANTS.filter(t => !t.secretSet).length;
+  }
+  document.getElementById('q').addEventListener('input', refresh);
+  refresh();
+</script>
+</body>
+</html>

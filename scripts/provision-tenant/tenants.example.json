@@ -1,0 +1,29 @@
+{
+  "_comment": "Canonical tenant registry. Copy to tenants.json and keep it updated as you onboard clients. The tenant-dashboard.html mirrors this shape in its editable TENANTS array.",
+  "tenants": [
+    {
+      "name": "Dube Man (flagship)",
+      "status": "live",
+      "plan": "Full suite",
+      "appUrl": "https://dube-man-system-two.vercel.app",
+      "supabaseRef": "your-project-ref",
+      "vercelProject": "dube-man-system",
+      "pcs": 6,
+      "onboarded": "2026-01-10",
+      "secretSet": true,
+      "notes": "Original single-tenant install."
+    },
+    {
+      "name": "Client B — Cyber Corner",
+      "status": "provisioning",
+      "plan": "Printer agent only",
+      "appUrl": "https://client-b.example.com",
+      "supabaseRef": "clientb-project-ref",
+      "vercelProject": "cafeos-client-b",
+      "pcs": 3,
+      "onboarded": "2026-07-14",
+      "secretSet": true,
+      "notes": "Wants printer agent today. Silo instance."
+    }
+  ]
+}

@@ -10,9 +10,6 @@ load_dotenv(dotenv_path=BASE_DIR / ".env")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 
-print(f"SUPABASE_URL: {repr(SUPABASE_URL)}")
-print(f"SUPABASE_ANON_KEY exists: {SUPABASE_ANON_KEY is not None}")
-
 COMPUTER_CODE = os.getenv("COMPUTER_CODE", "PC-01")
 HEARTBEAT_INTERVAL = int(
     os.getenv("HEARTBEAT_INTERVAL", "30")
