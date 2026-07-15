@@ -13,7 +13,7 @@ import {
 // imports `supabase`/`isSupabaseConfigured` from this file. Both imports are
 // only ever touched inside function bodies (never at module-eval time), so
 // this circular reference resolves safely under Vite/ESM.
-import { getCurrentOrganizationId, clearOrganizationCache } from './organizations';
+import { getCurrentOrganizationId, clearOrganizationCache, completeOrganizationSignup } from './organizations';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -62,6 +62,27 @@ async function fetchProfileForAuthUser(authUser: any): Promise<User | null> {
 
   if (!error && profile) {
     return mapProfileToUser(profile);
+  }
+
+  // A user who signed up via the Signup page but whose project requires
+  // email confirmation has no profile yet — their organization name was
+  // stashed in auth user_metadata at sign-up time (see
+  // signUpNewOrganization in services/organizations.ts) because no session
+  // existed then to complete it immediately. Their first successful login
+  // is the first point we can act as them, so complete it here.
+  const pendingOrgName = authUser.user_metadata?.org_name as string | undefined;
+  if (pendingOrgName) {
+    try {
+      await completeOrganizationSignup(pendingOrgName, authUser.user_metadata?.owner_name || undefined);
+      const { data: created } = await supabase.from('users').select('*').eq('id', authUser.id).maybeSingle();
+      if (created) return mapProfileToUser(created);
+    } catch (signupErr: any) {
+      // Most likely the organization name was taken by someone else between
+      // sign-up and this first login. Fall through to the default STAFF
+      // profile below so the account isn't stuck unable to log in at all —
+      // an admin can assign them to an organization afterward.
+      console.warn(`Deferred organization signup failed, falling back to a plain profile: ${signupErr?.message || signupErr}`);
+    }
   }
 
   const defaultProfile = {

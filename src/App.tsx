@@ -5,8 +5,9 @@ import { initializeStore } from './utils/db';
 import { getAuthenticatedUser, logoutUser } from './services/supabase';
 import ErrorBoundary from './components/ErrorBoundary';
 
-// Login is needed for first paint (pre-auth), so keep it eager.
+// Login and Signup are needed for first paint (pre-auth), so keep them eager.
 import Login from './pages/Login';
+import Signup from './pages/Signup';
 
 // Authenticated pages are code-split so they load on demand,
 // keeping the initial bundle small.
@@ -459,6 +460,7 @@ export default function App() {
   const [user, setUser]                   = useState<User | null>(null);
   const [drawerOpen, setDrawerOpen]       = useState(false);
   const [checking, setChecking]           = useState(true);
+  const [authView, setAuthView]           = useState<'login' | 'signup'>('login');
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -503,7 +505,11 @@ export default function App() {
 
   // ---- Render guards ----
   if (checking) return <LoadingScreen />;
-  if (!authenticated || !user) return <Login onLoginSuccess={handleLogin} />;
+  if (!authenticated || !user) {
+    return authView === 'signup'
+      ? <Signup onSignupSuccess={handleLogin} onSwitchToLogin={() => setAuthView('login')} />
+      : <Login onLoginSuccess={handleLogin} onSwitchToSignup={() => setAuthView('signup')} />;
+  }
 
   const homePath = defaultPathFor(user.role);
 

@@ -99,6 +99,71 @@ export async function fetchUserOrganizations(): Promise<Organization[]> {
   }
 }
 
+// ==========================================
+// SELF-SERVICE SIGNUP
+// ==========================================
+
+/**
+ * Calls the `signup_new_organization` SQL function (see
+ * database/migrations/003_organization_signup.sql). Requires the caller to
+ * already be authenticated (a session must exist) — it creates the
+ * organization and makes the calling account its ADMIN in one transaction,
+ * bypassing the normal "only an ADMIN can create an organization" RLS rule
+ * because a brand-new signup is, by definition, not an ADMIN of anything
+ * yet. Throws if the account already has a profile, or if the organization
+ * name is already taken.
+ */
+export async function completeOrganizationSignup(
+  orgName: string,
+  ownerName?: string
+): Promise<{ organizationId: string; role: string }> {
+  const { data, error } = await supabase.rpc('signup_new_organization', {
+    org_name: orgName,
+    owner_name: ownerName || null,
+  });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) throw new Error('Organization signup did not return a result.');
+  setActiveOrganizationId(row.organization_id);
+  return { organizationId: row.organization_id, role: row.role };
+}
+
+/**
+ * Full self-service signup: creates the Supabase Auth account, then
+ * completes organization setup immediately if a session comes back right
+ * away (email confirmation disabled/auto-confirmed). If the project
+ * requires email confirmation, no session exists yet — org_name/owner_name
+ * are stashed in the auth user's metadata and organization setup completes
+ * automatically on their first successful login instead (see
+ * fetchProfileForAuthUser in services/supabase.ts).
+ */
+export async function signUpNewOrganization(
+  email: string,
+  password: string,
+  orgName: string,
+  ownerName?: string
+): Promise<{ needsEmailConfirmation: boolean; organizationId?: string }> {
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { org_name: orgName, owner_name: ownerName || null },
+    },
+  });
+  if (authError) throw authError;
+  if (!authData?.user) throw new Error('Sign-up did not return an account.');
+
+  if (!authData.session) {
+    // Email confirmation required — nothing more to do until they confirm
+    // and log in; organization setup completes then via the stashed
+    // metadata above.
+    return { needsEmailConfirmation: true };
+  }
+
+  const { organizationId } = await completeOrganizationSignup(orgName, ownerName);
+  return { needsEmailConfirmation: false, organizationId };
+}
+
 /** Admin action: create a new tenant and add the current user as a member. */
 export async function createOrganization(name: string): Promise<Organization | null> {
   if (!isSupabaseConfigured) return null;

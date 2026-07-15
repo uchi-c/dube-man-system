@@ -18,7 +18,10 @@ Run each file's contents, in this order (paste and **Run**):
    auto-assigned to a "Default Organization").
 5. `database/migrations/002_pharmacy_module.sql` — the Pharmacy module
    (medicines, batches/expiry, prescriptions, dispensing ledger).
-6. `database/seed.sql` — demo data so every module (including Pharmacy) shows
+6. `database/migrations/003_organization_signup.sql` — adds
+   `signup_new_organization()`, which powers the "Create your workspace"
+   self-service signup link on the Login page (see step 2 below).
+7. `database/seed.sql` — demo data so every module (including Pharmacy) shows
    real records.
 
 > **Re-running after a failed/partial attempt?** If you hit
@@ -27,9 +30,16 @@ Run each file's contents, in this order (paste and **Run**):
 > schema or your login users), giving a clean slate. Then run the files
 > above in order. `reset.sql` is safe to run repeatedly.
 
-## 2. Create your login user (Supabase → Authentication → Users)
+## 2. Create your login user
 
 The schema uses Supabase Auth — the old demo buttons no longer apply.
+
+**Easiest path**: once migration 003 is applied and the app is redeployed
+(step 3–4 below), just open the app and click **"Create your workspace"** on
+the Login page. It creates your account, an organization, and makes you its
+`ADMIN` — no SQL needed. Skip straight to **Verify** once you've done that.
+
+**Manual path** (Supabase → Authentication → Users):
 
 1. **Add user** → enter an email + password → enable **Auto Confirm User**.
 2. Back in the **SQL Editor**, promote that user to Admin (replace the email):
