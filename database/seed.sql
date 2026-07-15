@@ -1,6 +1,7 @@
 -- ============================================================================
 -- DUBE MAN INNOVATION SYSTEM — DEMO SEED DATA
--- Run in the Supabase SQL editor AFTER schema.sql and print_schema.sql.
+-- Run in the Supabase SQL editor AFTER schema.sql, print_schema.sql,
+-- migrations/001_multi_tenancy.sql and migrations/002_pharmacy_module.sql.
 -- Populates every module so a fresh project shows a fully working system.
 -- Safe to re-run: every insert uses ON CONFLICT DO NOTHING.
 -- Note: This does NOT create login users — create those in
@@ -118,4 +119,39 @@ insert into public.print_jobs (id, printer_id, computer_id, customer_id, documen
   ('99990001-0000-4000-8000-000000000006', 'eeee0001-0000-4000-8000-000000000002', null,                                    null,                                    'Flyers Full Colour Run',      80,  'Colour', 'A4', 'Completed', now() - interval '1 days'),
   ('99990001-0000-4000-8000-000000000007', 'eeee0001-0000-4000-8000-000000000001', 'bbbb0001-0000-4000-8000-000000000004', 'aaaa0001-0000-4000-8000-000000000002', 'Contract Documents',          35,  'BW',     'A4', 'Completed', now() - interval '6 hours'),
   ('99990001-0000-4000-8000-000000000008', 'eeee0001-0000-4000-8000-000000000002', null,                                    'aaaa0001-0000-4000-8000-000000000001', 'Photo Reprints Glossy',       18,  'Colour', 'A4', 'Completed', now() - interval '2 hours')
+on conflict do nothing;
+
+-- ============================================================================
+-- PHARMACY MODULE (requires migrations/001_multi_tenancy.sql and
+-- migrations/002_pharmacy_module.sql)
+-- ============================================================================
+
+-- ---- Medicine catalog -------------------------------------------------------
+insert into public.medicines (id, name, generic_name, dosage_form, strength, unit, category, requires_prescription, controlled_substance, reorder_level, buying_price, selling_price, barcode) values
+  ('70010001-0000-4000-8000-000000000001', 'Paracetamol',        'Paracetamol',   'TABLET',    '500mg', 'Tablet', 'Analgesic',      false, false, 100, 0.30,  0.80,  '6001234500011'),
+  ('70010001-0000-4000-8000-000000000002', 'Amoxicillin',        'Amoxicillin',   'CAPSULE',   '500mg', 'Capsule','Antibiotic',      true,  false, 60,  1.20,  2.50,  '6001234500028'),
+  ('70010001-0000-4000-8000-000000000003', 'Amoxiclav',          'Co-amoxiclav',  'TABLET',    '625mg', 'Tablet', 'Antibiotic',      true,  false, 40,  2.80,  5.50,  '6001234500035'),
+  ('70010001-0000-4000-8000-000000000004', 'Piriton Syrup',      'Chlorphenamine','SYRUP',     '2mg/5ml','Bottle','Antihistamine',   false, false, 15,  9.00,  16.00, '6001234500042'),
+  ('70010001-0000-4000-8000-000000000005', 'Diazepam',           'Diazepam',      'TABLET',    '5mg',   'Tablet', 'Sedative',        true,  true,  20,  0.90,  2.00,  '6001234500059'),
+  ('70010001-0000-4000-8000-000000000006', 'ORS Sachets',        'Oral Rehydration Salts','POWDER','—','Sachet', 'Rehydration',     false, false, 50,  1.00,  2.50,  '6001234500066')
+on conflict (organization_id, name, strength) do nothing;
+
+-- ---- Batches (lot numbers + expiry — mix of healthy, low, and near-expiry) --
+insert into public.medicine_batches (id, medicine_id, batch_number, quantity, expiry_date, manufacture_date, supplier, cost_price) values
+  ('70020001-0000-4000-8000-000000000001', '70010001-0000-4000-8000-000000000001', 'PCM-2401', 480, current_date + interval '18 months', current_date - interval '4 months', 'Pharma Wholesale Ltd', 0.30),
+  ('70020001-0000-4000-8000-000000000002', '70010001-0000-4000-8000-000000000002', 'AMX-2312', 8,   current_date + interval '25 days',   current_date - interval '10 months','MedSource Distributors', 1.20),
+  ('70020001-0000-4000-8000-000000000003', '70010001-0000-4000-8000-000000000003', 'AMC-2404', 140, current_date + interval '20 months', current_date - interval '2 months', 'Pharma Wholesale Ltd', 2.80),
+  ('70020001-0000-4000-8000-000000000004', '70010001-0000-4000-8000-000000000004', 'PIR-2350', 40,  current_date + interval '60 days',   current_date - interval '9 months', 'MedSource Distributors', 9.00),
+  ('70020001-0000-4000-8000-000000000005', '70010001-0000-4000-8000-000000000005', 'DZP-2318', 60,  current_date + interval '14 months', current_date - interval '5 months', 'Controlled Meds Supply', 0.90),
+  ('70020001-0000-4000-8000-000000000006', '70010001-0000-4000-8000-000000000006', 'ORS-2455', 200, current_date + interval '2 years',   current_date - interval '1 month',  'Pharma Wholesale Ltd', 1.00)
+on conflict (organization_id, medicine_id, batch_number) do nothing;
+
+-- ---- A sample prescription (partially filled) -------------------------------
+insert into public.prescriptions (id, customer_id, patient_name, prescribing_doctor, diagnosis, status) values
+  ('70030001-0000-4000-8000-000000000001', 'aaaa0001-0000-4000-8000-000000000002', 'Mphatso Phiri', 'Dr. C. Mwale', 'Upper respiratory tract infection', 'PENDING')
+on conflict do nothing;
+
+insert into public.prescription_items (id, prescription_id, medicine_id, quantity_prescribed, dosage_instructions) values
+  ('70040001-0000-4000-8000-000000000001', '70030001-0000-4000-8000-000000000001', '70010001-0000-4000-8000-000000000002', 21, 'One capsule three times daily for 7 days'),
+  ('70040001-0000-4000-8000-000000000002', '70030001-0000-4000-8000-000000000001', '70010001-0000-4000-8000-000000000001', 10, 'One tablet as needed for fever, max 4x/day')
 on conflict do nothing;

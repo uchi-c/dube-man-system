@@ -9,14 +9,25 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 db="$here/../../database"
 out="$here/schema-bundle.sql"
 
-# Order matters: base tables first, then print manager, then agent add-ons.
-files=(schema.sql print_schema.sql agent_schema.sql)
+# Order matters: base tables first, then print manager, then agent add-ons,
+# then the multi-tenancy foundation (harmless with a single org — everything
+# auto-assigns to "Default Organization"), then the pharmacy module, which
+# depends on multi-tenancy's helper functions/tables.
+files=(
+  schema.sql
+  print_schema.sql
+  agent_schema.sql
+  migrations/001_multi_tenancy.sql
+  migrations/002_pharmacy_module.sql
+)
 
 {
   echo "-- ============================================================"
   echo "-- CaféOS tenant schema bundle — GENERATED. Do not edit by hand."
   echo "-- Regenerate with: scripts/provision-tenant/build-bundle.sh"
-  echo "-- Order: schema.sql -> print_schema.sql -> agent_schema.sql"
+  echo "-- Order: schema.sql -> print_schema.sql -> agent_schema.sql ->"
+  echo "--        migrations/001_multi_tenancy.sql ->"
+  echo "--        migrations/002_pharmacy_module.sql"
   echo "-- Paste this whole file into a fresh Supabase project's SQL editor,"
   echo "-- then run create-admin.sql to promote the owner account."
   echo "-- ============================================================"

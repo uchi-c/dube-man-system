@@ -9,16 +9,23 @@ Run each file's contents, in this order (paste and **Run**):
 
 1. `database/schema.sql` — core tables (users, products, sales, café, WiFi…)
 2. `database/print_schema.sql` — Print Manager tables (printers, jobs, paper, pricing)
-3. `database/seed.sql` — demo data so every module shows real records
-4. `database/agent_schema.sql` — PC-agent support: live usage metrics, the
+3. `database/agent_schema.sql` — PC-agent support: live usage metrics, the
    session countdown, the remote-command queue, and agent access policies
-   (also seeds sample CPU/RAM/disk so the café cards show usage immediately)
+4. `database/migrations/001_multi_tenancy.sql` — adds `organizations` +
+   `user_organization_memberships`, tags every table with `organization_id`,
+   and re-scopes RLS so tenants can never see each other's data. Safe to run
+   against a fresh project or an already-live one (existing rows are
+   auto-assigned to a "Default Organization").
+5. `database/migrations/002_pharmacy_module.sql` — the Pharmacy module
+   (medicines, batches/expiry, prescriptions, dispensing ledger).
+6. `database/seed.sql` — demo data so every module (including Pharmacy) shows
+   real records.
 
 > **Re-running after a failed/partial attempt?** If you hit
 > `relation "..." already exists`, run `database/reset.sql` **first** — it
 > drops only this app's tables/functions/types (never Supabase's `auth`
-> schema or your login users), giving a clean slate. Then run the three
-> files above in order. `reset.sql` is safe to run repeatedly.
+> schema or your login users), giving a clean slate. Then run the files
+> above in order. `reset.sql` is safe to run repeatedly.
 
 ## 2. Create your login user (Supabase → Authentication → Users)
 
@@ -35,8 +42,25 @@ The schema uses Supabase Auth — the old demo buttons no longer apply.
    on conflict (id) do update set role = 'ADMIN';
    ```
 
-   Roles: `ADMIN` (full access), `STAFF` (POS/inventory/customers/WiFi),
+   Roles: `ADMIN` (full access), `STAFF` (POS/inventory/customers/pharmacy/WiFi),
    `CAFE_OPERATOR` (café/WiFi). Repeat for additional staff as needed.
+
+3. Add the user to an organization — everyone must belong to at least one to
+   see any data (RLS blocks reads/writes otherwise):
+
+   ```sql
+   insert into public.user_organization_memberships (user_id, org_id)
+   select u.id, public.default_organization_id()
+   from public.users u
+   where u.email = 'YOUR_LOGIN_EMAIL'
+   on conflict (user_id, org_id) do nothing;
+   ```
+
+   `public.default_organization_id()` resolves to (or creates) the single
+   "Default Organization" — the right choice for the common single-tenant
+   deployment. To host a second, independent business in the same Supabase
+   project, insert a new row into `public.organizations` and membership rows
+   pointing at its `id` instead.
 
 ## 3. Add environment variables (Vercel → Project → Settings → Environment Variables)
 
@@ -61,9 +85,11 @@ after adding them (Vercel → Deployments → ⋯ → Redeploy, or push any comm
 ## Verify
 
 - Log in with the user from step 2.
-- Inventory, Print Manager, Café, and WiFi should show the seeded records.
-- Create a POS sale or start a café session — it should persist in Supabase
-  (visible under **Table Editor**), confirming live writes and RLS are working.
+- Inventory, Print Manager, Café, WiFi, and Pharmacy should show the seeded
+  records.
+- Create a POS sale, start a café session, or dispense a medicine — it should
+  persist in Supabase (visible under **Table Editor**), confirming live
+  writes and RLS are working.
 
 ## 5. (Optional) PC Agent on café workstations
 

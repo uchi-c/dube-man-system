@@ -1,13 +1,20 @@
 # Provision a new tenant (silo model)
 
-CaféOS is **single-tenant**: one Supabase project + one frontend deploy holds
-one client's data. To onboard another client, stand up a **separate isolated
-instance** — no code changes, complete data isolation. This folder makes that
-repeatable (~10 minutes).
+This runbook stands up a **separate isolated Supabase project + frontend
+deploy** per client — no code changes, complete physical data isolation. This
+folder makes that repeatable (~10 minutes). `schema-bundle.sql` now includes
+the multi-tenancy foundation and the Pharmacy module (see below), so a fresh
+silo comes with both out of the box.
 
-> When do I stop doing this? The silo model is great for a handful of clients.
-> Once you're juggling many, plan a real multi-tenant migration deliberately
-> (add `tenant_id` + RLS scoping) — not under a same-day deadline.
+> **Silo vs. shared multi-tenant — which do I use?** The silo model (this
+> folder) is great when a client needs hard physical isolation or its own
+> Vercel domain. `database/migrations/001_multi_tenancy.sql` +
+> `002_pharmacy_module.sql` (already folded into `schema-bundle.sql`) enable
+> the *other* model too: several organizations sharing one Supabase project,
+> isolated by row-level security instead of by project boundary — see
+> `docs/ARCHITECTURE.md` § Multi-Tenancy. Once you're juggling many silo
+> clients on nearly-identical infra, it's usually cheaper to onboard the next
+> one as an `organizations` row in a shared project instead of a new silo.
 
 ## What each file is for
 
