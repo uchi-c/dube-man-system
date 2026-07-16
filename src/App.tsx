@@ -2,13 +2,15 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { User, UserRole, BusinessType } from './types';
 import { initializeStore } from './utils/db';
-import { getAuthenticatedUser, logoutUser } from './services/supabase';
+import { getAuthenticatedUser, logoutUser, supabase } from './services/supabase';
 import { getCurrentOrganizationBusinessType } from './services/organizations';
 import ErrorBoundary from './components/ErrorBoundary';
 
-// Login and Signup are needed for first paint (pre-auth), so keep them eager.
+// Login, Signup and ResetPassword are needed for first paint (pre-auth), so
+// keep them eager.
 import Login from './pages/Login';
 import Signup from './pages/Signup';
+import ResetPassword from './pages/ResetPassword';
 
 // Authenticated pages are code-split so they load on demand,
 // keeping the initial bundle small.
@@ -478,6 +480,7 @@ export default function App() {
   const [drawerOpen, setDrawerOpen]       = useState(false);
   const [checking, setChecking]           = useState(true);
   const [authView, setAuthView]           = useState<'login' | 'signup'>('login');
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -504,6 +507,19 @@ export default function App() {
     return () => { cancelled = true; };
   }, []);
 
+  // The "reset your password" link emailed from Login's "Forgot password?"
+  // establishes a real session so supabase.auth.updateUser() can act on it —
+  // which means the bootstrap effect above would otherwise treat that as a
+  // normal sign-in and drop the visitor straight into the app instead of
+  // letting them set a new password. Listening for PASSWORD_RECOVERY
+  // intercepts that and the render guards below check it first.
+  useEffect(() => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
   const handleLogin = (u: User) => {
     localStorage.setItem('dubeman_current_user', JSON.stringify(u));
     setUser(u);
@@ -528,6 +544,17 @@ export default function App() {
   };
 
   // ---- Render guards ----
+  // Checked before `checking`/`authenticated` — a recovery-link visit
+  // already carries a valid session, so those would otherwise short-circuit
+  // straight past this screen into the main app.
+  if (passwordRecovery) {
+    return (
+      <ResetPassword
+        onComplete={u => { setPasswordRecovery(false); handleLogin(u); }}
+        onCancel={() => setPasswordRecovery(false)}
+      />
+    );
+  }
   if (checking) return <LoadingScreen />;
   if (!authenticated || !user) {
     return authView === 'signup'
