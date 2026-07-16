@@ -27,6 +27,18 @@ export interface User {
   created_at: string;
 }
 
+/** A pending/accepted/revoked invitation for someone to join an org with a given role. */
+export interface OrganizationInvite {
+  id: string;
+  email: string;
+  role: UserRole;
+  token: string;
+  created_at: string;
+  expires_at: string;
+  accepted_at: string | null;
+  revoked_at: string | null;
+}
+
 export interface Product {
   id: string;
   name: string;

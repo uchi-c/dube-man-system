@@ -1,9 +1,29 @@
-import React, { useState } from 'react';
-import { Building2, User as UserIcon, Mail, Lock, ArrowRight, Loader2, AlertCircle, MailCheck, Pill, Coffee, Printer, ShoppingBag, LayoutGrid } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Building2, User as UserIcon, Mail, Lock, ArrowRight, Loader2, AlertCircle, MailCheck, Pill, Coffee, Printer, ShoppingBag, LayoutGrid, UsersRound, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
-import { isSupabaseConfigured, getAuthenticatedUser } from '../services/supabase';
-import { signUpNewOrganization } from '../services/organizations';
-import { User, BusinessType } from '../types';
+import { isSupabaseConfigured, getAuthenticatedUser, signInWithGoogle } from '../services/supabase';
+import {
+  signUpNewOrganization, getInviteInfo, acceptInviteSignup,
+  stashPendingGoogleSignup, stashPendingInviteToken,
+} from '../services/organizations';
+import { User, BusinessType, UserRole } from '../types';
+
+const ROLE_LABEL: Record<UserRole, string> = { ADMIN: 'Admin', STAFF: 'Staff', CAFE_OPERATOR: 'Café Operator' };
+
+// The official Google "G" mark — required as-is on OAuth buttons per Google's
+// brand guidelines, hence the literal multi-color paths instead of a
+// single-tone icon from the shared lucide set.
+function GoogleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 18 18" aria-hidden="true">
+      <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.87 2.7-6.62z" />
+      <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.94v2.33A9 9 0 0 0 9 18z" />
+      <path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.94A9 9 0 0 0 0 9c0 1.45.35 2.83.94 4.03l3.01-2.33z" />
+      <path fill="#EA4335" d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .94 4.97l3.01 2.33C4.66 5.17 6.65 3.58 9 3.58z" />
+    </svg>
+  );
+}
 
 const BUSINESS_TYPES: { value: BusinessType; label: string; icon: React.ElementType }[] = [
   { value: 'general',  label: 'General / Multi-service', icon: LayoutGrid },
@@ -75,6 +95,9 @@ function NewBusinessIllustration() {
 // ---- Main component ---------------------------------------------------------
 
 export default function Signup({ onSignupSuccess, onSwitchToLogin }: SignupProps) {
+  const [searchParams] = useSearchParams();
+  const inviteToken = searchParams.get('invite') || '';
+
   const [orgName, setOrgName] = useState('');
   const [ownerName, setOwnerName] = useState('');
   const [businessType, setBusinessType] = useState<BusinessType>('general');
@@ -82,8 +105,29 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin }: SignupProps
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [confirmationSent, setConfirmationSent] = useState(false);
+
+  // Invite-mode: a ?invite= token in the URL switches this page from
+  // "create a new organization" to "join an existing one with the role its
+  // admin picked". Resolved via the anon-callable get_invite_info RPC so
+  // the org name/role show up before the visitor has authenticated at all.
+  const [inviteInfo, setInviteInfo] = useState<{ orgName: string; role: UserRole; email: string } | null>(null);
+  const [inviteChecked, setInviteChecked] = useState(false);
+  const isInviteMode = !!inviteToken;
+
+  useEffect(() => {
+    if (!inviteToken) { setInviteChecked(true); return; }
+    let cancelled = false;
+    getInviteInfo(inviteToken).then(info => {
+      if (cancelled) return;
+      setInviteInfo(info);
+      if (info?.email) setEmail(info.email);
+      setInviteChecked(true);
+    });
+    return () => { cancelled = true; };
+  }, [inviteToken]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,17 +137,23 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin }: SignupProps
       setError('Sign-up needs a connected Supabase project — this preview is running in local demo mode.');
       return;
     }
-    if (!orgName.trim()) { setError('Enter your business or organization name.'); return; }
+    if (isInviteMode && !inviteInfo) { setError('This invite link is invalid or has expired. Ask your admin to send a new one.'); return; }
+    if (!isInviteMode && !orgName.trim()) { setError('Enter your business or organization name.'); return; }
     if (!email.trim() || !password) { setError('Enter your email and a password.'); return; }
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
     if (password !== confirmPassword) { setError("Passwords don't match."); return; }
 
     setLoading(true);
     try {
-      const result = await withTimeout(
-        signUpNewOrganization(email.trim(), password, orgName.trim(), ownerName.trim() || undefined, businessType),
-        SIGNUP_TIMEOUT_MS,
-      );
+      const result = isInviteMode
+        ? await withTimeout(
+            acceptInviteSignup(email.trim(), password, inviteToken, ownerName.trim() || undefined),
+            SIGNUP_TIMEOUT_MS,
+          )
+        : await withTimeout(
+            signUpNewOrganization(email.trim(), password, orgName.trim(), ownerName.trim() || undefined, businessType),
+            SIGNUP_TIMEOUT_MS,
+          );
       if (result.needsEmailConfirmation) {
         setConfirmationSent(true);
       } else {
@@ -111,13 +161,36 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin }: SignupProps
         if (user) {
           onSignupSuccess(user);
         } else {
-          setError("Your organization was created, but we couldn't sign you in automatically. Try signing in.");
+          setError("Your account was created, but we couldn't sign you in automatically. Try signing in.");
         }
       }
     } catch (err: any) {
       setError(err?.message || 'Sign-up failed. Check your connection and try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleContinue = async () => {
+    setError('');
+    if (!isSupabaseConfigured) {
+      setError('Google sign-in needs a connected Supabase project — this preview is running in local demo mode.');
+      return;
+    }
+    if (isInviteMode) {
+      if (!inviteInfo) { setError('This invite link is invalid or has expired. Ask your admin to send a new one.'); return; }
+      stashPendingInviteToken(inviteToken);
+    } else {
+      if (!orgName.trim()) { setError('Enter your business or organization name before continuing with Google.'); return; }
+      stashPendingGoogleSignup({ orgName: orgName.trim(), ownerName: ownerName.trim() || undefined, businessType });
+    }
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+      // Browser navigates away to Google on success — nothing more to do here.
+    } catch (err: any) {
+      setError(err?.message || 'Google sign-in failed. Try again.');
+      setGoogleLoading(false);
     }
   };
 
@@ -209,68 +282,107 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin }: SignupProps
                 <MailCheck style={{ width: 22, height: 22, color: 'var(--success)' }} />
               </div>
               <h1 className="dm-h1" style={{ fontSize: '1.4rem' }}>Check your email</h1>
+              {isInviteMode ? (
+                <p style={{ color: 'var(--text-mid)', fontSize: '0.875rem', lineHeight: 1.6 }}>
+                  We sent a confirmation link to <strong style={{ color: 'var(--text-hi)' }}>{email}</strong>.
+                  Confirm it, then sign in — you'll join <strong style={{ color: 'var(--text-hi)' }}>{inviteInfo?.orgName}</strong> as{' '}
+                  <strong style={{ color: 'var(--text-hi)' }}>{inviteInfo ? ROLE_LABEL[inviteInfo.role] : 'a teammate'}</strong> automatically the moment you do.
+                </p>
+              ) : (
+                <p style={{ color: 'var(--text-mid)', fontSize: '0.875rem', lineHeight: 1.6 }}>
+                  We sent a confirmation link to <strong style={{ color: 'var(--text-hi)' }}>{email}</strong>.
+                  Confirm it, then sign in — <strong style={{ color: 'var(--text-hi)' }}>{orgName}</strong> will be created
+                  and you'll be its <strong style={{ color: 'var(--text-hi)' }}>Admin</strong> automatically the moment you do.
+                </p>
+              )}
+              <button onClick={onSwitchToLogin} className="dm-btn dm-btn-ghost w-full mt-2">Back to sign in</button>
+            </div>
+          ) : isInviteMode && inviteChecked && !inviteInfo ? (
+            <div className="dm-card-glass p-6 text-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center" style={{ background: 'var(--danger-bg)', border: '1px solid rgba(255,107,107,0.30)' }}>
+                <AlertCircle style={{ width: 22, height: 22, color: 'var(--danger)' }} />
+              </div>
+              <h1 className="dm-h1" style={{ fontSize: '1.4rem' }}>This invite isn't valid</h1>
               <p style={{ color: 'var(--text-mid)', fontSize: '0.875rem', lineHeight: 1.6 }}>
-                We sent a confirmation link to <strong style={{ color: 'var(--text-hi)' }}>{email}</strong>.
-                Confirm it, then sign in — <strong style={{ color: 'var(--text-hi)' }}>{orgName}</strong> will be set up
-                automatically the moment you do.
+                It may have expired, already been used, or been revoked. Ask whoever invited you to send a new link.
               </p>
               <button onClick={onSwitchToLogin} className="dm-btn dm-btn-ghost w-full mt-2">Back to sign in</button>
             </div>
           ) : (
             <>
               <div>
-                <h1 className="dm-h1" style={{ fontSize: '1.75rem' }}>Create your workspace</h1>
+                <h1 className="dm-h1" style={{ fontSize: '1.75rem' }}>
+                  {isInviteMode ? `Join ${inviteInfo?.orgName ?? 'your team'}` : 'Create your workspace'}
+                </h1>
                 <p style={{ color: 'var(--text-mid)', fontSize: '0.9rem', marginTop: '6px' }}>
-                  Set up your business and become its first admin.
+                  {isInviteMode
+                    ? `You've been invited as ${inviteInfo ? ROLE_LABEL[inviteInfo.role] : 'a teammate'}.`
+                    : 'Set up your business and become its first admin.'}
                 </p>
               </div>
 
+              {isInviteMode && inviteInfo && (
+                <div className="flex items-center gap-3 p-3 rounded-2xl" style={{ background: 'rgba(76,111,255,0.10)', border: '1px solid rgba(76,111,255,0.25)' }}>
+                  <div className="flex items-center justify-center flex-shrink-0" style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(76,111,255,0.18)', color: 'var(--blue-400)' }}>
+                    {inviteInfo.role === 'ADMIN' ? <ShieldCheck style={{ width: 16, height: 16 }} /> : <UsersRound style={{ width: 16, height: 16 }} />}
+                  </div>
+                  <div className="min-w-0">
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-hi)' }} className="dm-truncate">{inviteInfo.orgName}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-mid)' }}>Joining as {ROLE_LABEL[inviteInfo.role]}</div>
+                  </div>
+                </div>
+              )}
+
               <div className="dm-card-glass p-6 space-y-4">
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-1.5">
-                    <label className="dm-label" style={{ display: 'block', letterSpacing: '0.06em' }}>Business / organization name</label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ width: 15, height: 15, color: 'var(--text-low)' }} />
-                      <input
-                        type="text" required autoComplete="organization"
-                        placeholder="e.g. Acme Pharmacy"
-                        value={orgName}
-                        onChange={e => setOrgName(e.target.value)}
-                        style={inputStyle} onFocus={onFocus} onBlur={onBlur}
-                      />
+                  {!isInviteMode && (
+                    <div className="space-y-1.5">
+                      <label className="dm-label" style={{ display: 'block', letterSpacing: '0.06em' }}>Business / organization name</label>
+                      <div className="relative">
+                        <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ width: 15, height: 15, color: 'var(--text-low)' }} />
+                        <input
+                          type="text" required autoComplete="organization"
+                          placeholder="e.g. Acme Pharmacy"
+                          value={orgName}
+                          onChange={e => setOrgName(e.target.value)}
+                          style={inputStyle} onFocus={onFocus} onBlur={onBlur}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="space-y-1.5">
-                    <label className="dm-label" style={{ display: 'block', letterSpacing: '0.06em' }}>Business type</label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {BUSINESS_TYPES.map(({ value, label, icon: Icon }) => {
-                        const active = businessType === value;
-                        return (
-                          <button
-                            key={value}
-                            type="button"
-                            onClick={() => setBusinessType(value)}
-                            aria-pressed={active}
-                            title={label}
-                            className="flex flex-col items-center justify-center gap-1 text-center"
-                            style={{
-                              padding: '0.6rem 0.4rem',
-                              borderRadius: 'var(--r-control)',
-                              border: active ? '1px solid #4C6FFF' : '1px solid var(--panel-line)',
-                              background: active ? 'rgba(76,111,255,0.14)' : 'var(--panel-2)',
-                              color: active ? 'var(--text-hi)' : 'var(--text-mid)',
-                              cursor: 'pointer',
-                              transition: 'border-color 0.15s, background 0.15s',
-                            }}
-                          >
-                            <Icon style={{ width: 16, height: 16 }} />
-                            <span style={{ fontSize: '0.6875rem', lineHeight: 1.2, fontWeight: active ? 600 : 500 }}>{label}</span>
-                          </button>
-                        );
-                      })}
+                  {!isInviteMode && (
+                    <div className="space-y-1.5">
+                      <label className="dm-label" style={{ display: 'block', letterSpacing: '0.06em' }}>Business type</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {BUSINESS_TYPES.map(({ value, label, icon: Icon }) => {
+                          const active = businessType === value;
+                          return (
+                            <button
+                              key={value}
+                              type="button"
+                              onClick={() => setBusinessType(value)}
+                              aria-pressed={active}
+                              title={label}
+                              className="flex flex-col items-center justify-center gap-1 text-center"
+                              style={{
+                                padding: '0.6rem 0.4rem',
+                                borderRadius: 'var(--r-control)',
+                                border: active ? '1px solid #4C6FFF' : '1px solid var(--panel-line)',
+                                background: active ? 'rgba(76,111,255,0.14)' : 'var(--panel-2)',
+                                color: active ? 'var(--text-hi)' : 'var(--text-mid)',
+                                cursor: 'pointer',
+                                transition: 'border-color 0.15s, background 0.15s',
+                              }}
+                            >
+                              <Icon style={{ width: 16, height: 16 }} />
+                              <span style={{ fontSize: '0.6875rem', lineHeight: 1.2, fontWeight: active ? 600 : 500 }}>{label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="space-y-1.5">
                     <label className="dm-label" style={{ display: 'block', letterSpacing: '0.06em' }}>Your name <span style={{ opacity: 0.6, textTransform: 'none' }}>(optional)</span></label>
@@ -292,10 +404,12 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin }: SignupProps
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ width: 15, height: 15, color: 'var(--text-low)' }} />
                       <input
                         type="email" required autoComplete="email"
+                        readOnly={isInviteMode && !!inviteInfo}
                         placeholder="you@company.com"
                         value={email}
                         onChange={e => setEmail(e.target.value)}
-                        style={inputStyle} onFocus={onFocus} onBlur={onBlur}
+                        style={{ ...inputStyle, ...(isInviteMode && inviteInfo ? { opacity: 0.7, cursor: 'not-allowed' } : {}) }}
+                        onFocus={onFocus} onBlur={onBlur}
                       />
                     </div>
                   </div>
@@ -342,11 +456,28 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin }: SignupProps
                     </motion.div>
                   )}
 
-                  <button type="submit" disabled={loading} className="dm-btn dm-btn-primary w-full">
+                  <button type="submit" disabled={loading || googleLoading} className="dm-btn dm-btn-primary w-full">
                     {loading ? <Loader2 style={{ width: 16, height: 16 }} className="dm-spin" /> : <ArrowRight style={{ width: 16, height: 16 }} />}
-                    {loading ? 'Creating your workspace…' : 'Create workspace'}
+                    {loading ? 'Creating your account…' : isInviteMode ? 'Join workspace' : 'Create workspace'}
                   </button>
                 </form>
+
+                <div className="flex items-center gap-3" style={{ margin: '0.25rem 0' }}>
+                  <div style={{ flex: 1, height: 1, background: 'var(--panel-line)' }} />
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-low)' }}>or</span>
+                  <div style={{ flex: 1, height: 1, background: 'var(--panel-line)' }} />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleGoogleContinue}
+                  disabled={googleLoading || loading || (isInviteMode && !inviteInfo)}
+                  className="dm-btn dm-btn-ghost w-full"
+                  style={{ gap: 10 }}
+                >
+                  {googleLoading ? <Loader2 style={{ width: 16, height: 16 }} className="dm-spin" /> : <GoogleIcon />}
+                  Continue with Google
+                </button>
               </div>
 
               <p style={{ textAlign: 'center', fontSize: '0.8125rem', color: 'var(--text-mid)' }}>

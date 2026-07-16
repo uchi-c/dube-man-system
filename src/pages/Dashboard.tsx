@@ -6,13 +6,13 @@ import {
 } from 'lucide-react';
 import {
   fetchProducts, fetchSales, fetchPrintingOrders,
-  fetchRunningCafeSessions, fetchCustomers,
+  fetchRunningCafeSessions, fetchCompletedCafeSessions, fetchCustomers,
   fetchPrintDashboardStats,
 } from '../services/supabase';
 import { Product, Sale, PrintingOrder, CafeSession, Customer } from '../types';
 import DashboardCard from '../components/DashboardCard';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  AreaChart, Area, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { motion } from 'motion/react';
@@ -72,18 +72,19 @@ export default function Dashboard() {
   const [sales, setSales]               = useState<Sale[]>([]);
   const [printOrders, setPrintOrders]   = useState<PrintingOrder[]>([]);
   const [sessions, setSessions]         = useState<CafeSession[]>([]);
+  const [completedSessions, setCompletedSessions] = useState<CafeSession[]>([]);
   const [customers, setCustomers]       = useState<Customer[]>([]);
   const [printRevenue, setPrintRevenue] = useState(0);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [prods, sls, prnts, sess, custs, printStats] = await Promise.all([
+      const [prods, sls, prnts, sess, doneSess, custs, printStats] = await Promise.all([
         fetchProducts(), fetchSales(), fetchPrintingOrders(),
-        fetchRunningCafeSessions(), fetchCustomers(), fetchPrintDashboardStats(),
+        fetchRunningCafeSessions(), fetchCompletedCafeSessions(), fetchCustomers(), fetchPrintDashboardStats(),
       ]);
       setProducts(prods); setSales(sls); setPrintOrders(prnts);
-      setSessions(sess); setCustomers(custs); setPrintRevenue(printStats.revenue_today);
+      setSessions(sess); setCompletedSessions(doneSess); setCustomers(custs); setPrintRevenue(printStats.revenue_today);
     } catch (err) {
       console.error('Dashboard load error:', err);
     } finally {
@@ -115,6 +116,25 @@ export default function Dashboard() {
 
   const rangeRevenue = windowSales.reduce((sum, s) => sum + s.total_amount, 0);
   const rangeTxns = windowSales.length;
+
+  // ---- Revenue by channel (same range window as the trend chart) ----
+  const windowPrintOrders = useMemo(
+    () => printOrders.filter(o => { const d = new Date(o.created_at); return d >= start && d <= end; }),
+    [printOrders, start, end],
+  );
+  const windowCafeRevenue = useMemo(
+    () => completedSessions
+      .filter(s => { const d = new Date(s.end_time || s.start_time); return d >= start && d <= end; })
+      .reduce((sum, s) => sum + (s.amount || 0), 0),
+    [completedSessions, start, end],
+  );
+  const printOrdersRevenue = windowPrintOrders.reduce((sum, o) => sum + o.amount, 0);
+  const channelData = useMemo(() => [
+    { name: 'POS Sales', value: rangeRevenue, color: '#4C6FFF' },
+    { name: 'Branding & Printing', value: printOrdersRevenue, color: '#7DD3FC' },
+    { name: 'Café Sessions', value: windowCafeRevenue, color: '#3DDC97' },
+  ], [rangeRevenue, printOrdersRevenue, windowCafeRevenue]);
+  const hasChannelData = channelData.some(c => c.value > 0);
 
   const topProduct = useMemo(() => {
     const tally: Record<string, number> = {};
@@ -256,6 +276,35 @@ export default function Dashboard() {
             <Area type="monotone" dataKey="amount" stroke="#4C6FFF" strokeWidth={2.5} fill="url(#areaGrad)" dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: '#7DD3FC' }} />
           </AreaChart>
         </ResponsiveContainer>
+      </div>
+
+      {/* ---- Revenue by channel ---- */}
+      <div className="dm-card p-6">
+        <div className="mb-5">
+          <h2 className="dm-h2">Revenue by channel</h2>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-low)', marginTop: 2 }}>
+            POS, branding &amp; printing orders, and café sessions in the selected range
+          </p>
+        </div>
+
+        {hasChannelData ? (
+          <ResponsiveContainer width="100%" height={180}>
+            <BarChart data={channelData} layout="vertical" margin={{ top: 0, right: 24, left: 8, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 11, fill: '#8A93BE' }} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 12, fill: '#C7CCE6' }} axisLine={false} tickLine={false} />
+              <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+              <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={22}>
+                {channelData.map((c, i) => <Cell key={i} fill={c.color} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-10" style={{ color: 'var(--text-low)' }}>
+            <TrendingUp style={{ width: 28, height: 28, marginBottom: 8, opacity: 0.6 }} />
+            <p style={{ fontSize: '0.8125rem' }}>No revenue recorded in this range yet.</p>
+          </div>
+        )}
       </div>
 
       {/* ---- Bottom row: inventory alerts + recent print orders ---- */}

@@ -121,6 +121,42 @@ on conflict (user_id, org_id) do nothing;
 "Default Organization" — correct for a single-tenant deployment. See §6 to
 onboard additional tenants into the same project.
 
+### 3b. Inviting teammates (Team page)
+
+Once you're signed in as an `ADMIN`, the sidebar's **Team** page (migration
+005, `database/migrations/005_team_invites.sql`) lets you invite a teammate
+by email and pick their role — `ADMIN`, `STAFF`, or `CAFE_OPERATOR` — without
+touching SQL. It generates a shareable link
+(`.../#/signup?invite=<token>`); share it however you like (chat, email by
+hand, etc. — this app doesn't send the email itself). Opening that link
+switches the Signup page into "join an existing org" mode instead of
+"create a new org", pre-filled with the org name and role the admin picked.
+Invites expire after 7 days and are single-use.
+
+### 3c. Google sign-in (optional)
+
+The Login and Signup pages both have a **"Continue with Google"** button.
+It's inert until you enable the Google provider in Supabase:
+
+1. In the [Google Cloud Console](https://console.cloud.google.com/apis/credentials),
+   create an OAuth 2.0 Client ID (type: Web application). Add your Supabase
+   project's callback URL as an authorized redirect URI — find it in
+   Supabase under **Authentication → Providers → Google** (looks like
+   `https://<project-ref>.supabase.co/auth/v1/callback`).
+2. In Supabase, go to **Authentication → Providers → Google**, toggle it on,
+   and paste the Client ID and Client Secret from step 1.
+3. Under **Authentication → URL Configuration**, make sure your deployed
+   app's URL (and `http://localhost:5173`/`:3000` for local dev) is in the
+   allowed **Redirect URLs** list — Google sign-in redirects back to
+   whatever origin the button was clicked from.
+
+No app code changes are needed for this — `signInWithGoogle()` in
+`src/services/supabase.ts` already calls `supabase.auth.signInWithOAuth`
+with `provider: 'google'`. A brand-new Google identity clicking "Continue
+with Google" from the **Signup** page creates a new org (or joins an invite,
+if `?invite=` is present) the same way an email/password signup does; from
+the **Login** page it's only for accounts that already have a profile.
+
 ---
 
 ## 4. Removing the demo seed data
