@@ -63,67 +63,67 @@ export default function WifiSessionCard({ session, onTerminate, onExpire }: Wifi
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -12 }}
-      className={`bg-white border rounded-3xl p-5 shadow-sm transition-all text-left flex flex-col justify-between space-y-4 relative overflow-hidden ${
-        session.status === 'ACTIVE' 
-          ? isCritical 
-            ? 'border-rose-500 ring-2 ring-rose-500/20' 
-            : 'border-slate-200 hover:shadow-md'
-          : 'border-slate-100 bg-slate-50/60 opacity-75'
-      }`}
+      className="dm-card p-5 text-left flex flex-col justify-between space-y-4"
+      style={{
+        position: 'relative', overflow: 'hidden',
+        borderColor: session.status === 'ACTIVE' && isCritical ? 'var(--danger)' : 'var(--panel-line)',
+        boxShadow: session.status === 'ACTIVE' && isCritical ? '0 0 0 3px rgba(255,107,107,0.15)' : undefined,
+        opacity: session.status === 'ACTIVE' ? 1 : 0.7,
+      }}
     >
       {/* Top Banner Status Bar */}
       <div className="flex justify-between items-start">
-        <div className="space-y-1 truncate max-w-[65%]">
-          <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">WiFi Hotspot Ticket</span>
-          <h3 className="font-extrabold text-sm text-slate-800 truncate flex items-center">
+        <div className="space-y-1 truncate" style={{ maxWidth: '65%' }}>
+          <span className="dm-label" style={{ padding: 0, display: 'block' }}>WiFi Hotspot Ticket</span>
+          <h3 className="dm-truncate" style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-hi)' }}>
             {session.wifi_customers?.name || 'Unknown Guest'}
           </h3>
         </div>
 
         {/* Dynamic status badges */}
         {session.status === 'ACTIVE' ? (
-          <span className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[9px] font-mono font-bold tracking-wider ${
-            isCritical ? 'bg-rose-50 text-rose-600 border border-rose-200' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-          }`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${isCritical ? 'bg-rose-500 animate-ping' : 'bg-emerald-500 animate-pulse'}`} />
+          <span className={`dm-badge ${isCritical ? 'dm-badge-danger' : 'dm-badge-success'}`}>
+            <span className={`dm-dot ${isCritical ? 'dm-dot-danger' : 'dm-dot-success'} dm-dot-pulse`} />
             <span>ACTIVE</span>
           </span>
         ) : session.status === 'EXPIRED' ? (
-          <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[9px] font-mono font-bold tracking-wider bg-amber-50 text-amber-600 border border-amber-200">
-            <Clock className="w-2.5 h-2.5" />
+          <span className="dm-badge dm-badge-warning">
+            <Clock style={{ width: 10, height: 10 }} />
             <span>EXPIRED</span>
           </span>
         ) : session.status === 'COMPLETED' ? (
-          <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[9px] font-mono font-bold tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
-            <CheckCircle className="w-2.5 h-2.5" />
+          <span className="dm-badge dm-badge-neutral">
+            <CheckCircle style={{ width: 10, height: 10 }} />
             <span>RELEASED</span>
           </span>
         ) : (
-          <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[9px] font-mono font-bold tracking-wider bg-slate-100 text-slate-500 border border-slate-200">
-            <Ban className="w-2.5 h-2.5" />
+          <span className="dm-badge dm-badge-neutral">
+            <Ban style={{ width: 10, height: 10 }} />
             <span>CANCELLED</span>
           </span>
         )}
       </div>
 
       {/* Main Countdown or Duration display */}
-      <div className="bg-slate-50/80 border border-slate-100 rounded-2xl p-4 flex items-center justify-between">
+      <div className="dm-card-inset flex items-center justify-between" style={{ padding: '1rem' }}>
         <div>
-          <span className="text-[9px] font-mono uppercase text-slate-400 block tracking-wide">
+          <span className="dm-label" style={{ padding: 0, display: 'block' }}>
             {session.status === 'ACTIVE' ? 'Time Remaining' : 'Package Allocated'}
           </span>
-          <span className={`text-xl font-extrabold font-mono tabular-nums tracking-tight block mt-0.5 ${
-            session.status === 'ACTIVE'
-              ? isCritical ? 'text-rose-600 animate-pulse' : 'text-slate-800'
-              : 'text-slate-500'
-          }`}>
+          <span
+            className="dm-nums"
+            style={{
+              fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.02em', display: 'block', marginTop: 2,
+              color: session.status === 'ACTIVE' ? (isCritical ? 'var(--danger)' : 'var(--text-hi)') : 'var(--text-low)',
+            }}
+          >
             {session.status === 'ACTIVE' ? formatTime(secondsLeft) : `${session.duration_minutes} Minutes`}
           </span>
         </div>
 
         <div className="text-right">
-          <span className="text-[9px] font-mono uppercase text-slate-400 block tracking-wide">Authorized Cost</span>
-          <span className="text-sm font-bold text-slate-700 block mt-0.5 tabular-nums">
+          <span className="dm-label" style={{ padding: 0, display: 'block' }}>Authorized Cost</span>
+          <span className="dm-nums" style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-mid)', display: 'block', marginTop: 2 }}>
             {formatCurrency(session.amount)}
           </span>
         </div>
@@ -131,39 +131,40 @@ export default function WifiSessionCard({ session, onTerminate, onExpire }: Wifi
 
       {/* Progress Bar for Active Sessions */}
       {session.status === 'ACTIVE' && (
-        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-          <div 
-            className={`h-full transition-all duration-1000 rounded-full ${
-              isCritical ? 'bg-rose-500' : 'bg-emerald-500'
-            }`}
-            style={{ width: `${getPercentageLeft()}%` }}
+        <div style={{ width: '100%', background: 'var(--panel-2)', height: 6, borderRadius: 'var(--r-full)', overflow: 'hidden' }}>
+          <div
+            style={{
+              height: '100%', borderRadius: 'var(--r-full)', transition: 'width 1s',
+              width: `${getPercentageLeft()}%`,
+              background: isCritical ? 'var(--danger)' : 'var(--success)',
+            }}
           />
         </div>
       )}
 
       {/* Device & Connection metadata */}
-      <div className="space-y-2 text-xs text-slate-600">
-        <div className="flex items-center text-[11px] truncate">
-          <Smartphone className="w-3.5 h-3.5 mr-2 text-slate-400 shrink-0" />
-          <span className="text-slate-500 mr-1 font-mono">Device:</span>
-          <strong className="text-slate-700 truncate">{session.wifi_customers?.device_name || 'N/A'}</strong>
+      <div className="space-y-2" style={{ fontSize: '0.75rem', color: 'var(--text-mid)' }}>
+        <div className="flex items-center truncate" style={{ fontSize: '0.6875rem' }}>
+          <Smartphone style={{ width: 14, height: 14, marginRight: 8, color: 'var(--text-low)', flexShrink: 0 }} />
+          <span style={{ color: 'var(--text-low)', marginRight: 4, fontFamily: 'monospace' }}>Device:</span>
+          <strong className="dm-truncate" style={{ color: 'var(--text-mid)' }}>{session.wifi_customers?.device_name || 'N/A'}</strong>
         </div>
 
-        <div className="flex items-center text-[11px]">
-          <Wifi className="w-3.5 h-3.5 mr-2 text-slate-400 shrink-0" />
-          <span className="text-slate-500 mr-1 font-mono">MAC Address:</span>
-          <code className="bg-slate-100 border text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-mono tracking-wider">
+        <div className="flex items-center" style={{ fontSize: '0.6875rem' }}>
+          <Wifi style={{ width: 14, height: 14, marginRight: 8, color: 'var(--text-low)', flexShrink: 0 }} />
+          <span style={{ color: 'var(--text-low)', marginRight: 4, fontFamily: 'monospace' }}>MAC Address:</span>
+          <code className="dm-card-inset" style={{ color: 'var(--text-mid)', padding: '0.15rem 0.4rem', borderRadius: 6, fontSize: '0.625rem', fontFamily: 'monospace', letterSpacing: '0.03em' }}>
             {session.wifi_customers?.mac_address || '00:00:00:00:00:00'}
           </code>
         </div>
 
-        <div className="flex items-center text-[11px]">
-          <Phone className="w-3.5 h-3.5 mr-2 text-slate-400 shrink-0" />
-          <span className="text-slate-500 mr-1 font-mono">Phone:</span>
-          <span className="text-slate-700">{session.wifi_customers?.phone || 'N/A'}</span>
+        <div className="flex items-center" style={{ fontSize: '0.6875rem' }}>
+          <Phone style={{ width: 14, height: 14, marginRight: 8, color: 'var(--text-low)', flexShrink: 0 }} />
+          <span style={{ color: 'var(--text-low)', marginRight: 4, fontFamily: 'monospace' }}>Phone:</span>
+          <span style={{ color: 'var(--text-mid)' }}>{session.wifi_customers?.phone || 'N/A'}</span>
         </div>
 
-        <div className="flex items-center text-[10px] text-slate-400 font-mono pt-1.5 border-t border-slate-100 justify-between">
+        <div className="flex items-center justify-between pt-1.5" style={{ fontSize: '0.625rem', color: 'var(--text-low)', fontFamily: 'monospace', borderTop: '1px solid var(--panel-line)' }}>
           <span>Start: {new Date(session.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
           <span>End: {new Date(session.end_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
         </div>
@@ -174,9 +175,10 @@ export default function WifiSessionCard({ session, onTerminate, onExpire }: Wifi
         <div className="pt-2 flex space-x-2">
           <button
             onClick={() => onTerminate(session.id)}
-            className="flex-1 py-2 bg-slate-900 hover:bg-rose-600 text-white hover:text-white rounded-xl text-[10px] font-bold transition-all flex items-center justify-center space-x-1 cursor-pointer shadow-sm"
+            className="dm-btn dm-btn-danger w-full"
+            style={{ minHeight: 36, fontSize: '0.6875rem' }}
           >
-            <Ban className="w-3 h-3" />
+            <Ban style={{ width: 12, height: 12 }} />
             <span>Disconnect Hotspot</span>
           </button>
         </div>

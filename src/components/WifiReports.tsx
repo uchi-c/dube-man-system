@@ -16,6 +16,18 @@ interface WifiReportsProps {
   packages: WifiPackage[];
 }
 
+function ChartTooltip({ active, payload, label, accent }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{ background: 'var(--panel)', border: '1px solid var(--panel-line-strong)', color: 'var(--text-hi)', borderRadius: 10, padding: '8px 12px', fontSize: 12, boxShadow: 'var(--shadow-card)' }}>
+      <div style={{ color: 'var(--text-low)', marginBottom: 4, fontSize: 11 }}>{label}</div>
+      {payload.map((p: any, i: number) => (
+        <div key={i} className="dm-nums" style={{ fontWeight: 700, color: accent || 'var(--blue-400)' }}>{p.name}: {p.value}</div>
+      ))}
+    </div>
+  );
+}
+
 export default function WifiReports({ sessions, usageLogs, packages }: WifiReportsProps) {
   const [logSearch, setLogSearch] = useState('');
   const [logFilter, setLogFilter] = useState<'ALL' | 'CONNECTED' | 'DISCONNECTED' | 'EXPIRED'>('ALL');
@@ -87,46 +99,46 @@ export default function WifiReports({ sessions, usageLogs, packages }: WifiRepor
       {/* Overview stats grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Stat 1 */}
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center space-x-3 text-white shadow-sm">
-          <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-400">
-            <TrendingUp className="w-5 h-5" />
+        <div className="dm-card p-4 flex items-center gap-3">
+          <div className="flex items-center justify-center flex-shrink-0" style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--blue-bg)', color: 'var(--blue-400)' }}>
+            <TrendingUp style={{ width: 18, height: 18 }} />
           </div>
           <div>
-            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Total Revenue</span>
-            <strong className="text-sm sm:text-base font-black tabular-nums">{formatCurrency(totalRevenue)}</strong>
+            <span className="dm-label" style={{ padding: 0, display: 'block' }}>Total Revenue</span>
+            <strong className="dm-nums" style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-hi)' }}>{formatCurrency(totalRevenue)}</strong>
           </div>
         </div>
 
         {/* Stat 2 */}
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center space-x-3 text-white shadow-sm">
-          <div className="p-2.5 rounded-xl bg-sky-500/10 text-sky-400">
-            <Users className="w-5 h-5" />
+        <div className="dm-card p-4 flex items-center gap-3">
+          <div className="flex items-center justify-center flex-shrink-0" style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--cyan-bg)', color: 'var(--cyan-300)' }}>
+            <Users style={{ width: 18, height: 18 }} />
           </div>
           <div>
-            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">WiFi Customers</span>
-            <strong className="text-sm sm:text-base font-black tabular-nums">{uniqueUsersCount} Unique</strong>
+            <span className="dm-label" style={{ padding: 0, display: 'block' }}>WiFi Customers</span>
+            <strong className="dm-nums" style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-hi)' }}>{uniqueUsersCount} Unique</strong>
           </div>
         </div>
 
         {/* Stat 3 */}
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center space-x-3 text-white shadow-sm">
-          <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400">
-            <Clock className="w-5 h-5" />
+        <div className="dm-card p-4 flex items-center gap-3">
+          <div className="flex items-center justify-center flex-shrink-0" style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--warning-bg)', color: 'var(--warning)' }}>
+            <Clock style={{ width: 18, height: 18 }} />
           </div>
           <div>
-            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Avg Duration</span>
-            <strong className="text-sm sm:text-base font-black tabular-nums">{avgSessionDuration} Mins</strong>
+            <span className="dm-label" style={{ padding: 0, display: 'block' }}>Avg Duration</span>
+            <strong className="dm-nums" style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-hi)' }}>{avgSessionDuration} Mins</strong>
           </div>
         </div>
 
         {/* Stat 4 */}
-        <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex items-center space-x-3 text-white shadow-sm">
-          <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400">
-            <Flame className="w-5 h-5" />
+        <div className="dm-card p-4 flex items-center gap-3">
+          <div className="flex items-center justify-center flex-shrink-0" style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--success-bg)', color: 'var(--success)' }}>
+            <Flame style={{ width: 18, height: 18 }} />
           </div>
-          <div className="truncate">
-            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Top Package</span>
-            <strong className="text-sm sm:text-base font-black truncate block">{popularPackageName}</strong>
+          <div className="dm-truncate">
+            <span className="dm-label" style={{ padding: 0, display: 'block' }}>Top Package</span>
+            <strong className="dm-truncate" style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-hi)', display: 'block' }}>{popularPackageName}</strong>
           </div>
         </div>
       </div>
@@ -134,32 +146,28 @@ export default function WifiReports({ sessions, usageLogs, packages }: WifiRepor
       {/* Visual Analytics Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Chart 1 */}
-        <div className="bg-white border rounded-3xl p-5 shadow-sm space-y-4">
+        <div className="dm-card p-5 space-y-4">
           <div>
-            <h3 className="font-extrabold text-sm text-slate-800 flex items-center">
-              <Calendar className="w-4 h-4 mr-1.5 text-rose-500" />
+            <h3 className="dm-h3 flex items-center">
+              <Calendar style={{ width: 15, height: 15, marginRight: 6, color: 'var(--blue-400)' }} />
               <span>WiFi Revenue Streams (Last 7 Days)</span>
             </h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">Aggregated payments generated through voucher configurations.</p>
+            <p style={{ color: 'var(--text-low)', fontSize: '0.6875rem', marginTop: 3 }}>Aggregated payments generated through voucher configurations.</p>
           </div>
 
-          <div className="h-[220px]">
+          <div style={{ height: 220 }}>
             {revenueChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={revenueChartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="date" stroke="#94a3b8" fontSize={10} tickLine={false} />
-                  <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: 'none', color: '#fff' }}
-                    labelStyle={{ fontWeight: 'bold', fontSize: '11px' }}
-                    itemStyle={{ color: '#fb7185', fontSize: '11px' }}
-                  />
-                  <Line type="monotone" dataKey="revenue" name={`Revenue (${CURRENCY})`} stroke="#f43f5e" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#8A93BE' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: '#8A93BE' }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<ChartTooltip accent="var(--blue-400)" />} />
+                  <Line type="monotone" dataKey="revenue" name={`Revenue (${CURRENCY})`} stroke="#4C6FFF" strokeWidth={3} dot={{ r: 4, fill: '#4C6FFF', strokeWidth: 0 }} activeDot={{ r: 6, strokeWidth: 0, fill: '#7DD3FC' }} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-slate-400 text-xs font-mono">
+              <div className="flex items-center justify-center h-full" style={{ color: 'var(--text-low)', fontSize: '0.75rem', fontFamily: 'monospace' }}>
                 No active income history compiled yet.
               </div>
             )}
@@ -167,32 +175,28 @@ export default function WifiReports({ sessions, usageLogs, packages }: WifiRepor
         </div>
 
         {/* Chart 2 */}
-        <div className="bg-white border rounded-3xl p-5 shadow-sm space-y-4">
+        <div className="dm-card p-5 space-y-4">
           <div>
-            <h3 className="font-extrabold text-sm text-slate-800 flex items-center">
-              <FileSpreadsheet className="w-4 h-4 mr-1.5 text-rose-500" />
+            <h3 className="dm-h3 flex items-center">
+              <FileSpreadsheet style={{ width: 15, height: 15, marginRight: 6, color: 'var(--blue-400)' }} />
               <span>Package Allocation Distribution</span>
             </h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">Comparison of active vouchers purchased across rates.</p>
+            <p style={{ color: 'var(--text-low)', fontSize: '0.6875rem', marginTop: 3 }}>Comparison of active vouchers purchased across rates.</p>
           </div>
 
-          <div className="h-[220px]">
+          <div style={{ height: 220 }}>
             {packagePopularityChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={packagePopularityChartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} />
-                  <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#0f172a', borderRadius: '12px', border: 'none', color: '#fff' }}
-                    labelStyle={{ fontWeight: 'bold', fontSize: '11px' }}
-                    itemStyle={{ color: '#67e8f9', fontSize: '11px' }}
-                  />
-                  <Bar dataKey="sessions" name="Sessions Issued" fill="#0f172a" radius={[6, 6, 0, 0]} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.06)" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#8A93BE' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: '#8A93BE' }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<ChartTooltip accent="var(--cyan-300)" />} />
+                  <Bar dataKey="sessions" name="Sessions Issued" fill="#4C6FFF" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-slate-400 text-xs font-mono">
+              <div className="flex items-center justify-center h-full" style={{ color: 'var(--text-low)', fontSize: '0.75rem', fontFamily: 'monospace' }}>
                 No packages configured yet.
               </div>
             )}
@@ -201,14 +205,14 @@ export default function WifiReports({ sessions, usageLogs, packages }: WifiRepor
       </div>
 
       {/* Connection History & Security Logs */}
-      <div className="bg-white border rounded-3xl p-5 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3.5">
+      <div className="dm-card p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5" style={{ borderBottom: '1px solid var(--panel-line)' }}>
           <div>
-            <h3 className="font-extrabold text-sm text-slate-800 flex items-center">
-              <History className="w-4 h-4 mr-1.5 text-rose-500" />
-              <span>Network Audit Log & Activity Trails</span>
+            <h3 className="dm-h3 flex items-center">
+              <History style={{ width: 15, height: 15, marginRight: 6, color: 'var(--blue-400)' }} />
+              <span>Network Audit Log &amp; Activity Trails</span>
             </h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">Realtime authentication, connection, and timeout logs tracked from the gateway switches.</p>
+            <p style={{ color: 'var(--text-low)', fontSize: '0.6875rem', marginTop: 3 }}>Realtime authentication, connection, and timeout logs tracked from the gateway switches.</p>
           </div>
 
           {/* Filter buttons */}
@@ -217,11 +221,8 @@ export default function WifiReports({ sessions, usageLogs, packages }: WifiRepor
               <button
                 key={type}
                 onClick={() => setLogFilter(type)}
-                className={`px-2.5 py-1 text-[9px] font-mono font-bold tracking-wider rounded-lg transition-all cursor-pointer ${
-                  logFilter === type 
-                    ? 'bg-slate-900 text-white' 
-                    : 'bg-slate-50 border border-slate-200 text-slate-500 hover:bg-slate-100'
-                }`}
+                className={`dm-badge ${logFilter === type ? 'dm-badge-info' : 'dm-badge-neutral'}`}
+                style={{ cursor: 'pointer', fontFamily: 'monospace' }}
               >
                 {type}
               </button>
@@ -231,58 +232,57 @@ export default function WifiReports({ sessions, usageLogs, packages }: WifiRepor
 
         {/* Search filter input */}
         <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="w-3.5 h-3.5 text-slate-400" />
-          </div>
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ width: 14, height: 14, color: 'var(--text-low)' }} />
           <input
             type="text"
             placeholder="Search logs by client name, MAC address..."
             value={logSearch}
             onChange={(e) => setLogSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-rose-500 focus:bg-white transition-all"
+            className="dm-input"
+            style={{ paddingLeft: '2.25rem' }}
           />
         </div>
 
         {/* Logs Table */}
-        <div className="overflow-x-auto border border-slate-100 rounded-2xl">
-          <table className="w-full text-xs text-slate-600 tabular-nums">
-            <thead className="bg-slate-50 text-[10px] font-mono text-slate-400 border-b border-slate-100">
+        <div className="dm-scroll-x dm-card-inset" style={{ padding: 0 }}>
+          <table className="w-full dm-nums" style={{ fontSize: '0.75rem', color: 'var(--text-mid)' }}>
+            <thead style={{ fontSize: '0.625rem', fontFamily: 'monospace', color: 'var(--text-low)', borderBottom: '1px solid var(--panel-line)' }}>
               <tr>
-                <th className="px-4 py-3 text-left font-black tracking-wider">Timestamp</th>
-                <th className="px-4 py-3 text-left font-black tracking-wider">Client Name</th>
-                <th className="px-4 py-3 text-left font-black tracking-wider">Device Model</th>
-                <th className="px-4 py-3 text-left font-black tracking-wider">MAC Address</th>
-                <th className="px-4 py-3 text-left font-black tracking-wider">Action Event</th>
+                <th className="px-4 py-3 text-left" style={{ fontWeight: 700, letterSpacing: '0.04em' }}>Timestamp</th>
+                <th className="px-4 py-3 text-left" style={{ fontWeight: 700, letterSpacing: '0.04em' }}>Client Name</th>
+                <th className="px-4 py-3 text-left" style={{ fontWeight: 700, letterSpacing: '0.04em' }}>Device Model</th>
+                <th className="px-4 py-3 text-left" style={{ fontWeight: 700, letterSpacing: '0.04em' }}>MAC Address</th>
+                <th className="px-4 py-3 text-left" style={{ fontWeight: 700, letterSpacing: '0.04em' }}>Action Event</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody>
               {filteredLogs.length > 0 ? (
                 filteredLogs.map(log => (
-                  <tr key={log.id} className="hover:bg-slate-50/40 transition">
-                    <td className="px-4 py-3 font-mono text-[10px] text-slate-400">
+                  <tr key={log.id} className="dm-row" style={{ borderTop: '1px solid var(--panel-line)' }}>
+                    <td className="px-4 py-3" style={{ fontFamily: 'monospace', fontSize: '0.625rem', color: 'var(--text-low)' }}>
                       {new Date(log.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                     </td>
-                    <td className="px-4 py-3 font-bold text-slate-800">
+                    <td className="px-4 py-3" style={{ fontWeight: 700, color: 'var(--text-hi)' }}>
                       {log.wifi_customers?.name || 'Unknown Guest'}
                     </td>
-                    <td className="px-4 py-3 text-slate-500">{log.device_name}</td>
-                    <td className="px-4 py-3 font-mono text-[10px] tracking-wider text-slate-500 uppercase">
+                    <td className="px-4 py-3" style={{ color: 'var(--text-low)' }}>{log.device_name}</td>
+                    <td className="px-4 py-3" style={{ fontFamily: 'monospace', fontSize: '0.625rem', letterSpacing: '0.03em', color: 'var(--text-low)', textTransform: 'uppercase' }}>
                       {log.mac_address}
                     </td>
                     <td className="px-4 py-3">
                       {log.action === 'CONNECTED' ? (
-                        <span className="inline-flex items-center text-[9px] font-mono font-bold bg-emerald-50 text-emerald-600 border border-emerald-100 px-2 py-0.5 rounded-md uppercase tracking-wider">
-                          <ArrowUpRight className="w-2.5 h-2.5 mr-0.5 shrink-0" />
+                        <span className="dm-badge dm-badge-success" style={{ fontFamily: 'monospace' }}>
+                          <ArrowUpRight style={{ width: 10, height: 10 }} />
                           {log.action}
                         </span>
                       ) : log.action === 'EXPIRED' ? (
-                        <span className="inline-flex items-center text-[9px] font-mono font-bold bg-amber-50 text-amber-600 border border-amber-100 px-2 py-0.5 rounded-md uppercase tracking-wider">
-                          <Clock className="w-2.5 h-2.5 mr-0.5 shrink-0" />
+                        <span className="dm-badge dm-badge-warning" style={{ fontFamily: 'monospace' }}>
+                          <Clock style={{ width: 10, height: 10 }} />
                           {log.action}
                         </span>
                       ) : (
-                        <span className="inline-flex items-center text-[9px] font-mono font-bold bg-slate-100 text-slate-500 border border-slate-200 px-2 py-0.5 rounded-md uppercase tracking-wider">
-                          <ArrowDownLeft className="w-2.5 h-2.5 mr-0.5 shrink-0" />
+                        <span className="dm-badge dm-badge-neutral" style={{ fontFamily: 'monospace' }}>
+                          <ArrowDownLeft style={{ width: 10, height: 10 }} />
                           {log.action}
                         </span>
                       )}
@@ -291,7 +291,7 @@ export default function WifiReports({ sessions, usageLogs, packages }: WifiRepor
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-slate-400 font-mono">
+                  <td colSpan={5} className="py-8 text-center" style={{ color: 'var(--text-low)', fontFamily: 'monospace' }}>
                     No matching gateway audit log actions compiled.
                   </td>
                 </tr>
