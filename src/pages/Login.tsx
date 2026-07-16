@@ -281,7 +281,13 @@ export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) 
                     type="email" required autoComplete="email"
                     placeholder="you@company.com"
                     value={email}
-                    onChange={e => setEmail(e.target.value)}
+                    onChange={e => {
+                      setEmail(e.target.value);
+                      // A stale "sent"/"error" resend banner referencing the
+                      // previous address would otherwise linger while they
+                      // type a different one.
+                      if (resendState !== 'idle') setResendState('idle');
+                    }}
                     style={inputStyle} onFocus={onFocus} onBlur={onBlur}
                   />
                 </div>

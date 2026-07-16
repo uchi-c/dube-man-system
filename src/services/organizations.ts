@@ -297,6 +297,17 @@ export async function acceptInvite(
 // leaving for Google (create a new org vs. accept an invite) is stashed in
 // localStorage and consumed once on the first successful return, from
 // fetchProfileForAuthUser in services/supabase.ts.
+//
+// Both stashes carry a timestamp and expire after PENDING_STASH_MAX_AGE_MS.
+// Without that, abandoning the flow (closing the tab, cancelling at
+// Google, the popup failing) leaves the entry sitting in localStorage
+// forever — and it would then get silently consumed by the NEXT unrelated
+// Google sign-in on that browser (e.g. someone else, or the same person
+// legitimately just signing into an existing account later), creating an
+// org or accepting an invite nobody asked for at that moment. An OAuth
+// round trip normally completes in well under a minute, so a generous
+// window still catches the real case without that risk.
+const PENDING_STASH_MAX_AGE_MS = 10 * 60 * 1000;
 
 export function stashPendingGoogleSignup(details: {
   orgName: string;
@@ -304,7 +315,7 @@ export function stashPendingGoogleSignup(details: {
   businessType?: BusinessType;
 }): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(PENDING_GOOGLE_SIGNUP_KEY, JSON.stringify(details));
+  localStorage.setItem(PENDING_GOOGLE_SIGNUP_KEY, JSON.stringify({ ...details, ts: Date.now() }));
 }
 
 export function takePendingGoogleSignup(): {
@@ -317,7 +328,9 @@ export function takePendingGoogleSignup(): {
   if (!raw) return null;
   localStorage.removeItem(PENDING_GOOGLE_SIGNUP_KEY);
   try {
-    return JSON.parse(raw);
+    const { ts, ...details } = JSON.parse(raw);
+    if (typeof ts !== 'number' || Date.now() - ts > PENDING_STASH_MAX_AGE_MS) return null;
+    return details;
   } catch {
     return null;
   }
@@ -325,14 +338,21 @@ export function takePendingGoogleSignup(): {
 
 export function stashPendingInviteToken(token: string): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(PENDING_INVITE_TOKEN_KEY, token);
+  localStorage.setItem(PENDING_INVITE_TOKEN_KEY, JSON.stringify({ token, ts: Date.now() }));
 }
 
 export function takePendingInviteToken(): string | null {
   if (typeof window === 'undefined') return null;
-  const token = localStorage.getItem(PENDING_INVITE_TOKEN_KEY);
-  if (token) localStorage.removeItem(PENDING_INVITE_TOKEN_KEY);
-  return token;
+  const raw = localStorage.getItem(PENDING_INVITE_TOKEN_KEY);
+  if (!raw) return null;
+  localStorage.removeItem(PENDING_INVITE_TOKEN_KEY);
+  try {
+    const { token, ts } = JSON.parse(raw);
+    if (typeof ts !== 'number' || Date.now() - ts > PENDING_STASH_MAX_AGE_MS) return null;
+    return token || null;
+  } catch {
+    return null;
+  }
 }
 
 /**
