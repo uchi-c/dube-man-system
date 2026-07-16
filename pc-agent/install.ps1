@@ -96,6 +96,22 @@ Write-Host "Installing dependencies..." -ForegroundColor Cyan
 & $python -m pip install --upgrade pip | Out-Null
 & $python -m pip install -r (Join-Path $here "requirements.txt")
 
+# pywin32 installed via pip does NOT register its COM/service DLLs
+# (pythoncomXX.dll / pywintypesXX.dll) into System32. Running the agent
+# in the foreground can still work because the interpreter finds the DLLs
+# on sys.path, but the Windows Service Control Manager launches
+# pythonservice.exe without that context — so without this step,
+# "service.py install" / "service.py start" below fails with a DLL-load
+# or access error even though pip reported success.
+Write-Host "Registering pywin32 system DLLs..." -ForegroundColor Cyan
+$scriptsDir = (& $python -c "import sys, os; print(os.path.join(os.path.dirname(sys.executable), 'Scripts'))").Trim()
+$postInstall = Join-Path $scriptsDir "pywin32_postinstall.py"
+if (Test-Path $postInstall) {
+  & $python $postInstall -install -silent
+} else {
+  Write-Host "  pywin32_postinstall.py not found at $postInstall - skipping. If service registration fails below, locate it under your Python install's Scripts folder and run: python <path> -install" -ForegroundColor Yellow
+}
+
 Write-Host "Writing .env ($ComputerCode)..." -ForegroundColor Cyan
 @"
 SUPABASE_URL=$SupabaseUrl
@@ -108,8 +124,25 @@ AGENT_SECRET=$AgentSecret
 Write-Host "Registering Windows service ($svcName)..." -ForegroundColor Cyan
 Push-Location $here
 try {
+  $existing = Get-Service -Name $svcName -ErrorAction SilentlyContinue
+  if ($existing) {
+    Write-Host "  Existing '$svcName' service found - stopping and removing before reinstall..." -ForegroundColor Yellow
+    if ($existing.Status -ne "Stopped") {
+      & $python service.py stop
+      Start-Sleep -Seconds 2
+    }
+    & $python service.py remove
+  }
   & $python service.py install
   & $python service.py start
+} catch {
+  Write-Host ""
+  Write-Host "Service registration/start failed: $($_.Exception.Message)" -ForegroundColor Red
+  Write-Host "Common causes:" -ForegroundColor Yellow
+  Write-Host "  - pywin32 DLLs not registered - re-run this installer (it now runs pywin32_postinstall.py first), or run manually: python `"$postInstall`" -install"
+  Write-Host "  - Leftover service registration from a prior failed install - try: sc.exe delete $svcName"
+  Write-Host "  - Not actually elevated despite the prompt - confirm the PowerShell window title says 'Administrator'"
+  throw
 } finally {
   Pop-Location
 }
