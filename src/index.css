@@ -79,10 +79,16 @@
 }
 
 /* ---- Base reset + typography ------------------------------ */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* Must live in @layer base: Tailwind's own utilities (p-*, m-*, ...) are
+   emitted in @layer utilities, and unlayered rules always beat layered
+   ones regardless of specificity — an unlayered reset here would silently
+   zero out every spacing utility in the app. */
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 }
 
 html {
