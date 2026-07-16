@@ -13,7 +13,10 @@ import {
 // imports `supabase`/`isSupabaseConfigured` from this file. Both imports are
 // only ever touched inside function bodies (never at module-eval time), so
 // this circular reference resolves safely under Vite/ESM.
-import { getCurrentOrganizationId, clearOrganizationCache, completeOrganizationSignup } from './organizations';
+import {
+  getCurrentOrganizationId, clearOrganizationCache, completeOrganizationSignup,
+  acceptInvite, takePendingInviteToken, takePendingGoogleSignup,
+} from './organizations';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -64,19 +67,47 @@ async function fetchProfileForAuthUser(authUser: any): Promise<User | null> {
     return mapProfileToUser(profile);
   }
 
+  // A user who signed up via the Signup page's "join a team" (invite) mode
+  // but whose project requires email confirmation has no profile yet —
+  // their invite token was stashed in auth user_metadata at sign-up time
+  // because no session existed then to accept it immediately. Their first
+  // successful login is the first point we can act as them, so accept it
+  // here. Checked before the plain-org-signup branch below since an invite
+  // token always wins if somehow both were present.
+  const pendingInviteToken =
+    (authUser.user_metadata?.invite_token as string | undefined) || takePendingInviteToken() || undefined;
+  if (pendingInviteToken) {
+    try {
+      await acceptInvite(pendingInviteToken, authUser.user_metadata?.owner_name || undefined);
+      const { data: created } = await supabase.from('users').select('*').eq('id', authUser.id).maybeSingle();
+      if (created) return mapProfileToUser(created);
+    } catch (inviteErr: any) {
+      // Most likely the invite was revoked or expired between sign-up and
+      // this first login. Fall through so the account isn't stuck unable
+      // to log in at all — an admin can invite them again.
+      console.warn(`Deferred invite acceptance failed, falling back to a plain profile: ${inviteErr?.message || inviteErr}`);
+    }
+  }
+
   // A user who signed up via the Signup page but whose project requires
   // email confirmation has no profile yet — their organization name was
   // stashed in auth user_metadata at sign-up time (see
   // signUpNewOrganization in services/organizations.ts) because no session
   // existed then to complete it immediately. Their first successful login
   // is the first point we can act as them, so complete it here.
-  const pendingOrgName = authUser.user_metadata?.org_name as string | undefined;
+  //
+  // For a Google sign-in specifically, signInWithOAuth can't attach custom
+  // user_metadata the way email/password signUp can, so the same intent is
+  // stashed in localStorage instead (see stashPendingGoogleSignup) and
+  // picked up here via takePendingGoogleSignup on the redirect back.
+  const pendingGoogleSignup = takePendingGoogleSignup();
+  const pendingOrgName = (authUser.user_metadata?.org_name as string | undefined) || pendingGoogleSignup?.orgName;
   if (pendingOrgName) {
     try {
       await completeOrganizationSignup(
         pendingOrgName,
-        authUser.user_metadata?.owner_name || undefined,
-        authUser.user_metadata?.business_type || undefined
+        authUser.user_metadata?.owner_name || pendingGoogleSignup?.ownerName || undefined,
+        authUser.user_metadata?.business_type || pendingGoogleSignup?.businessType || undefined
       );
       const { data: created } = await supabase.from('users').select('*').eq('id', authUser.id).maybeSingle();
       if (created) return mapProfileToUser(created);
@@ -167,6 +198,24 @@ export async function loginUser(email: string, password: string): Promise<User |
     return found;
   }
   return null;
+}
+
+/**
+ * Redirects to Google's OAuth consent screen. Whatever the caller needs
+ * completed on return (create a new org, or accept a pending invite) must
+ * already be stashed via stashPendingGoogleSignup/stashPendingInviteToken
+ * in services/organizations.ts BEFORE calling this — the browser navigates
+ * away immediately, so nothing after this call in the current page can run.
+ */
+export async function signInWithGoogle(): Promise<void> {
+  if (!isSupabaseConfigured) {
+    throw new Error('Google sign-in needs a connected Supabase project — this preview is running in local demo mode.');
+  }
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin + window.location.pathname },
+  });
+  if (error) throw error;
 }
 
 export async function logoutUser(): Promise<void> {

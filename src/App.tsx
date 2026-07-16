@@ -23,11 +23,12 @@ const PrintManager   = lazy(() => import('./pages/PrintManager'));
 const Pharmacy       = lazy(() => import('./pages/Pharmacy'));
 const PCAgentConsole = lazy(() => import('./components/PCAgentConsole'));
 const ActivityLogs   = lazy(() => import('./components/ActivityLogs'));
+const Team           = lazy(() => import('./pages/Team'));
 
 import {
   LayoutDashboard, Package, ShoppingCart, Printer, Monitor,
   Wifi, History, Users, Shield, LogOut, Menu, X,
-  RefreshCw, PrinterIcon, ChevronRight, Bell, Pill,
+  RefreshCw, PrinterIcon, ChevronRight, Bell, Pill, UserPlus,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Analytics } from '@vercel/analytics/react';
@@ -60,6 +61,7 @@ const TABS: TabDef[] = [
   // System
   { id: 'pc-agent',      label: 'PC Agent Hub',     icon: Shield,          group: 'System',     path: '/pc-agent',      roles: ['ADMIN'] },
   { id: 'logs',          label: 'Security Logs',    icon: History,         group: 'System',     path: '/logs',          roles: ['ADMIN'] },
+  { id: 'team',          label: 'Team',             icon: UserPlus,        group: 'System',     path: '/team',          roles: ['ADMIN'] },
 ];
 
 const PATH_TO_TAB: Record<string, string> = Object.fromEntries(
@@ -75,10 +77,10 @@ const GROUP_ORDER = ['Home','Operations','Printing','Connectivity','System'];
 // look different, on top of their data already being hard-isolated by RLS.
 const BUSINESS_TYPE_MODULES: Record<BusinessType, string[] | null> = {
   general:  null,
-  pharmacy: ['dashboard', 'pos', 'inventory', 'customers', 'pharmacy', 'wifi', 'pc-agent', 'logs'],
-  cafe:     ['dashboard', 'pos', 'inventory', 'customers', 'cafe', 'wifi', 'pc-agent', 'logs'],
-  printing: ['dashboard', 'pos', 'inventory', 'customers', 'print-manager', 'printing', 'wifi', 'pc-agent', 'logs'],
-  retail:   ['dashboard', 'pos', 'inventory', 'customers', 'wifi', 'pc-agent', 'logs'],
+  pharmacy: ['dashboard', 'pos', 'inventory', 'customers', 'pharmacy', 'wifi', 'pc-agent', 'logs', 'team'],
+  cafe:     ['dashboard', 'pos', 'inventory', 'customers', 'cafe', 'wifi', 'pc-agent', 'logs', 'team'],
+  printing: ['dashboard', 'pos', 'inventory', 'customers', 'print-manager', 'printing', 'wifi', 'pc-agent', 'logs', 'team'],
+  retail:   ['dashboard', 'pos', 'inventory', 'customers', 'wifi', 'pc-agent', 'logs', 'team'],
 };
 
 // Role-based landing paths.
@@ -436,6 +438,7 @@ function renderPage(id: string, role: string) {
     case 'wifi':          return <WifiManagement />;
     case 'pc-agent':      return <PCAgentConsole />;
     case 'logs':          return <ActivityLogs userRole={role} />;
+    case 'team':          return <Team />;
     default:              return null;
   }
 }

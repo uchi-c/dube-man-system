@@ -11,9 +11,11 @@
  */
 
 import { supabase, isSupabaseConfigured } from './supabase';
-import { Organization, BusinessType } from '../types';
+import { Organization, BusinessType, OrganizationInvite, UserRole } from '../types';
 
 const ORG_STORAGE_KEY = 'uruu_org_id';
+const PENDING_GOOGLE_SIGNUP_KEY = 'uruu_pending_google_signup';
+const PENDING_INVITE_TOKEN_KEY = 'uruu_pending_invite_token';
 
 // Local-demo mode (no Supabase configured) has no real multi-tenancy —
 // everything runs against localStorage under one implicit workspace.
@@ -191,6 +193,177 @@ export async function signUpNewOrganization(
   }
 
   const { organizationId } = await completeOrganizationSignup(orgName, ownerName, businessType);
+  return { needsEmailConfirmation: false, organizationId };
+}
+
+// ==========================================
+// TEAM INVITES
+// ==========================================
+
+/**
+ * Admin-only: invite a teammate into the caller's own organization with a
+ * chosen role. Returns the shareable token — the caller builds the actual
+ * link (e.g. `${origin}/#/signup?invite=${token}`).
+ */
+export async function createInvite(
+  email: string,
+  role: UserRole
+): Promise<{ token: string; email: string; role: UserRole; expiresAt: string }> {
+  const { data, error } = await supabase.rpc('create_organization_invite', {
+    p_email: email,
+    p_role: role,
+  });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) throw new Error('Invite creation did not return a result.');
+  return { token: row.token, email: row.email, role: row.role, expiresAt: row.expires_at };
+}
+
+/** Every invite (pending, accepted, or revoked) for the caller's organization. */
+export async function fetchInvites(): Promise<OrganizationInvite[]> {
+  if (!isSupabaseConfigured) return [];
+  try {
+    const { data, error } = await supabase
+      .from('organization_invites')
+      .select('id, email, role, token, created_at, expires_at, accepted_at, revoked_at')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data ?? [];
+  } catch (err) {
+    console.warn('Failed fetching organization invites:', (err as any)?.message || err);
+    return [];
+  }
+}
+
+/** Admin action: revoke a still-pending invite so its link stops working. */
+export async function revokeInvite(inviteId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('organization_invites')
+      .update({ revoked_at: new Date().toISOString() })
+      .eq('id', inviteId);
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.warn('Failed revoking invite:', (err as any)?.message || err);
+    return false;
+  }
+}
+
+/** Anon-safe preview of a still-valid invite token — org name + assigned role. */
+export async function getInviteInfo(
+  token: string
+): Promise<{ orgName: string; role: UserRole; email: string } | null> {
+  if (!isSupabaseConfigured || !token) return null;
+  try {
+    const { data, error } = await supabase.rpc('get_invite_info', { p_token: token });
+    if (error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) return null;
+    return { orgName: row.org_name, role: row.role, email: row.email };
+  } catch (err) {
+    console.warn('Failed resolving invite token:', (err as any)?.message || err);
+    return null;
+  }
+}
+
+/**
+ * Completes invite acceptance once a session exists (mirrors
+ * completeOrganizationSignup's role in the plain-signup flow — see
+ * fetchProfileForAuthUser in services/supabase.ts for the deferred-email-
+ * confirmation and deferred-Google-redirect callers).
+ */
+export async function acceptInvite(
+  token: string,
+  name?: string
+): Promise<{ organizationId: string; role: UserRole }> {
+  const { data, error } = await supabase.rpc('accept_organization_invite', {
+    p_token: token,
+    p_name: name || null,
+  });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) throw new Error('Invite acceptance did not return a result.');
+  setActiveOrganizationId(row.organization_id);
+  return { organizationId: row.organization_id, role: row.role };
+}
+
+// ==========================================
+// GOOGLE OAUTH SIGNUP HAND-OFF
+// ==========================================
+// signInWithOAuth (unlike signUp) can't attach custom user_metadata at
+// account-creation time — the profile is created by the provider redirect,
+// not by a call we control. So the intent the user expressed BEFORE
+// leaving for Google (create a new org vs. accept an invite) is stashed in
+// localStorage and consumed once on the first successful return, from
+// fetchProfileForAuthUser in services/supabase.ts.
+
+export function stashPendingGoogleSignup(details: {
+  orgName: string;
+  ownerName?: string;
+  businessType?: BusinessType;
+}): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(PENDING_GOOGLE_SIGNUP_KEY, JSON.stringify(details));
+}
+
+export function takePendingGoogleSignup(): {
+  orgName: string;
+  ownerName?: string;
+  businessType?: BusinessType;
+} | null {
+  if (typeof window === 'undefined') return null;
+  const raw = localStorage.getItem(PENDING_GOOGLE_SIGNUP_KEY);
+  if (!raw) return null;
+  localStorage.removeItem(PENDING_GOOGLE_SIGNUP_KEY);
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+export function stashPendingInviteToken(token: string): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(PENDING_INVITE_TOKEN_KEY, token);
+}
+
+export function takePendingInviteToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  const token = localStorage.getItem(PENDING_INVITE_TOKEN_KEY);
+  if (token) localStorage.removeItem(PENDING_INVITE_TOKEN_KEY);
+  return token;
+}
+
+/**
+ * Full self-service invite acceptance: creates the Supabase Auth account,
+ * then joins the invite's organization immediately if a session comes back
+ * right away. If the project requires email confirmation, the invite token
+ * is stashed in the auth user's metadata and acceptance completes
+ * automatically on first login instead (see fetchProfileForAuthUser in
+ * services/supabase.ts) — mirrors signUpNewOrganization's shape exactly.
+ */
+export async function acceptInviteSignup(
+  email: string,
+  password: string,
+  token: string,
+  name?: string
+): Promise<{ needsEmailConfirmation: boolean; organizationId?: string }> {
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { invite_token: token, owner_name: name || null },
+    },
+  });
+  if (authError) throw authError;
+  if (!authData?.user) throw new Error('Sign-up did not return an account.');
+
+  if (!authData.session) {
+    return { needsEmailConfirmation: true };
+  }
+
+  const { organizationId } = await acceptInvite(token, name);
   return { needsEmailConfirmation: false, organizationId };
 }
 

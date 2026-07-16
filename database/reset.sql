@@ -6,7 +6,7 @@
 -- After running this, apply in order: schema.sql, print_schema.sql,
 -- agent_schema.sql, migrations/001_multi_tenancy.sql,
 -- migrations/002_pharmacy_module.sql, migrations/003_organization_signup.sql,
--- migrations/004_business_type.sql, seed.sql.
+-- migrations/004_business_type.sql, migrations/005_team_invites.sql, seed.sql.
 -- Safe to run repeatedly.
 --
 -- Going live and just want to remove seed.sql's demo rows (not tear down
@@ -40,6 +40,7 @@ drop table if exists
   public.computers,
   public.customers,
   public.products,
+  public.organization_invites,
   public.user_organization_memberships,
   public.organizations,
   public.users
@@ -65,6 +66,9 @@ drop function if exists public.auto_enroll_default_organization() cascade;
 drop function if exists public.process_dispensing_deduction() cascade;
 drop function if exists public.signup_new_organization(text, text) cascade;
 drop function if exists public.signup_new_organization(text, text, text) cascade;
+drop function if exists public.create_organization_invite(text, text) cascade;
+drop function if exists public.get_invite_info(text) cascade;
+drop function if exists public.accept_organization_invite(text, text) cascade;
 
 -- Enum types (drop after the tables that use them)
 drop type if exists public.color_mode cascade;

@@ -1,12 +1,26 @@
 import React, { useState } from 'react';
 import { Mail, Lock, ArrowRight, Loader2, AlertCircle, MailCheck } from 'lucide-react';
 import { motion } from 'motion/react';
-import { isSupabaseConfigured, loginUser, supabase } from '../services/supabase';
+import { isSupabaseConfigured, loginUser, supabase, signInWithGoogle } from '../services/supabase';
 import { User } from '../types';
 
 interface LoginProps {
   onLoginSuccess: (user: User) => void;
   onSwitchToSignup: () => void;
+}
+
+// The official Google "G" mark — required as-is on OAuth buttons per
+// Google's brand guidelines, hence the literal multi-color paths instead of
+// a single-tone icon from the shared lucide set.
+function GoogleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 18 18" aria-hidden="true">
+      <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.57 2.7-3.87 2.7-6.62z" />
+      <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.9-2.26c-.8.54-1.84.86-3.06.86-2.35 0-4.34-1.59-5.05-3.72H.94v2.33A9 9 0 0 0 9 18z" />
+      <path fill="#FBBC05" d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.17.28-1.7V4.97H.94A9 9 0 0 0 0 9c0 1.45.35 2.83.94 4.03l3.01-2.33z" />
+      <path fill="#EA4335" d="M9 3.58c1.32 0 2.51.46 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .94 4.97l3.01 2.33C4.66 5.17 6.65 3.58 9 3.58z" />
+    </svg>
+  );
 }
 
 // Sign-in must never hang on a dead connection — cap it and recover.
@@ -102,6 +116,7 @@ export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) 
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading]   = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError]       = useState('');
   const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
@@ -130,6 +145,18 @@ export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) 
       setError(err?.message || 'Sign-in failed. Check your connection and try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    setError('');
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+      // Browser navigates away to Google on success — nothing more to do here.
+    } catch (err: any) {
+      setError(err?.message || 'Google sign-in failed. Try again.');
+      setGoogleLoading(false);
     }
   };
 
@@ -320,13 +347,30 @@ export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) 
               )}
 
               {/* Sign in button — disabled while pending */}
-              <button type="submit" disabled={loading} className="dm-btn dm-btn-primary w-full">
+              <button type="submit" disabled={loading || googleLoading} className="dm-btn dm-btn-primary w-full">
                 {loading
                   ? <Loader2 style={{ width: 16, height: 16 }} className="dm-spin" />
                   : <ArrowRight style={{ width: 16, height: 16 }} />}
                 {loading ? 'Signing in…' : 'Sign in'}
               </button>
             </form>
+
+            <div className="flex items-center gap-3" style={{ margin: '0.25rem 0' }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--panel-line)' }} />
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-low)' }}>or</span>
+              <div style={{ flex: 1, height: 1, background: 'var(--panel-line)' }} />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={googleLoading || loading}
+              className="dm-btn dm-btn-ghost w-full"
+              style={{ gap: 10 }}
+            >
+              {googleLoading ? <Loader2 style={{ width: 16, height: 16 }} className="dm-spin" /> : <GoogleIcon />}
+              Continue with Google
+            </button>
           </div>
 
           <p style={{ textAlign: 'center', fontSize: '0.8125rem', color: 'var(--text-mid)' }}>
