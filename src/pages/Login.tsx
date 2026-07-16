@@ -182,12 +182,7 @@ export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) 
         {/* Top brand mark */}
         <div className="relative z-10 p-10">
           <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: 'linear-gradient(135deg, #4C6FFF, #7DD3FC)', boxShadow: '0 8px 22px -6px rgba(76,111,255,0.7)' }}
-            >
-              <span style={{ color: 'white', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '14px' }}>UO</span>
-            </div>
+            <img src="/logo-mark.png" alt="Uruu OS" style={{ width: 40, height: 40, objectFit: 'contain', flexShrink: 0 }} />
             <div>
               <div style={{ color: 'var(--text-hi)', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '18px', letterSpacing: '-0.02em' }}>
                 Uruu
@@ -229,9 +224,7 @@ export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) 
       <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 overflow-y-auto">
         {/* Mobile brand */}
         <div className="lg:hidden flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #4C6FFF, #7DD3FC)' }}>
-            <span style={{ color: 'white', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '14px' }}>UO</span>
-          </div>
+          <img src="/logo-mark.png" alt="Uruu OS" style={{ width: 40, height: 40, objectFit: 'contain', flexShrink: 0 }} />
           <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '20px', color: 'var(--text-hi)' }}>Uruu OS</span>
         </div>
 
