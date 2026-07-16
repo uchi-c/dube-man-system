@@ -52,17 +52,14 @@ export default function PrintSettings() {
     setSaving(false);
   };
 
-  const inputCls = "w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-400";
-  const labelCls = "block text-xs font-bold text-slate-600 mb-1.5";
-
   const marginBW = form.bw_price_per_page - form.paper_cost_per_page;
   const marginColour = form.colour_price_per_page - form.paper_cost_per_page;
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20 text-slate-400">
-        <RefreshCw className="w-5 h-5 animate-spin mr-2" />
-        <span className="text-sm font-mono">Loading settings…</span>
+      <div className="flex items-center justify-center py-20" style={{ color: 'var(--text-low)' }}>
+        <RefreshCw className="dm-spin" style={{ width: 18, height: 18, marginRight: 8 }} />
+        <span style={{ fontSize: '0.8125rem', fontFamily: 'monospace' }}>Loading settings…</span>
       </div>
     );
   }
@@ -70,22 +67,22 @@ export default function PrintSettings() {
   return (
     <div className="space-y-5 max-w-lg" id="print-settings">
       <div>
-        <h2 className="text-sm font-bold text-slate-700 flex items-center space-x-2">
-          <Settings2 className="w-4 h-4 text-rose-500" />
+        <h2 className="dm-h3 flex items-center space-x-2">
+          <Settings2 style={{ width: 15, height: 15, color: 'var(--blue-400)' }} />
           <span>Print Pricing Settings</span>
         </h2>
-        <p className="text-xs text-slate-400 mt-0.5">
+        <p style={{ color: 'var(--text-low)', fontSize: '0.75rem', marginTop: 3 }}>
           These prices are used to calculate revenue, cost, and profit for every print job.
         </p>
       </div>
 
-      <form onSubmit={handleSave} className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6 space-y-5">
+      <form onSubmit={handleSave} className="dm-card p-6 space-y-5">
         {/* BW price */}
         <div>
-          <label className={labelCls}>Black & White — Price per Page (ZMW)</label>
+          <label className="dm-label" style={{ display: 'block', marginBottom: 6 }}>Black &amp; White — Price per Page (ZMW)</label>
           <input
             type="number" min="0" step="0.01" required
-            className={inputCls}
+            className="dm-input"
             value={form.bw_price_per_page}
             onChange={e => setForm(f => ({ ...f, bw_price_per_page: Number(e.target.value) }))}
           />
@@ -93,10 +90,10 @@ export default function PrintSettings() {
 
         {/* Colour price */}
         <div>
-          <label className={labelCls}>Colour — Price per Page (ZMW)</label>
+          <label className="dm-label" style={{ display: 'block', marginBottom: 6 }}>Colour — Price per Page (ZMW)</label>
           <input
             type="number" min="0" step="0.01" required
-            className={inputCls}
+            className="dm-input"
             value={form.colour_price_per_page}
             onChange={e => setForm(f => ({ ...f, colour_price_per_page: Number(e.target.value) }))}
           />
@@ -104,44 +101,44 @@ export default function PrintSettings() {
 
         {/* Paper cost */}
         <div>
-          <label className={labelCls}>Paper Cost per Page (ZMW)</label>
+          <label className="dm-label" style={{ display: 'block', marginBottom: 6 }}>Paper Cost per Page (ZMW)</label>
           <input
             type="number" min="0" step="0.001" required
-            className={inputCls}
+            className="dm-input"
             value={form.paper_cost_per_page}
             onChange={e => setForm(f => ({ ...f, paper_cost_per_page: Number(e.target.value) }))}
           />
-          <p className="text-[10px] text-slate-400 mt-1">
+          <p style={{ fontSize: '0.625rem', color: 'var(--text-low)', marginTop: 4 }}>
             Used to calculate cost and profit per job. Typically: cost per ream ÷ pages per ream.
           </p>
         </div>
 
         {/* Margin preview */}
-        <div className="bg-slate-50 rounded-2xl p-4 grid grid-cols-2 gap-4 text-xs border border-slate-100 tabular-nums">
+        <div className="dm-card-inset grid grid-cols-2 gap-4 dm-nums" style={{ padding: '1rem', fontSize: '0.75rem' }}>
           <div>
-            <div className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">B&W Margin / Page</div>
-            <div className={`text-base font-extrabold ${marginBW >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+            <div className="dm-label" style={{ padding: 0, marginBottom: 4 }}>B&amp;W Margin / Page</div>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: marginBW >= 0 ? 'var(--success)' : 'var(--danger)' }}>
               {formatCurrency(marginBW, { decimals: 3 })}
             </div>
           </div>
           <div>
-            <div className="text-slate-400 text-[10px] uppercase tracking-wider mb-1">Colour Margin / Page</div>
-            <div className={`text-base font-extrabold ${marginColour >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+            <div className="dm-label" style={{ padding: 0, marginBottom: 4 }}>Colour Margin / Page</div>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: marginColour >= 0 ? 'var(--success)' : 'var(--danger)' }}>
               {formatCurrency(marginColour, { decimals: 3 })}
             </div>
           </div>
         </div>
 
         {success && (
-          <div className="flex items-center space-x-2 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2.5 text-xs font-semibold">
-            <CheckCircle2 className="w-4 h-4" />
+          <div className="dm-badge dm-badge-success" style={{ width: '100%', padding: '0.65rem 1rem', whiteSpace: 'normal' }}>
+            <CheckCircle2 style={{ width: 15, height: 15, flexShrink: 0 }} />
             <span>Settings saved successfully.</span>
           </div>
         )}
 
         {error && (
-          <div className="flex items-center space-x-2 text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-2.5 text-xs">
-            <AlertTriangle className="w-4 h-4" />
+          <div className="dm-badge dm-badge-danger" style={{ width: '100%', padding: '0.65rem 1rem', whiteSpace: 'normal' }}>
+            <AlertTriangle style={{ width: 15, height: 15, flexShrink: 0 }} />
             <span>{error}</span>
           </div>
         )}
@@ -149,16 +146,16 @@ export default function PrintSettings() {
         <button
           type="submit"
           disabled={saving}
-          className="w-full py-3 rounded-xl bg-rose-600 text-white text-sm font-bold hover:bg-rose-700 disabled:opacity-60 flex items-center justify-center space-x-2 cursor-pointer transition"
+          className="dm-btn dm-btn-primary w-full"
         >
-          {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {saving ? <RefreshCw className="dm-spin" style={{ width: 16, height: 16 }} /> : <Save style={{ width: 16, height: 16 }} />}
           <span>{saving ? 'Saving…' : 'Save Settings'}</span>
         </button>
       </form>
 
       {/* Note about printer-level overrides */}
-      <div className="bg-rose-50 border border-rose-100 rounded-2xl px-4 py-3 text-xs text-rose-700">
-        <strong>Note:</strong> These are organization-wide defaults. Individual printers can have their own
+      <div style={{ background: 'var(--blue-bg)', border: '1px solid rgba(76,111,255,0.30)', borderRadius: 'var(--r-card)', padding: '0.85rem 1rem', fontSize: '0.75rem', lineHeight: 1.6, color: 'var(--text-mid)' }}>
+        <strong style={{ color: 'var(--text-hi)' }}>Note:</strong> These are organization-wide defaults. Individual printers can have their own
         BW / Colour cost-per-page values set in the Printers tab. When both are set, the pricing settings
         above take precedence for revenue calculations (they represent your sell price, while printer values
         represent your cost).

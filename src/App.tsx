@@ -91,19 +91,15 @@ const defaultPathFor = (role: string) => ROLE_DEFAULT_PATH[role] ?? '/dashboard'
 
 // ---- Brand mark ------------------------------------------------------------
 
-function BrandMark({ size = 34, radius = 10, font = 13 }: { size?: number; radius?: number; font?: number }) {
+function BrandMark({ size = 34 }: { size?: number; radius?: number; font?: number }) {
   return (
-    <div
-      style={{
-        width: size, height: size, borderRadius: radius,
-        background: 'linear-gradient(135deg, #4C6FFF 0%, #7DD3FC 100%)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0,
-        boxShadow: '0 6px 18px -6px rgba(76,111,255,0.7)',
-      }}
-    >
-      <span style={{ color: 'white', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: font }}>UO</span>
-    </div>
+    <img
+      src="/logo-mark.png"
+      alt="Uruu OS"
+      width={size}
+      height={size}
+      style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0 }}
+    />
   );
 }
 

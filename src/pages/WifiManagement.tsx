@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  fetchWifiPackages, fetchWifiSessions, fetchWifiCustomers, fetchWifiUsageLogs, 
+import {
+  fetchWifiPackages, fetchWifiSessions, fetchWifiCustomers, fetchWifiUsageLogs,
   fetchRouterSettings, startWifiSession, updateWifiSessionStatus, saveRouterSettings,
   isSupabaseConfigured, supabase
 } from '../services/supabase';
@@ -10,12 +10,40 @@ import { WifiCustomer, WifiPackage, WifiSession, WifiUsageLog, RouterSetting, Us
 import WifiSessionCard from '../components/WifiSessionCard';
 import ConnectedDevices from '../components/ConnectedDevices';
 import WifiReports from '../components/WifiReports';
-import { 
+import {
   Wifi, PlusCircle, LayoutDashboard, Cpu, Database, RefreshCw, Radio,
   Settings2, ShieldCheck, Play, HelpCircle, Save, CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatCurrency } from '../utils/format';
+
+// ---- Stat card (matches Dashboard's HeroStat pattern) ---------------------
+
+function StatCard({ icon: Icon, label, value, tone = 'blue' }: {
+  icon: React.ElementType; label: string; value: React.ReactNode;
+  tone?: 'blue' | 'cyan' | 'success' | 'warning';
+}) {
+  const fg = tone === 'cyan' ? 'var(--cyan-300)' : tone === 'success' ? 'var(--success)' : tone === 'warning' ? 'var(--warning)' : 'var(--blue-400)';
+  const bg = tone === 'cyan' ? 'var(--cyan-bg)' : tone === 'success' ? 'var(--success-bg)' : tone === 'warning' ? 'var(--warning-bg)' : 'var(--blue-bg)';
+  return (
+    <div className="dm-card p-4 flex items-center justify-between text-left">
+      <div>
+        <span className="dm-label" style={{ padding: 0, display: 'block' }}>{label}</span>
+        <strong className="dm-kpi dm-nums" style={{ fontSize: '1.15rem', display: 'block', marginTop: 4 }}>{value}</strong>
+      </div>
+      <div className="flex items-center justify-center flex-shrink-0" style={{ width: 36, height: 36, borderRadius: 10, background: bg, color: fg }}>
+        <Icon style={{ width: 17, height: 17 }} />
+      </div>
+    </div>
+  );
+}
+
+const TABS: { id: 'sessions' | 'devices' | 'analytics' | 'router'; label: string; icon: React.ElementType }[] = [
+  { id: 'sessions',  label: 'Active Vouchers & Form', icon: LayoutDashboard },
+  { id: 'devices',   label: 'Device MAC Registry',    icon: Cpu },
+  { id: 'analytics', label: 'Revenue & Audit Logs',   icon: Settings2 },
+  { id: 'router',    label: 'Router Integration',     icon: Radio },
+];
 
 export default function WifiManagement() {
   // Current logged in user
@@ -98,7 +126,7 @@ export default function WifiManagement() {
     // Supabase Realtime Listener Setup
     if (isSupabaseConfigured) {
       console.log('[WiFi Realtime] Setting up listeners on wifi_sessions & wifi_usage_logs...');
-      
+
       const sessionsSubscription = supabase
         .channel('wifi-sessions-changes')
         .on(
@@ -187,13 +215,13 @@ export default function WifiManagement() {
         await applyAccessRule(macAddress.trim().toUpperCase(), newSession.duration_minutes);
 
         setFormSuccess(`WiFi hotspot voucher generated for ${custName}! Access authorized.`);
-        
+
         // Reset inputs
         setCustName('');
         setCustPhone('');
         setDeviceModel('');
         setMacAddress('');
-        
+
         // Refresh data
         await loadWifiData(true);
       } else {
@@ -321,142 +349,69 @@ export default function WifiManagement() {
     .reduce((sum, s) => sum + s.amount, 0);
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto p-4 md:p-6" id="wifi-module-main">
+    <div className="space-y-6" id="wifi-module-main">
       {/* Title Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4 border-slate-200">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4" style={{ borderBottom: '1px solid var(--panel-line)' }}>
         <div>
-          <h1 className="text-2xl font-black text-slate-800 tracking-tight flex items-center">
-            <Wifi className="w-7 h-7 mr-2.5 text-rose-500 animate-pulse" />
-            <span>WiFi Control & Bandwidth Manager</span>
+          <h1 className="dm-h1 flex items-center">
+            <Wifi className="dm-dot-pulse" style={{ width: 24, height: 24, marginRight: 10, color: 'var(--blue-400)' }} />
+            <span>WiFi Control &amp; Bandwidth Manager</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p style={{ color: 'var(--text-mid)', fontSize: '0.75rem', marginTop: 4 }}>
             Track user leases, MAC address hardware constraints, and generate prepaid vouchers connected to physical gateway routers.
           </p>
         </div>
 
         {/* Sync indicators */}
-        <div className="flex items-center space-x-2.5">
-          <span className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-[10px] font-mono font-bold ${
-            isSupabaseConfigured ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' : 'bg-slate-100 text-slate-500 border border-slate-200'
-          }`}>
-            <Database className="w-3.5 h-3.5" />
+        <div className="flex items-center gap-2.5">
+          <span className={`dm-badge ${isSupabaseConfigured ? 'dm-badge-info' : 'dm-badge-neutral'}`} style={{ fontFamily: 'monospace' }}>
+            <Database style={{ width: 13, height: 13 }} />
             <span>{isSupabaseConfigured ? 'SUPABASE REALTIME LIVE' : 'LOCAL SIMULATOR ACTIVE'}</span>
           </span>
 
           <button
             onClick={() => loadWifiData()}
-            className="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl transition text-slate-600 cursor-pointer"
+            className="dm-icon-btn"
             title="Refresh database records"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw style={{ width: 16, height: 16 }} />
           </button>
         </div>
       </div>
 
       {/* Mini Dashboard Metrics Panels */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {/* Card 1 */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between text-left shadow-sm">
-          <div>
-            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Active Sessions</span>
-            <strong className="text-xl font-extrabold text-slate-800 mt-1 block tabular-nums">{activeCount} Device(s)</strong>
-          </div>
-          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center border border-emerald-100">
-            <Radio className="w-5 h-5" />
-          </div>
-        </div>
-
-        {/* Card 2 */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between text-left shadow-sm">
-          <div>
-            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Expired Leases</span>
-            <strong className="text-xl font-extrabold text-slate-800 mt-1 block tabular-nums">{expiredCount} Session(s)</strong>
-          </div>
-          <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center border border-amber-100">
-            <Radio className="w-5 h-5 rotate-180" />
-          </div>
-        </div>
-
-        {/* Card 3 */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between text-left shadow-sm">
-          <div>
-            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">Connected Vouchers</span>
-            <strong className="text-xl font-extrabold text-slate-800 mt-1 block tabular-nums">{customers.length} MAC Registry</strong>
-          </div>
-          <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-500 flex items-center justify-center border border-sky-100">
-            <Cpu className="w-5 h-5" />
-          </div>
-        </div>
-
-        {/* Card 4 */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center justify-between text-left shadow-sm">
-          <div>
-            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">WiFi Income (Today)</span>
-            <strong className="text-xl font-extrabold text-slate-800 mt-1 block tabular-nums">{formatCurrency(todayRevenue)}</strong>
-          </div>
-          <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center border border-rose-100">
-            <Radio className="w-5 h-5 animate-pulse" />
-          </div>
-        </div>
+        <StatCard icon={Radio} label="Active Sessions" value={`${activeCount} Device(s)`} tone="success" />
+        <StatCard icon={Radio} label="Expired Leases" value={`${expiredCount} Session(s)`} tone="warning" />
+        <StatCard icon={Cpu} label="Connected Vouchers" value={`${customers.length} MAC Registry`} tone="cyan" />
+        <StatCard icon={Radio} label="WiFi Income (Today)" value={formatCurrency(todayRevenue)} tone="blue" />
       </div>
 
       {/* Tabs navigation */}
-      <div className="flex border-b border-slate-200 space-x-1 overflow-x-auto pt-2">
-        <button
-          onClick={() => setActiveTab('sessions')}
-          className={`px-4 py-2.5 text-xs font-bold transition-all border-b-2 whitespace-nowrap cursor-pointer flex items-center space-x-1.5 ${
-            activeTab === 'sessions' 
-              ? 'border-rose-500 text-rose-600' 
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <LayoutDashboard className="w-4 h-4" />
-          <span>Active Vouchers & Form</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('devices')}
-          className={`px-4 py-2.5 text-xs font-bold transition-all border-b-2 whitespace-nowrap cursor-pointer flex items-center space-x-1.5 ${
-            activeTab === 'devices' 
-              ? 'border-rose-500 text-rose-600' 
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Cpu className="w-4 h-4" />
-          <span>Device MAC Registry</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('analytics')}
-          className={`px-4 py-2.5 text-xs font-bold transition-all border-b-2 whitespace-nowrap cursor-pointer flex items-center space-x-1.5 ${
-            activeTab === 'analytics' 
-              ? 'border-rose-500 text-rose-600' 
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Settings2 className="w-4 h-4" />
-          <span>Revenue & Audit Logs</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('router')}
-          className={`px-4 py-2.5 text-xs font-bold transition-all border-b-2 whitespace-nowrap cursor-pointer flex items-center space-x-1.5 ${
-            activeTab === 'router' 
-              ? 'border-rose-500 text-rose-600' 
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          <Radio className="w-4 h-4" />
-          <span>Router Integration</span>
-        </button>
+      <div className="dm-scroll-x flex gap-2 pt-1">
+        {TABS.map(tab => {
+          const Icon = tab.icon;
+          const active = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`dm-badge ${active ? 'dm-badge-info' : 'dm-badge-neutral'}`}
+              style={{ padding: '0.5rem 0.9rem', fontSize: '0.78rem', cursor: 'pointer', flexShrink: 0 }}
+            >
+              <Icon style={{ width: 13, height: 13 }} />
+              <span>{tab.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Primary Panels Content */}
       <div className="pt-2">
         {loading ? (
-          <div className="py-20 text-center text-slate-400">
-            <RefreshCw className="w-8 h-8 animate-spin text-rose-500 mx-auto mb-3" />
-            <p className="text-sm font-mono">Synchronizing network databases...</p>
+          <div className="py-20 text-center" style={{ color: 'var(--text-low)' }}>
+            <RefreshCw className="dm-spin" style={{ width: 28, height: 28, color: 'var(--blue-400)', margin: '0 auto 12px' }} />
+            <p style={{ fontSize: '0.8125rem', fontFamily: 'monospace' }}>Synchronizing network databases...</p>
           </div>
         ) : (
           <AnimatePresence mode="wait">
@@ -470,89 +425,90 @@ export default function WifiManagement() {
                 className="grid grid-cols-1 lg:grid-cols-3 gap-6"
               >
                 {/* START WIFI SESSION FORM */}
-                <div className="bg-white border rounded-3xl p-5 shadow-sm space-y-4 text-left lg:col-span-1 self-start">
+                <div className="dm-card p-5 space-y-4 text-left lg:col-span-1 self-start">
                   <div>
-                    <h2 className="text-sm font-black text-slate-800 flex items-center">
-                      <PlusCircle className="w-4 h-4 mr-1.5 text-rose-500" />
+                    <h2 className="dm-h3 flex items-center">
+                      <PlusCircle style={{ width: 15, height: 15, marginRight: 6, color: 'var(--blue-400)' }} />
                       <span>Issue Access Voucher</span>
                     </h2>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Authorizes physical device access by registering user's MAC address.</p>
+                    <p style={{ color: 'var(--text-low)', fontSize: '0.6875rem', marginTop: 3 }}>Authorizes physical device access by registering user's MAC address.</p>
                   </div>
 
                   {formError && (
-                    <div className="bg-rose-50 border border-rose-100 text-rose-600 p-3 rounded-2xl text-[11px] leading-snug">
-                      <strong>Validation Error:</strong> {formError}
+                    <div className="dm-badge dm-badge-danger" style={{ width: '100%', padding: '0.6rem 0.75rem', fontSize: '0.6875rem', lineHeight: 1.5, whiteSpace: 'normal', textAlign: 'left' }}>
+                      <strong>Validation Error:</strong>&nbsp;{formError}
                     </div>
                   )}
 
                   {formSuccess && (
-                    <div className="bg-emerald-50 border border-emerald-100 text-emerald-600 p-3 rounded-2xl text-[11px] leading-snug flex items-start space-x-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <div className="dm-badge dm-badge-success" style={{ width: '100%', padding: '0.6rem 0.75rem', fontSize: '0.6875rem', lineHeight: 1.5, whiteSpace: 'normal', textAlign: 'left', alignItems: 'flex-start' }}>
+                      <CheckCircle2 style={{ width: 14, height: 14, flexShrink: 0, marginTop: 1 }} />
                       <span>{formSuccess}</span>
                     </div>
                   )}
 
-                  <form onSubmit={handleStartSession} className="space-y-3 text-xs">
+                  <form onSubmit={handleStartSession} className="space-y-3">
                     {/* Customer details */}
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 font-mono">Customer Full Name</label>
+                      <label className="dm-label" style={{ padding: 0 }}>Customer Full Name</label>
                       <input
                         type="text"
                         placeholder="e.g. Mercy Tembo"
                         value={custName}
                         onChange={(e) => setCustName(e.target.value)}
-                        className="w-full px-3.5 py-2 border rounded-xl outline-none focus:border-rose-500 transition-all bg-slate-50/50"
+                        className="dm-input"
                         required
                       />
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-500 font-mono">Phone Number</label>
+                        <label className="dm-label" style={{ padding: 0 }}>Phone Number</label>
                         <input
                           type="text"
                           placeholder="099xxxxxxx"
                           value={custPhone}
                           onChange={(e) => setCustPhone(e.target.value)}
-                          className="w-full px-3.5 py-2 border rounded-xl outline-none focus:border-rose-500 transition-all bg-slate-50/50"
+                          className="dm-input"
                           required
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-slate-500 font-mono">Device Model</label>
+                        <label className="dm-label" style={{ padding: 0 }}>Device Model</label>
                         <input
                           type="text"
                           placeholder="e.g. iPhone 12 Pro"
                           value={deviceModel}
                           onChange={(e) => setDeviceModel(e.target.value)}
-                          className="w-full px-3.5 py-2 border rounded-xl outline-none focus:border-rose-500 transition-all bg-slate-50/50"
+                          className="dm-input"
                           required
                         />
                       </div>
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 font-mono flex items-center justify-between">
+                      <label className="dm-label flex items-center justify-between" style={{ padding: 0 }}>
                         <span>Hardware MAC Address</span>
-                        <span className="text-[9px] text-slate-400 font-normal">AA:BB:CC:DD:EE:FF</span>
+                        <span style={{ color: 'var(--text-low)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>AA:BB:CC:DD:EE:FF</span>
                       </label>
                       <input
                         type="text"
                         placeholder="00:1A:2B:3C:4D:5E"
                         value={macAddress}
                         onChange={(e) => setMacAddress(e.target.value)}
-                        className="w-full px-3.5 py-2 border rounded-xl outline-none focus:border-rose-500 transition-all bg-slate-50/50 uppercase font-mono tracking-wider"
+                        className="dm-input"
+                        style={{ textTransform: 'uppercase', fontFamily: 'monospace', letterSpacing: '0.05em' }}
                         required
                       />
                     </div>
 
                     {/* Rates Selector */}
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-500 font-mono">Rate Package Plan</label>
+                      <label className="dm-label" style={{ padding: 0 }}>Rate Package Plan</label>
                       <select
                         value={selectedPackageId}
                         onChange={(e) => setSelectedPackageId(e.target.value)}
-                        className="w-full px-3.5 py-2 border rounded-xl outline-none focus:border-rose-500 transition-all bg-slate-50/50"
+                        className="dm-select"
                       >
                         {packages.map(pkg => (
                           <option key={pkg.id} value={pkg.id}>
@@ -565,9 +521,10 @@ export default function WifiManagement() {
                     <button
                       type="submit"
                       disabled={actionLoading}
-                      className="w-full py-2.5 bg-slate-900 hover:bg-rose-500 text-white font-bold rounded-xl transition-all flex items-center justify-center space-x-1.5 cursor-pointer shadow-sm mt-4 text-xs disabled:opacity-50"
+                      className="dm-btn dm-btn-primary w-full"
+                      style={{ marginTop: 8 }}
                     >
-                      <Play className="w-3.5 h-3.5" />
+                      <Play style={{ width: 14, height: 14 }} />
                       <span>{actionLoading ? 'Provisioning Switch...' : 'Authorize Hotspot Access'}</span>
                     </button>
                   </form>
@@ -577,11 +534,11 @@ export default function WifiManagement() {
                 <div className="lg:col-span-2 space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h2 className="text-sm font-black text-slate-800 text-left flex items-center">
-                        <Radio className="w-4.5 h-4.5 mr-1.5 text-rose-500 animate-pulse" />
+                      <h2 className="dm-h3 text-left flex items-center">
+                        <Radio className="dm-dot-pulse" style={{ width: 16, height: 16, marginRight: 6, color: 'var(--blue-400)' }} />
                         <span>Live Bandwidth Leases ({activeSessions.length})</span>
                       </h2>
-                      <p className="text-[11px] text-slate-400 text-left">Currently authenticated active leases streaming packets on local router.</p>
+                      <p style={{ color: 'var(--text-low)', fontSize: '0.6875rem', textAlign: 'left' }}>Currently authenticated active leases streaming packets on local router.</p>
                     </div>
                   </div>
 
@@ -597,10 +554,10 @@ export default function WifiManagement() {
                       ))}
                     </div>
                   ) : (
-                    <div className="border border-dashed border-slate-200 rounded-3xl p-12 bg-slate-50/50 text-center text-slate-400">
-                      <Wifi className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                      <h4 className="font-bold text-slate-700 text-sm">No Active Network Sessions</h4>
-                      <p className="text-[11px] text-slate-400 max-w-sm mx-auto mt-1">
+                    <div className="dm-card-inset text-center" style={{ padding: '3rem 1.5rem', borderStyle: 'dashed' }}>
+                      <Wifi style={{ width: 40, height: 40, color: 'var(--text-low)', margin: '0 auto 12px' }} />
+                      <h4 style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-mid)' }}>No Active Network Sessions</h4>
+                      <p style={{ color: 'var(--text-low)', fontSize: '0.6875rem', maxWidth: 380, margin: '4px auto 0' }}>
                         Use the allocation card to generate a WiFi access ticket for clients. The connection will stream to the physical router.
                       </p>
                     </div>
@@ -651,51 +608,53 @@ export default function WifiManagement() {
                 exit={{ opacity: 0, y: -10 }}
                 className="max-w-2xl mx-auto"
               >
-                <div className="bg-white border rounded-3xl p-6 shadow-sm space-y-6 text-left">
-                  <div className="flex items-start justify-between border-b pb-4 border-slate-100">
+                <div className="dm-card p-6 space-y-6 text-left">
+                  <div className="flex items-start justify-between pb-4" style={{ borderBottom: '1px solid var(--panel-line)' }}>
                     <div>
-                      <h2 className="text-sm font-black text-slate-800 flex items-center">
-                        <Radio className="w-4.5 h-4.5 mr-1.5 text-rose-500" />
-                        <span>Physical Gateway Settings & Rules</span>
+                      <h2 className="dm-h3 flex items-center">
+                        <Radio style={{ width: 16, height: 16, marginRight: 6, color: 'var(--blue-400)' }} />
+                        <span>Physical Gateway Settings &amp; Rules</span>
                       </h2>
-                      <p className="text-[11px] text-slate-400 mt-0.5">Integrates web portal database states with local physical hardware interfaces.</p>
+                      <p style={{ color: 'var(--text-low)', fontSize: '0.6875rem', marginTop: 3 }}>Integrates web portal database states with local physical hardware interfaces.</p>
                     </div>
 
-                    <span className="inline-flex items-center space-x-1 px-2 py-1 rounded-full text-[9px] font-mono font-bold tracking-wider bg-rose-50 text-rose-600 border border-rose-100">
-                      <ShieldCheck className="w-3 h-3" />
+                    <span className="dm-badge dm-badge-info" style={{ fontFamily: 'monospace', flexShrink: 0 }}>
+                      <ShieldCheck style={{ width: 12, height: 12 }} />
                       <span>ADMIN POLICY ONLY</span>
                     </span>
                   </div>
 
                   {currentUser?.role !== 'ADMIN' ? (
-                    <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex items-start space-x-2.5 text-amber-800 text-xs leading-normal">
-                      <HelpCircle className="w-5 h-5 shrink-0 text-amber-500 mt-0.5" />
+                    <div className="dm-badge dm-badge-warning" style={{ width: '100%', padding: '0.85rem 1rem', alignItems: 'flex-start', fontSize: '0.75rem', lineHeight: 1.6, whiteSpace: 'normal', textAlign: 'left' }}>
+                      <HelpCircle style={{ width: 18, height: 18, flexShrink: 0, marginTop: 1 }} />
                       <div>
                         <strong>Read-Only Mode:</strong> Your account role (<code>{currentUser?.role || 'STAFF'}</code>) is restricted from modifying hardware credentials. Please contact an administrative user to alter Mikrotik/Cisco server integrations.
                       </div>
                     </div>
                   ) : null}
 
-                  <form onSubmit={handleSaveRouterSettings} className="space-y-4 text-xs">
+                  <form onSubmit={handleSaveRouterSettings} className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-slate-500 font-mono">Gateway Router Name</label>
+                        <label className="dm-label" style={{ padding: 0 }}>Gateway Router Name</label>
                         <input
                           type="text"
                           value={routerName}
                           onChange={(e) => setRouterName(e.target.value)}
                           disabled={currentUser?.role !== 'ADMIN'}
-                          className="w-full px-3.5 py-2.5 border rounded-xl outline-none focus:border-rose-500 transition-all bg-slate-50/50 disabled:opacity-60"
+                          className="dm-input"
+                          style={{ opacity: currentUser?.role !== 'ADMIN' ? 0.6 : 1 }}
                         />
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-slate-500 font-mono">Router Brand</label>
+                        <label className="dm-label" style={{ padding: 0 }}>Router Brand</label>
                         <select
                           value={routerBrand}
                           onChange={(e) => setRouterBrand(e.target.value)}
                           disabled={currentUser?.role !== 'ADMIN'}
-                          className="w-full px-3.5 py-2.5 border rounded-xl outline-none focus:border-rose-500 transition-all bg-slate-50/50 disabled:opacity-60"
+                          className="dm-select"
+                          style={{ opacity: currentUser?.role !== 'ADMIN' ? 0.6 : 1 }}
                         >
                           <option value="Mikrotik">Mikrotik RouterBoard (Recommended)</option>
                           <option value="Cisco">Cisco ISR / Catalyst</option>
@@ -708,24 +667,26 @@ export default function WifiManagement() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-slate-500 font-mono">Hardware Model / Board ID</label>
+                        <label className="dm-label" style={{ padding: 0 }}>Hardware Model / Board ID</label>
                         <input
                           type="text"
                           value={routerModel}
                           placeholder="e.g. hEX S RB760iGS"
                           onChange={(e) => setRouterModel(e.target.value)}
                           disabled={currentUser?.role !== 'ADMIN'}
-                          className="w-full px-3.5 py-2.5 border rounded-xl outline-none focus:border-rose-500 transition-all bg-slate-50/50 disabled:opacity-60"
+                          className="dm-input"
+                          style={{ opacity: currentUser?.role !== 'ADMIN' ? 0.6 : 1 }}
                         />
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-slate-500 font-mono">Physical API Integration Type</label>
+                        <label className="dm-label" style={{ padding: 0 }}>Physical API Integration Type</label>
                         <select
                           value={integrationType}
                           onChange={(e) => setIntegrationType(e.target.value)}
                           disabled={currentUser?.role !== 'ADMIN'}
-                          className="w-full px-3.5 py-2.5 border rounded-xl outline-none focus:border-rose-500 transition-all bg-slate-50/50 disabled:opacity-60"
+                          className="dm-select"
+                          style={{ opacity: currentUser?.role !== 'ADMIN' ? 0.6 : 1 }}
                         >
                           <option value="REST_API">REST API (HTTP Web Sockets over SSL)</option>
                           <option value="SSH_COMMAND">Secure Shell (Encrypted SSH Commands)</option>
@@ -736,12 +697,8 @@ export default function WifiManagement() {
 
                     {/* Test handshake results output */}
                     {testResult && (
-                      <div className={`p-4 rounded-2xl text-[11px] leading-snug border ${
-                        testResult.success 
-                          ? 'bg-emerald-50 border-emerald-100 text-emerald-700' 
-                          : 'bg-rose-50 border-rose-100 text-rose-700'
-                      }`}>
-                        <strong>Gateway Handshake:</strong> {testResult.message}
+                      <div className={`dm-badge ${testResult.success ? 'dm-badge-success' : 'dm-badge-danger'}`} style={{ width: '100%', padding: '0.85rem 1rem', fontSize: '0.75rem', lineHeight: 1.6, whiteSpace: 'normal', textAlign: 'left' }}>
+                        <strong>Gateway Handshake:</strong>&nbsp;{testResult.message}
                       </div>
                     )}
 
@@ -750,9 +707,9 @@ export default function WifiManagement() {
                         type="button"
                         onClick={handleTestHandshake}
                         disabled={actionLoading}
-                        className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition cursor-pointer flex items-center justify-center space-x-1.5 disabled:opacity-50"
+                        className="dm-btn dm-btn-ghost flex-1"
                       >
-                        <RefreshCw className={`w-3.5 h-3.5 ${actionLoading ? 'animate-spin text-rose-500' : ''}`} />
+                        <RefreshCw className={actionLoading ? 'dm-spin' : ''} style={{ width: 14, height: 14 }} />
                         <span>Test API Handshake</span>
                       </button>
 
@@ -760,9 +717,9 @@ export default function WifiManagement() {
                         <button
                           type="submit"
                           disabled={actionLoading}
-                          className="flex-1 py-2.5 bg-slate-900 hover:bg-rose-500 text-white font-bold rounded-xl transition cursor-pointer flex items-center justify-center space-x-1.5 disabled:opacity-50"
+                          className="dm-btn dm-btn-primary flex-1"
                         >
-                          <Save className="w-3.5 h-3.5" />
+                          <Save style={{ width: 14, height: 14 }} />
                           <span>Save Access Rule Policy</span>
                         </button>
                       )}
