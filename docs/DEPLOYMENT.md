@@ -60,11 +60,12 @@ paste and run again.
 | 4 | `database/migrations/001_multi_tenancy.sql` | `organizations` + `user_organization_memberships`; tags **every** table above with `organization_id`; re-scopes all RLS policies for tenant isolation |
 | 5 | `database/migrations/002_pharmacy_module.sql` | Pharmacy: medicines, medicine_batches, prescriptions, prescription_items, dispensing_records |
 | 6 | `database/migrations/003_organization_signup.sql` | `signup_new_organization()` — powers the app's self-service Signup page (§3a) |
-| 7 | `database/seed.sql` *(optional)* | Demo data across every module so a fresh project shows a working system immediately |
+| 7 | `database/migrations/004_business_type.sql` | `organizations.business_type` (general/pharmacy/cafe/printing/retail); the Signup page's business-type picker and per-type nav filtering depend on this |
+| 8 | `database/seed.sql` *(optional)* | Demo data across every module so a fresh project shows a working system immediately |
 
 If a run fails partway through (`relation "..." already exists`), run
 `database/reset.sql` first — it drops only this app's objects (never
-Supabase's `auth` schema or your login users) — then re-apply files 1–7 in
+Supabase's `auth` schema or your login users) — then re-apply files 1–8 in
 order.
 
 Migration 001 is safe to run against an **already-live** project too: every
