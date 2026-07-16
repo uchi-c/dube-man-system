@@ -119,6 +119,8 @@ export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) 
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError]       = useState('');
   const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [forgotState, setForgotState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [forgotMessage, setForgotMessage] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,6 +171,30 @@ export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) 
       setResendState('sent');
     } catch {
       setResendState('error');
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!isSupabaseConfigured) {
+      setForgotState('error');
+      setForgotMessage('Password reset needs a connected Supabase project — this preview is running in local demo mode.');
+      return;
+    }
+    if (!email.trim()) {
+      setForgotState('error');
+      setForgotMessage('Enter your email address above first, then click "Forgot password?".');
+      return;
+    }
+    setForgotState('sending');
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: window.location.origin + window.location.pathname,
+      });
+      if (resetError) throw resetError;
+      setForgotState('sent');
+    } catch (err: any) {
+      setForgotState('error');
+      setForgotMessage(err?.message || "Couldn't send the reset link. Check the email address above and try again.");
     }
   };
 
@@ -281,7 +307,14 @@ export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) 
                     type="email" required autoComplete="email"
                     placeholder="you@company.com"
                     value={email}
-                    onChange={e => setEmail(e.target.value)}
+                    onChange={e => {
+                      setEmail(e.target.value);
+                      // A stale "sent"/"error" banner referencing the
+                      // previous address would otherwise linger while they
+                      // type a different one.
+                      if (resendState !== 'idle') setResendState('idle');
+                      if (forgotState !== 'idle') setForgotState('idle');
+                    }}
                     style={inputStyle} onFocus={onFocus} onBlur={onBlur}
                   />
                 </div>
@@ -291,8 +324,13 @@ export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="dm-label" style={{ letterSpacing: '0.06em' }}>Password</label>
-                  <button type="button" style={{ fontSize: '0.75rem', color: 'var(--blue-400)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
-                    Forgot password?
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    disabled={forgotState === 'sending'}
+                    style={{ fontSize: '0.75rem', color: 'var(--blue-400)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
+                    {forgotState === 'sending' ? 'Sending…' : 'Forgot password?'}
                   </button>
                 </div>
                 <div className="relative">
@@ -305,6 +343,17 @@ export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) 
                     style={inputStyle} onFocus={onFocus} onBlur={onBlur}
                   />
                 </div>
+                {forgotState === 'sent' && (
+                  <div className="flex items-center gap-2" style={{ fontSize: '0.75rem', color: 'var(--success)' }}>
+                    <MailCheck style={{ width: 13, height: 13, flexShrink: 0 }} />
+                    <span>Password reset link sent to {email.trim()} — check your inbox.</span>
+                  </div>
+                )}
+                {forgotState === 'error' && (
+                  <div style={{ fontSize: '0.75rem', color: 'var(--danger)' }}>
+                    {forgotMessage}
+                  </div>
+                )}
               </div>
 
               {/* Inline error banner — never a stuck spinner */}
