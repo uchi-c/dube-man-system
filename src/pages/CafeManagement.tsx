@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Computer, CafeSession } from '../types';
-import { 
+import {
   fetchComputers, fetchRunningCafeSessions, fetchCompletedCafeSessions,
   startWorkstationSession, endWorkstationSession, updateComputerLockStatus,
   fetchPrintCountsByComputer, supabase, isSupabaseConfigured
@@ -17,6 +17,28 @@ import { elapsedMinutes, sessionCharge } from '../utils/billing';
 
 interface CafeConsoleProps {
   userRole: string;
+}
+
+// ---- Stat card (matches Dashboard's HeroStat pattern) ---------------------
+
+function StatCard({ icon: Icon, label, value, sub, tone = 'blue' }: {
+  icon: React.ElementType; label: string; value: React.ReactNode; sub?: string;
+  tone?: 'blue' | 'cyan' | 'success' | 'warning';
+}) {
+  const fg = tone === 'cyan' ? 'var(--cyan-300)' : tone === 'success' ? 'var(--success)' : tone === 'warning' ? 'var(--warning)' : 'var(--blue-400)';
+  const bg = tone === 'cyan' ? 'var(--cyan-bg)' : tone === 'success' ? 'var(--success-bg)' : tone === 'warning' ? 'var(--warning-bg)' : 'var(--blue-bg)';
+  return (
+    <div className="dm-card p-4 flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center flex-shrink-0" style={{ width: 28, height: 28, borderRadius: 8, background: bg, color: fg }}>
+          <Icon style={{ width: 14, height: 14 }} />
+        </div>
+        <span className="dm-label" style={{ padding: 0 }}>{label}</span>
+      </div>
+      <div className="dm-kpi dm-truncate" style={{ fontSize: '1.15rem' }}>{value}</div>
+      {sub && <p className="dm-nums" style={{ fontSize: '0.6875rem', color: 'var(--text-low)' }}>{sub}</p>}
+    </div>
+  );
 }
 
 export default function CafeManagement({ userRole }: CafeConsoleProps) {
@@ -197,23 +219,23 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
       {/* Overview */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-left">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Uruu Café Workspace</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Real-time minute billing system (<strong>{formatCurrency(1)} per minute</strong>). Activate workstation terminals, review billing, and prepare PC agent sync hooks.
+          <h1 className="dm-h1">Café Workspace</h1>
+          <p style={{ color: 'var(--text-mid)', fontSize: '0.8125rem', marginTop: 4 }}>
+            Real-time minute billing system (<strong style={{ color: 'var(--text-hi)' }}>{formatCurrency(1)} per minute</strong>). Activate workstation terminals, review billing, and prepare PC agent sync hooks.
           </p>
         </div>
 
         <div className="flex items-center space-x-2 shrink-0">
-          <button 
+          <button
             onClick={pullCafeFromDb}
-            className="p-3 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-2xl flex items-center justify-center cursor-pointer transition-all shrink-0"
+            className="dm-icon-btn"
             title="Reload Workstations"
           >
-            <RefreshCw className={`w-4 h-4 text-slate-600 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={loading ? 'dm-spin' : ''} style={{ width: 16, height: 16 }} />
           </button>
 
-          <div className="text-slate-500 text-xs font-mono bg-slate-50 border border-slate-200 px-3.5 py-2.5 rounded-2xl flex items-center">
-            <Activity className="w-4 h-4 mr-1.5 text-emerald-500 animate-pulse" />
+          <div className="dm-badge dm-badge-success" style={{ padding: '0.5rem 0.9rem', fontFamily: "'Space Grotesk', monospace" }}>
+            <Activity className="dm-dot-pulse" style={{ width: 13, height: 13 }} />
             Gateway Router: Live
           </div>
         </div>
@@ -223,101 +245,44 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
           ANALYTICS REPORT PANEL
           ========================================== */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        {/* Metric 1 */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-4 text-left shadow-2xs">
-          <div className="flex items-center space-x-2 text-rose-500 mb-1">
-            <TrendingUp className="w-4 h-4" />
-            <span className="text-[10px] uppercase font-bold tracking-wider font-sans text-slate-400">Today's Revenue</span>
-          </div>
-          <div className="text-lg font-black text-slate-800 font-mono tabular-nums">
-            {formatCurrency(todayRevenue)}
-          </div>
-          <p className="text-[9px] text-slate-400 mt-0.5">Real-time estimate</p>
-        </div>
-
-        {/* Metric 2 */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-4 text-left shadow-2xs">
-          <div className="flex items-center space-x-2 text-rose-500 mb-1">
-            <Clock className="w-4 h-4" />
-            <span className="text-[10px] uppercase font-bold tracking-wider font-sans text-slate-400">Minutes Used</span>
-          </div>
-          <div className="text-lg font-black text-slate-800 font-mono tabular-nums">
-            {totalMinutesUsed} <span className="text-xs font-normal">mins</span>
-          </div>
-          <p className="text-[9px] text-slate-400 mt-0.5">Aggregate user time</p>
-        </div>
-
-        {/* Metric 3 */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-4 text-left shadow-2xs">
-          <div className="flex items-center space-x-2 text-indigo-500 mb-1">
-            <Monitor className="w-4 h-4" />
-            <span className="text-[10px] uppercase font-bold tracking-wider font-sans text-slate-400">Most Used PC</span>
-          </div>
-          <div className="text-xs font-bold text-slate-800 truncate" title={mostUsedComputerName}>
-            {mostUsedComputerName}
-          </div>
-          <p className="text-[9px] text-slate-400 mt-1">Based on session count</p>
-        </div>
-
-        {/* Metric 4 */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-4 text-left shadow-2xs">
-          <div className="flex items-center space-x-2 text-emerald-500 mb-1">
-            <Zap className="w-4 h-4" />
-            <span className="text-[10px] uppercase font-bold tracking-wider font-sans text-slate-400">Total Sessions</span>
-          </div>
-          <div className="text-lg font-black text-slate-800 font-mono tabular-nums">
-            {totalSessionsCount}
-          </div>
-          <p className="text-[9px] text-slate-400 mt-0.5">{runningSessions.length} active terminal</p>
-        </div>
-
-        {/* Metric 5 */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-4 text-left shadow-2xs">
-          <div className="flex items-center space-x-2 text-amber-500 mb-1">
-            <User className="w-4 h-4" />
-            <span className="text-[10px] uppercase font-bold tracking-wider font-sans text-slate-400">Avg Cust. Time</span>
-          </div>
-          <div className="text-lg font-black text-slate-800 font-mono tabular-nums">
-            {averageSessionMinutes} <span className="text-xs font-normal">mins</span>
-          </div>
-          <p className="text-[9px] text-slate-400 mt-0.5">Per allocated session</p>
-        </div>
+        <StatCard icon={TrendingUp} label="Today's Revenue" value={formatCurrency(todayRevenue)} sub="Real-time estimate" tone="success" />
+        <StatCard icon={Clock} label="Minutes Used" value={<>{totalMinutesUsed} <span style={{ fontSize: '0.75rem', fontWeight: 400 }}>mins</span></>} sub="Aggregate user time" tone="blue" />
+        <StatCard icon={Monitor} label="Most Used PC" value={<span title={mostUsedComputerName}>{mostUsedComputerName}</span>} sub="Based on session count" tone="cyan" />
+        <StatCard icon={Zap} label="Total Sessions" value={totalSessionsCount} sub={`${runningSessions.length} active terminal`} tone="blue" />
+        <StatCard icon={User} label="Avg Cust. Time" value={<>{averageSessionMinutes} <span style={{ fontSize: '0.75rem', fontWeight: 400 }}>mins</span></>} sub="Per allocated session" tone="warning" />
       </div>
 
       {/* ==========================================
           COMPUTER MONITORING & HEARTBEAT TRACKING (PC AGENT)
           ========================================== */}
       <div className="space-y-4 text-left" id="computer-monitoring-section">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/60 pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3" style={{ borderBottom: '1px solid var(--panel-line)' }}>
           <div>
-            <h2 className="text-base font-extrabold text-slate-800 tracking-tight flex items-center">
-              <span className="flex h-2.5 w-2.5 relative mr-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-              </span>
+            <h2 className="dm-h2 flex items-center">
+              <span className="dm-dot dm-dot-success dm-dot-pulse" style={{ marginRight: 8 }} />
               <span>Internet Café Computer Monitoring</span>
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">Live workstation status tracked via physical machine agents reporting heartbeats.</p>
+            <p style={{ color: 'var(--text-mid)', fontSize: '0.75rem', marginTop: 3 }}>Live workstation status tracked via physical machine agents reporting heartbeats.</p>
           </div>
-          <span className="self-start sm:self-auto bg-slate-900 text-slate-300 border border-slate-800 text-[10px] font-mono font-bold px-2.5 py-1 rounded-lg uppercase tracking-wider">
+          <span className="dm-badge dm-badge-neutral" style={{ fontFamily: "'Space Grotesk', monospace" }}>
             Realtime Listener: ACTIVE
           </span>
         </div>
 
         {loading && computers.length === 0 ? (
-          <div className="h-[120px] bg-slate-50 border border-slate-200 border-dashed rounded-3xl flex flex-col items-center justify-center text-center text-slate-400">
-            <RefreshCw className="w-5 h-5 animate-spin text-rose-500 mb-1.5" />
-            <span className="text-[11px] font-mono">Listening for live hardware signals...</span>
+          <div className="dm-card-inset flex flex-col items-center justify-center text-center" style={{ height: 120, borderStyle: 'dashed' }}>
+            <RefreshCw className="dm-spin" style={{ width: 20, height: 20, color: 'var(--blue-400)', marginBottom: 6 }} />
+            <span style={{ fontSize: '0.6875rem', color: 'var(--text-low)', fontFamily: 'monospace' }}>Listening for live hardware signals...</span>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {computers.map(computer => {
               const activeSession = runningSessions.find(s => s.computer_id === computer.id && s.status === 'ACTIVE');
               return (
-                <ComputerStatusCard 
-                  key={computer.id} 
-                  computer={computer} 
-                  activeSession={activeSession} 
+                <ComputerStatusCard
+                  key={computer.id}
+                  computer={computer}
+                  activeSession={activeSession}
                 />
               );
             })}
@@ -325,16 +290,16 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
         )}
       </div>
 
-      <div className="pt-4 border-t border-slate-200/60 text-left">
-        <h2 className="text-base font-extrabold text-slate-800 tracking-tight">Workstation Allocations & Billing</h2>
-        <p className="text-xs text-slate-500 mt-0.5">Manually start or stop sessions, manage client billing, and put machines out of service.</p>
+      <div className="pt-4 text-left" style={{ borderTop: '1px solid var(--panel-line)' }}>
+        <h2 className="dm-h2">Workstation Allocations &amp; Billing</h2>
+        <p style={{ color: 'var(--text-mid)', fontSize: '0.75rem', marginTop: 3 }}>Manually start or stop sessions, manage client billing, and put machines out of service.</p>
       </div>
 
       {/* Grid of Workstations */}
       {loading && computers.length === 0 ? (
-        <div className="h-[250px] flex flex-col items-center justify-center text-center text-slate-400">
-          <RefreshCw className="w-8 h-8 animate-spin text-rose-500 mb-2" />
-          <span className="text-xs font-mono">Synchronizing workstations and VLAN servers...</span>
+        <div className="flex flex-col items-center justify-center text-center" style={{ height: 250 }}>
+          <RefreshCw className="dm-spin" style={{ width: 28, height: 28, color: 'var(--blue-400)', marginBottom: 8 }} />
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-low)', fontFamily: 'monospace' }}>Synchronizing workstations and VLAN servers...</span>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -349,38 +314,41 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
               mappedStatus = 'ACTIVE';
             }
 
+            const cardBorder = computer.status === 'Occupied' ? 'rgba(255,176,32,0.35)' :
+              computer.status === 'Maintenance' ? 'rgba(255,107,107,0.30)' :
+              'var(--panel-line)';
+
             return (
               <motion.div
                 key={computer.id}
                 whileHover={{ y: -3 }}
-                className={`bg-white rounded-3xl p-5 border shadow-xs transition-all relative overflow-hidden flex flex-col justify-between min-h-[260px] text-left ${
-                  computer.status === 'Occupied' ? 'border-amber-200 bg-amber-50/5' :
-                  computer.status === 'Maintenance' ? 'border-rose-100 bg-rose-50/10' :
-                  'border-slate-200 hover:border-slate-300'
-                }`}
+                className="dm-card p-5 flex flex-col justify-between text-left"
+                style={{ minHeight: 260, borderColor: cardBorder, position: 'relative', overflow: 'hidden' }}
               >
                 {/* Header block details */}
                 <div>
                   <div className="flex justify-between items-center mb-3">
                     <div className="flex items-center space-x-2">
-                      <div className={`p-2.5 rounded-xl flex items-center justify-center ${
-                        computer.status === 'Occupied' ? 'bg-amber-100 text-amber-800' :
-                        computer.status === 'Maintenance' ? 'bg-rose-100 text-rose-700' :
-                        'bg-slate-100 text-slate-600'
-                      }`}>
-                        <Monitor className="w-5 h-5" />
+                      <div className="flex items-center justify-center flex-shrink-0" style={{
+                        width: 40, height: 40, borderRadius: 10,
+                        background: computer.status === 'Occupied' ? 'var(--warning-bg)' :
+                          computer.status === 'Maintenance' ? 'var(--danger-bg)' : 'var(--panel-2)',
+                        color: computer.status === 'Occupied' ? 'var(--warning)' :
+                          computer.status === 'Maintenance' ? 'var(--danger)' : 'var(--text-mid)',
+                      }}>
+                        <Monitor style={{ width: 18, height: 18 }} />
                       </div>
                       <div>
-                        <h3 className="font-extrabold text-sm text-slate-800 mb-0.5">{computer.computer_name}</h3>
-                        <code className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">{computer.computer_code}</code>
+                        <h3 style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-hi)', marginBottom: 2 }}>{computer.computer_name}</h3>
+                        <code style={{ fontSize: '0.625rem', fontFamily: 'monospace', color: 'var(--text-low)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{computer.computer_code}</code>
                       </div>
                     </div>
 
                     {/* Status Indicator badge */}
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-mono font-bold tracking-wide uppercase ${
-                      computer.status === 'Occupied' ? 'bg-amber-100 text-amber-800' :
-                      computer.status === 'Maintenance' ? 'bg-rose-100 text-rose-900' :
-                      'bg-slate-100 text-slate-500'
+                    <span className={`dm-badge ${
+                      computer.status === 'Occupied' ? 'dm-badge-warning' :
+                      computer.status === 'Maintenance' ? 'dm-badge-danger' :
+                      'dm-badge-neutral'
                     }`}>
                       {mappedStatus}
                     </span>
@@ -388,40 +356,40 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
 
                   {/* Session telemetry if Active */}
                   {computer.status === 'Occupied' && session ? (
-                    <div className={`p-3.5 rounded-2xl space-y-2 mt-2 font-mono text-[11px] border transition-all ${
-                      elapsed >= 60 
-                        ? 'bg-rose-950/20 border-rose-500 animate-pulse text-rose-100' 
-                        : 'bg-slate-900 border-slate-800 text-slate-200'
-                    }`}>
+                    <div className="dm-card-inset" style={{
+                      padding: '0.85rem', borderRadius: 12, marginTop: 8,
+                      fontFamily: 'monospace', fontSize: '0.6875rem',
+                      borderColor: elapsed >= 60 ? 'rgba(255,107,107,0.4)' : 'var(--panel-line)',
+                    }}>
                       {elapsed >= 60 && (
-                        <div className="bg-rose-600 text-white font-extrabold text-[9px] py-1 px-2 rounded-lg text-center tracking-wide animate-bounce uppercase font-sans mb-1.5 flex items-center justify-center space-x-1">
+                        <div className="dm-badge dm-badge-danger" style={{ width: '100%', justifyContent: 'center', marginBottom: 8, fontFamily: "'Inter', sans-serif" }}>
                           <span>⚠️ HEAVY USAGE: OVER 60 MINS</span>
                         </div>
                       )}
-                      <div className="flex justify-between">
-                        <span className="text-slate-500">Customer:</span>
-                        <span className="font-bold text-amber-400 truncate max-w-[120px]" title={session.customer_name}>
+                      <div className="flex justify-between" style={{ marginBottom: 6 }}>
+                        <span style={{ color: 'var(--text-low)' }}>Customer:</span>
+                        <span className="dm-truncate" style={{ fontWeight: 700, color: 'var(--warning)', maxWidth: 120 }} title={session.customer_name}>
                           {session.customer_name}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-500 flex items-center">
-                          <Clock className="w-3 h-3 mr-1 text-slate-400" /> Time Used:
+                      <div className="flex justify-between items-center" style={{ marginBottom: 6 }}>
+                        <span style={{ color: 'var(--text-low)', display: 'flex', alignItems: 'center' }}>
+                          <Clock style={{ width: 11, height: 11, marginRight: 4 }} /> Time Used:
                         </span>
-                        <span className={`font-semibold tabular-nums ${elapsed >= 60 ? 'text-rose-400 font-bold' : 'text-slate-100'}`}>{elapsed} minutes</span>
+                        <span className="dm-nums" style={{ fontWeight: 600, color: elapsed >= 60 ? 'var(--danger)' : 'var(--text-hi)' }}>{elapsed} minutes</span>
                       </div>
-                      <div className="flex justify-between items-center text-rose-300">
-                        <span className="text-slate-500 flex items-center">
-                          <Coins className="w-3 h-3 mr-1 text-slate-400" /> Amount:
+                      <div className="flex justify-between items-center">
+                        <span style={{ color: 'var(--text-low)', display: 'flex', alignItems: 'center' }}>
+                          <Coins style={{ width: 11, height: 11, marginRight: 4 }} /> Amount:
                         </span>
-                        <span className={`font-bold tabular-nums ${elapsed >= 60 ? 'text-rose-400 text-xs' : ''}`}>{formatCurrency(liveCharge)}</span>
+                        <span className="dm-nums" style={{ fontWeight: 700, color: 'var(--danger)' }}>{formatCurrency(liveCharge)}</span>
                       </div>
                     </div>
                   ) : (
-                    <div className="text-xs text-slate-400 py-4 font-mono">
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-low)', padding: '1rem 0', fontFamily: 'monospace' }}>
                       {computer.status === 'Maintenance' ? (
-                        <span className="text-rose-600 flex items-center">
-                          <ShieldAlert className="w-4 h-4 mr-1 text-rose-500 animate-pulse shrink-0" /> Out of service lockdown.
+                        <span style={{ color: 'var(--danger)', display: 'flex', alignItems: 'center' }}>
+                          <ShieldAlert style={{ width: 15, height: 15, marginRight: 4 }} className="dm-dot-pulse" /> Out of service lockdown.
                         </span>
                       ) : (
                         <span>Workstation is AVAILABLE. Ready for allocation.</span>
@@ -432,31 +400,31 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
                   {/* ==========================================
                       PC TRACKING AGENT FOUNDATION HOOKS
                       ========================================== */}
-                  <div className="mt-3 pt-3 border-t border-slate-100 text-[10px] text-slate-400 font-mono space-y-1">
+                  <div className="pt-3 mt-3" style={{ borderTop: '1px solid var(--panel-line)', fontSize: '0.625rem', color: 'var(--text-low)', fontFamily: 'monospace', display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <div className="flex justify-between items-center">
-                      <span className="flex items-center">
-                        <Server className="w-3 h-3 mr-1 text-slate-300" /> PC Tracking Agent:
+                      <span style={{ display: 'flex', alignItems: 'center' }}>
+                        <Server style={{ width: 11, height: 11, marginRight: 4 }} /> PC Tracking Agent:
                       </span>
-                      <span className={`font-bold ${computer.status === 'Maintenance' ? 'text-rose-400' : 'text-emerald-500'}`}>
+                      <span style={{ fontWeight: 700, color: computer.status === 'Maintenance' ? 'var(--danger)' : 'var(--success)' }}>
                         {computer.status === 'Maintenance' ? 'SUSPENDED' : 'READY_TO_CONNECT'}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Online heartbeat:</span>
-                      <span className="text-slate-500">
+                      <span style={{ color: 'var(--text-low)' }}>
                         {computer.status === 'Maintenance' ? 'Offline' : 'Ready (Active Listener)'}
                       </span>
                     </div>
-                    <div className="flex justify-between truncate">
+                    <div className="flex justify-between dm-truncate">
                       <span>Gateway node:</span>
-                      <span className="text-slate-500">wc-hook://{computer.computer_code.toLowerCase()}.dube.net</span>
+                      <span style={{ color: 'var(--text-low)' }}>wc-hook://{computer.computer_code.toLowerCase()}.uruu.net</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Action buttons */}
-                <div className="border-t border-slate-100 pt-3.5 mt-3.5 flex items-center justify-between gap-2">
-                  <div className="text-slate-400 text-[10px] font-mono">
+                <div className="pt-3.5 mt-3.5 flex items-center justify-between gap-2" style={{ borderTop: '1px solid var(--panel-line)' }}>
+                  <div style={{ fontSize: '0.625rem', color: 'var(--text-low)', fontFamily: 'monospace' }}>
                     Rate: {formatCurrency(computer.rate_per_minute || 1.0)}/min
                   </div>
 
@@ -465,14 +433,16 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
                     {computer.status !== 'Occupied' && (
                       <button
                         onClick={() => handleToggleMaintenance(computer)}
-                        className={`p-2 rounded-xl border transition-all cursor-pointer ${
-                          computer.status === 'Maintenance'
-                            ? 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100'
-                            : 'bg-slate-50 border-slate-200 text-slate-400 hover:text-slate-600'
-                        }`}
+                        className="dm-icon-btn"
+                        style={{
+                          width: 36, height: 36,
+                          ...(computer.status === 'Maintenance'
+                            ? { background: 'var(--danger-bg)', borderColor: 'rgba(255,107,107,0.35)', color: 'var(--danger)' }
+                            : {}),
+                        }}
                         title={computer.status === 'Maintenance' ? 'Re-enable terminal node' : 'Enter Maintenance mode'}
                       >
-                        <Wrench className="w-3.5 h-3.5" />
+                        <Wrench style={{ width: 14, height: 14 }} />
                       </button>
                     )}
 
@@ -484,17 +454,19 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
                           setCustomerFormName('');
                           setIsStartingSession(true);
                         }}
-                        className="px-3.5 py-2 bg-rose-500 hover:bg-rose-600 hover:shadow-xs text-white rounded-xl text-xs font-bold flex items-center space-x-1 transition-all cursor-pointer"
+                        className="dm-btn dm-btn-primary"
+                        style={{ minHeight: 36, padding: '0 0.9rem', fontSize: '0.75rem' }}
                       >
-                        <Play className="w-3 h-3 fill-white shrink-0" />
+                        <Play style={{ width: 12, height: 12 }} fill="currentColor" />
                         <span>START SESSION</span>
                       </button>
                     ) : computer.status === 'Occupied' ? (
                       <button
                         onClick={() => handleTerminateSession(computer)}
-                        className="px-3 py-2 bg-slate-900 hover:bg-rose-600 text-slate-400 hover:text-white rounded-xl text-xs font-bold flex items-center space-x-1 border border-slate-800 hover:border-transparent transition-all cursor-pointer"
+                        className="dm-btn dm-btn-danger"
+                        style={{ minHeight: 36, padding: '0 0.9rem', fontSize: '0.75rem' }}
                       >
-                        <Square className="w-3 h-3 fill-current shrink-0" />
+                        <Square style={{ width: 12, height: 12 }} fill="currentColor" />
                         <span>END SESSION</span>
                       </button>
                     ) : null}
@@ -508,34 +480,34 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
 
       {/* START SESSION DIALOG */}
       {isStartingSession && selectedComp && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <motion.div 
+        <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ background: 'rgba(7,11,36,0.75)', backdropFilter: 'blur(4px)' }}>
+          <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white border rounded-3xl max-w-sm w-full p-6 shadow-2xl relative text-left"
+            className="dm-card-glass max-w-sm w-full p-6 relative text-left"
           >
             <div className="mb-4">
-              <span className="text-[10px] font-bold text-rose-500 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full uppercase font-mono">
+              <span className="dm-badge dm-badge-warning" style={{ fontFamily: 'monospace' }}>
                 Initiating Client allocation
               </span>
-              <h3 className="text-base font-bold text-slate-800 mt-2">Start Café Session</h3>
-              <p className="text-slate-400 text-xs mt-0.5">Workstation: <strong>{selectedComp.computer_name}</strong> &bull; Rate: {formatCurrency(selectedComp.rate_per_minute || 1.0)}/min</p>
+              <h3 className="dm-h3" style={{ marginTop: 8, fontSize: '1rem' }}>Start Café Session</h3>
+              <p style={{ color: 'var(--text-low)', fontSize: '0.75rem', marginTop: 4 }}>Workstation: <strong style={{ color: 'var(--text-mid)' }}>{selectedComp.computer_name}</strong> &bull; Rate: {formatCurrency(selectedComp.rate_per_minute || 1.0)}/min</p>
             </div>
 
-            <form onSubmit={handleStartSessionSubmit} className="space-y-4 text-xs font-sans">
-              <div className="space-y-1">
-                <label className="text-xs text-slate-500">Customer reference name</label>
+            <form onSubmit={handleStartSessionSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="dm-label" style={{ display: 'block', padding: 0 }}>Customer reference name</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. John"
                   value={customerFormName}
                   onChange={(e) => setCustomerFormName(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-xs outline-none focus:border-rose-500 transition-all"
+                  className="dm-input"
                 />
               </div>
 
-              <div className="flex space-x-2 pt-3 border-t justify-end text-xs font-bold uruu-animate-in">
+              <div className="flex space-x-2 pt-3 justify-end" style={{ borderTop: '1px solid var(--panel-line)' }}>
                 <button
                   type="button"
                   onClick={() => {
@@ -543,15 +515,15 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
                     setSelectedComp(null);
                     setCustomerFormName('');
                   }}
-                  className="px-4 py-2 text-slate-500 hover:bg-slate-50 rounded-xl cursor-pointer"
+                  className="dm-btn dm-btn-ghost"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-white bg-rose-500 hover:bg-rose-600 rounded-xl shadow-md cursor-pointer transition animate-pulse"
+                  className="dm-btn dm-btn-primary"
                 >
-                  Launch Terminal lock
+                  Launch Terminal Lock
                 </button>
               </div>
             </form>
@@ -561,67 +533,68 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
 
       {/* BILLING CONFIRMATION MODAL */}
       {billingConfirmation && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <motion.div 
+        <div className="fixed inset-0 flex items-center justify-center p-4 z-50" style={{ background: 'rgba(7,11,36,0.82)', backdropFilter: 'blur(4px)' }}>
+          <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white border rounded-3xl max-w-sm w-full p-6 shadow-2xl relative text-left"
+            className="dm-card-glass max-w-sm w-full p-6 relative text-left"
           >
             <div className="text-center mb-4">
-              <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3 text-emerald-600">
-                <Check className="w-6 h-6 stroke-[3]" />
+              <div className="flex items-center justify-center mx-auto mb-3" style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--success-bg)', color: 'var(--success)' }}>
+                <Check style={{ width: 24, height: 24, strokeWidth: 3 }} />
               </div>
-              <h3 className="text-lg font-bold text-slate-800">Terminal Billing Invoice</h3>
-              <p className="text-slate-400 text-xs mt-0.5">Workstation: {billingConfirmation.computer_name}</p>
+              <h3 className="dm-h1" style={{ fontSize: '1.125rem' }}>Terminal Billing Invoice</h3>
+              <p style={{ color: 'var(--text-low)', fontSize: '0.75rem', marginTop: 4 }}>Workstation: {billingConfirmation.computer_name}</p>
             </div>
 
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2 font-mono text-xs text-slate-600">
+            <div className="dm-card-inset" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: 8, fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--text-mid)' }}>
               <div className="flex justify-between">
                 <span>Customer name:</span>
-                <span className="font-bold text-slate-800">{billingConfirmation.customer_name}</span>
+                <span style={{ fontWeight: 700, color: 'var(--text-hi)' }}>{billingConfirmation.customer_name}</span>
               </div>
               <div className="flex justify-between">
                 <span>Total elapsed time:</span>
-                <span className="font-bold text-slate-800">{billingConfirmation.duration_minutes} minutes</span>
+                <span style={{ fontWeight: 700, color: 'var(--text-hi)' }}>{billingConfirmation.duration_minutes} minutes</span>
               </div>
-              <div className="flex justify-between items-center text-slate-800 border-t pt-2 font-bold text-sm">
+              <div className="flex justify-between items-center pt-2" style={{ borderTop: '1px solid var(--panel-line)', fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-hi)' }}>
                 <span>Total billing:</span>
-                <span className="text-rose-600 text-base tabular-nums">{formatCurrency(billingConfirmation.amount)}</span>
+                <span className="dm-nums" style={{ color: 'var(--success)', fontSize: '1rem' }}>{formatCurrency(billingConfirmation.amount)}</span>
               </div>
             </div>
 
             <button
               onClick={() => setBillingConfirmation(null)}
-              className="mt-5 w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1 transition-all cursor-pointer"
+              className="dm-btn dm-btn-primary w-full"
+              style={{ marginTop: 20 }}
             >
-              <span>Acknowledge & Save Receipt</span>
+              <span>Acknowledge &amp; Save Receipt</span>
             </button>
           </motion.div>
         </div>
       )}
 
       {/* PC Agent Connectivity Info Footer panel */}
-      <div className="bg-slate-50 rounded-3xl p-5 border border-slate-200 text-left font-sans mt-8">
-        <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2 flex items-center">
-          <Server className="w-4 h-4 mr-1.5 text-rose-500 animate-pulse" />
-          PC Agent Hook & Sync Foundation (API Ready)
+      <div className="dm-card-inset p-5 text-left mt-8">
+        <h3 style={{ fontWeight: 700, fontSize: '0.75rem', color: 'var(--text-hi)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8, display: 'flex', alignItems: 'center' }}>
+          <Server className="dm-dot-pulse" style={{ width: 15, height: 15, marginRight: 6, color: 'var(--blue-400)' }} />
+          PC Agent Hook &amp; Sync Foundation (API Ready)
         </h3>
-        <p className="text-xs text-slate-500 leading-relaxed mb-4">
-          This system is pre-configured with active hooks for future workstation agent connection. Workstation terminal daemons can query 
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-mid)', lineHeight: 1.6, marginBottom: 16 }}>
+          This system is pre-configured with active hooks for future workstation agent connection. Workstation terminal daemons can query
           online heartbeat status, report user activity triggers, and sync session state lockdowns via standard JSON payloads.
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 font-mono text-[10px] text-slate-400 bg-white p-3.5 border border-slate-200 rounded-2xl">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 dm-card p-3.5" style={{ fontFamily: 'monospace', fontSize: '0.625rem', color: 'var(--text-low)' }}>
           <div>
-            <span className="text-slate-400 block uppercase tracking-wide mb-0.5">Heartbeat Endpoint</span>
-            <code className="text-slate-700">POST /api/agent/ping</code>
+            <span style={{ display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2 }}>Heartbeat Endpoint</span>
+            <code style={{ color: 'var(--text-mid)' }}>POST /api/agent/ping</code>
           </div>
           <div>
-            <span className="text-slate-400 block uppercase tracking-wide mb-0.5 font-sans">Active Lockscreen Protocol</span>
-            <code className="text-slate-700">WS Gateway Hook / Ready</code>
+            <span style={{ display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, fontFamily: "'Inter', sans-serif" }}>Active Lockscreen Protocol</span>
+            <code style={{ color: 'var(--text-mid)' }}>WS Gateway Hook / Ready</code>
           </div>
           <div>
-            <span className="text-slate-400 block uppercase tracking-wide mb-0.5 font-sans">Supported Agent Version</span>
-            <code className="text-slate-700">v1.1.0-beta</code>
+            <span style={{ display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 2, fontFamily: "'Inter', sans-serif" }}>Supported Agent Version</span>
+            <code style={{ color: 'var(--text-mid)' }}>v1.1.0-beta</code>
           </div>
         </div>
       </div>
