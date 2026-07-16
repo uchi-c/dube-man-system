@@ -46,7 +46,7 @@ the Login page. It creates your account, an organization, and makes you its
 
    ```sql
    insert into public.users (id, name, email, role)
-   select id, 'Dube Man (Owner)', email, 'ADMIN'
+   select id, 'Workspace Owner', email, 'ADMIN'
    from auth.users
    where email = 'YOUR_LOGIN_EMAIL'
    on conflict (id) do update set role = 'ADMIN';

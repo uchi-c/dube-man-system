@@ -1,5 +1,5 @@
 /* ============================================================
-   Dube Man Innovation — Shared formatting helpers
+   Uruu OS — Shared formatting helpers
    Single source of truth for currency and number display so
    every module renders figures identically.
    ============================================================ */

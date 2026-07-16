@@ -1,5 +1,5 @@
 -- ============================================================================
--- DUBE MAN — PC AGENT SCHEMA
+-- URUU OS — PC AGENT SCHEMA
 -- Adds live usage metrics, the session countdown, a remote-command queue, and
 -- the access policies the café PC agent needs.
 -- Run in the Supabase SQL editor AFTER schema.sql and print_schema.sql.

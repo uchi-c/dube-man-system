@@ -1,8 +1,8 @@
 <#
-  Dube Man / CaféOS — PC Agent installer (Windows)
+  Uruu OS — PC Agent installer (Windows)
   ---------------------------------------------------------------------------
   Installs Python deps, writes .env, and registers the agent as a Windows
-  service (DubeManAgent). Run from an ELEVATED PowerShell (Run as Administrator)
+  service (UruuAgent). Run from an ELEVATED PowerShell (Run as Administrator)
   because service install and the print spooler hook need admin rights.
 
   Examples
@@ -31,7 +31,7 @@ param(
 $ErrorActionPreference = "Stop"
 $here = Split-Path -Parent $MyInvocation.MyCommand.Definition
 $envPath = Join-Path $here ".env"
-$svcName = "DubeManAgent"
+$svcName = "UruuAgent"
 
 function Assert-Admin {
   $id = [Security.Principal.WindowsIdentity]::GetCurrent()

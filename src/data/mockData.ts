@@ -3,7 +3,7 @@ import { User, Product, Customer, PrintingOrder, Computer, CafeSession, Activity
 export const INITIAL_USERS: User[] = [
   {
     id: 'u-1',
-    name: 'Dube Man (Owner)',
+    name: 'Workspace Owner',
     email: 'admin@dubeman.com',
     role: 'ADMIN',
     created_at: new Date('2026-01-10').toISOString()
@@ -280,7 +280,7 @@ export const INITIAL_LOGS: ActivityLog[] = [
   {
     id: 'log-1',
     user_id: 'u-1',
-    user_name: 'Dube Man (Owner)',
+    user_name: 'Workspace Owner',
     action: 'System initialized. Pre-loaded products and computers database.',
     timestamp: new Date('2026-06-20T08:00:00Z').toISOString()
   },
@@ -466,7 +466,7 @@ export const INITIAL_WIFI_LOGS: WifiUsageLog[] = [
 export const INITIAL_ROUTER_SETTINGS: RouterSetting[] = [
   {
     id: 'r-1',
-    router_name: 'Dube Man Mikrotik Core',
+    router_name: 'Uruu Mikrotik Core',
     router_brand: 'Mikrotik',
     router_model: 'hEX S (RB760iGS)',
     integration_type: 'REST_API',

@@ -7,16 +7,16 @@ import servicemanager
 from agent import main
 
 
-class DubeManService(
+class UruuAgentService(
     win32serviceutil.ServiceFramework
 ):
 
     _svc_name_ = (
-        "DubeManAgent"
+        "UruuAgent"
     )
 
     _svc_display_name_ = (
-        "Dube Man PC Agent"
+        "Uruu Agent"
     )
 
     def __init__(
@@ -52,7 +52,7 @@ class DubeManService(
         self
     ):
         servicemanager.LogInfoMsg(
-            "DubeManAgent started."
+            "UruuAgent started."
         )
 
         main()
@@ -60,5 +60,5 @@ class DubeManService(
 
 if __name__ == "__main__":
     win32serviceutil.HandleCommandLine(
-        DubeManService
+        UruuAgentService
     )

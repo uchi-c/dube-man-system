@@ -1,6 +1,6 @@
-# Dube Man Innovation Business Management System
+# Uruu OS — Multi-Business Management System
 
-React + Vite business console for Dube Man General Dealers, backed by Supabase Auth, PostgreSQL, RLS, and Supabase Realtime-ready tables. Multi-tenant: every table is scoped to an `organization_id` and isolated by row-level security, so one Supabase project can safely host several independent businesses.
+React + Vite business console for Uruu OS, backed by Supabase Auth, PostgreSQL, RLS, and Supabase Realtime-ready tables. Multi-tenant: every table is scoped to an `organization_id` and isolated by row-level security, so one Supabase project can safely host several independent businesses.
 
 **Live:** https://dube-man-system-two.vercel.app
 

@@ -2,7 +2,7 @@
   "_comment": "Canonical tenant registry. Copy to tenants.json and keep it updated as you onboard clients. The tenant-dashboard.html mirrors this shape in its editable TENANTS array.",
   "tenants": [
     {
-      "name": "Dube Man (flagship)",
+      "name": "Uruu OS (flagship)",
       "status": "live",
       "plan": "Full suite",
       "appUrl": "https://dube-man-system-two.vercel.app",

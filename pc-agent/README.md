@@ -15,7 +15,7 @@ cd pc-agent
 ```
 
 The installer installs Python deps, writes `.env`, and registers/starts the
-`DubeManAgent` Windows service. Give each machine a **unique `-ComputerCode`**
+`UruuAgent` Windows service. Give each machine a **unique `-ComputerCode`**
 (PC-01, PC-02, …). All connection values must point at that **one tenant's**
 Supabase project.
 
@@ -60,7 +60,7 @@ cases. If it still fails:
 python "<path-to-python>\Scripts\pywin32_postinstall.py" -install
 
 # Clear a broken leftover service registration
-sc.exe delete DubeManAgent
+sc.exe delete UruuAgent
 ```
 
 Then re-run `install.ps1`.

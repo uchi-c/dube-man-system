@@ -1,6 +1,6 @@
 {
-  "name": "Dube Man Innovation System",
-  "description": "Secure, Scalable Business Management System MVP for Dube Man General Dealers - Printing, Stationery, Embroidery, Internet Café, and Digital typing/scanning/copy services.",
+  "name": "Uruu OS System",
+  "description": "Secure, Scalable Business Management System MVP for Uruu OS - Printing, Stationery, Embroidery, Internet Café, and Digital typing/scanning/copy services.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

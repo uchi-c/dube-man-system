@@ -1,5 +1,5 @@
 # CYBERSECURITY COMPLIANCE & SAFETY ASSURANCE
-## Dube Man Innovation System
+## Uruu OS
 
 This document outlines the security parameters implemented throughout the codebase, database policies, and future network modules.
 

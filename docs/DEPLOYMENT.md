@@ -1,5 +1,5 @@
 # DEPLOYMENT README
-## Dube Man Innovation / CaféOS — Business Management System
+## Uruu OS — Business Management System
 
 End-to-end guide to stand up this system in production: frontend, database
 (multi-tenant + Pharmacy), café PC agents, tenant onboarding, and demo-data
@@ -265,7 +265,7 @@ cd pc-agent
 ```
 
 This installs Python dependencies, writes `pc-agent/.env`, and
-registers/starts the `DubeManAgent` Windows service. Requirements:
+registers/starts the `UruuAgent` Windows service. Requirements:
 Python 3.10+ on PATH (installer checks and fails fast with instructions if
 missing).
 

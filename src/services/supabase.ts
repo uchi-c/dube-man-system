@@ -73,7 +73,11 @@ async function fetchProfileForAuthUser(authUser: any): Promise<User | null> {
   const pendingOrgName = authUser.user_metadata?.org_name as string | undefined;
   if (pendingOrgName) {
     try {
-      await completeOrganizationSignup(pendingOrgName, authUser.user_metadata?.owner_name || undefined);
+      await completeOrganizationSignup(
+        pendingOrgName,
+        authUser.user_metadata?.owner_name || undefined,
+        authUser.user_metadata?.business_type || undefined
+      );
       const { data: created } = await supabase.from('users').select('*').eq('id', authUser.id).maybeSingle();
       if (created) return mapProfileToUser(created);
     } catch (signupErr: any) {

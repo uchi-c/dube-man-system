@@ -1,6 +1,6 @@
 # WiFi Control & Usage Management System (Module 2)
 
-Welcome to the **WiFi Control & Usage Management System** for **Dube Man Innovation**. This advanced module coordinates prepaid internet vouchers with physical MAC address allocations, logging dynamic connections, and preparing the dashboard for future physical gateway router APIs (e.g. Mikrotik, Cisco, TP-Link).
+Welcome to the **WiFi Control & Usage Management System** for **Uruu OS**. This advanced module coordinates prepaid internet vouchers with physical MAC address allocations, logging dynamic connections, and preparing the dashboard for future physical gateway router APIs (e.g. Mikrotik, Cisco, TP-Link).
 
 ---
 

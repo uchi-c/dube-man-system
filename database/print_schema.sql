@@ -1,5 +1,5 @@
 -- ============================================================================
--- DUBE MAN PRINT MANAGER — Supabase / PostgreSQL Schema
+-- URUU OS PRINT MANAGER — Supabase / PostgreSQL Schema
 -- Applies on top of the base schema (schema.sql).
 -- Run this file in the Supabase SQL editor after schema.sql.
 -- ============================================================================

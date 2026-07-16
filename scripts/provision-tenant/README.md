@@ -31,7 +31,7 @@ silo comes with both out of the box.
 
 For the per-PC agent install itself, use **`pc-agent/install.ps1`** (elevated
 PowerShell) — it installs deps, writes `.env`, generates/records the
-`AGENT_SECRET`, and registers the `DubeManAgent` service. See `pc-agent/README.md`.
+`AGENT_SECRET`, and registers the `UruuAgent` service. See `pc-agent/README.md`.
 
 ## Checklist
 

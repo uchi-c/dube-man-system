@@ -1,13 +1,13 @@
 # SYSTEM TECHNICAL ARCHITECTURE
-## Dube Man Innovation - Business Management System
+## Uruu OS - Business Management System
 
-This document outlines the architectural flow, modularity, and database mapping rules of the Dube Man Innovation System MVP.
+This document outlines the architectural flow, modularity, and database mapping rules of the Uruu OS MVP.
 
 ---
 
 ### 1. High-Level System Architecture
 
-The Dube Man Innovation System is structured as a modern **full-stack decoupled system** utilizing React + Supabase (PostgreSQL with integrated RLS) to handle five business processes in a single integrated console:
+The Uruu OS is structured as a modern **full-stack decoupled system** utilizing React + Supabase (PostgreSQL with integrated RLS) to handle five business processes in a single integrated console:
 
 ```
                             +-------------------------------------------+

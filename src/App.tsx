@@ -1,8 +1,9 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { User, UserRole } from './types';
+import { User, UserRole, BusinessType } from './types';
 import { initializeStore } from './utils/db';
 import { getAuthenticatedUser, logoutUser } from './services/supabase';
+import { getCurrentOrganizationBusinessType } from './services/organizations';
 import ErrorBoundary from './components/ErrorBoundary';
 
 // Login and Signup are needed for first paint (pre-auth), so keep them eager.
@@ -68,6 +69,18 @@ PATH_TO_TAB['/users'] = 'logs'; // legacy alias
 
 const GROUP_ORDER = ['Home','Operations','Printing','Connectivity','System'];
 
+// Which nav modules each business type sees. 'general' (the default) shows
+// everything, unchanged from before business types existed. Niche types hide
+// modules irrelevant to them — this is what makes two tenants' UIs actually
+// look different, on top of their data already being hard-isolated by RLS.
+const BUSINESS_TYPE_MODULES: Record<BusinessType, string[] | null> = {
+  general:  null,
+  pharmacy: ['dashboard', 'pos', 'inventory', 'customers', 'pharmacy', 'wifi', 'pc-agent', 'logs'],
+  cafe:     ['dashboard', 'pos', 'inventory', 'customers', 'cafe', 'wifi', 'pc-agent', 'logs'],
+  printing: ['dashboard', 'pos', 'inventory', 'customers', 'print-manager', 'printing', 'wifi', 'pc-agent', 'logs'],
+  retail:   ['dashboard', 'pos', 'inventory', 'customers', 'wifi', 'pc-agent', 'logs'],
+};
+
 // Role-based landing paths.
 const ROLE_DEFAULT_PATH: Record<string, string> = {
   ADMIN: '/dashboard',
@@ -89,7 +102,7 @@ function BrandMark({ size = 34, radius = 10, font = 13 }: { size?: number; radiu
         boxShadow: '0 6px 18px -6px rgba(76,111,255,0.7)',
       }}
     >
-      <span style={{ color: 'white', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: font }}>DM</span>
+      <span style={{ color: 'white', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: font }}>UO</span>
     </div>
   );
 }
@@ -199,6 +212,7 @@ function SidebarSection({ group, tabs, activeTab, onSelect }: SidebarSectionProp
 
 interface SidebarProps {
   user: User;
+  businessType: BusinessType;
   activeTab: string;
   onSelect: (id: string) => void;
   onLogout: () => void;
@@ -206,8 +220,11 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-function Sidebar({ user, activeTab, onSelect, onLogout, mobile, onClose }: SidebarProps) {
-  const visibleTabs = TABS.filter(t => t.roles.includes(user.role as UserRole));
+function Sidebar({ user, businessType, activeTab, onSelect, onLogout, mobile, onClose }: SidebarProps) {
+  const allowedModules = BUSINESS_TYPE_MODULES[businessType];
+  const visibleTabs = TABS
+    .filter(t => t.roles.includes(user.role as UserRole))
+    .filter(t => !allowedModules || allowedModules.includes(t.id));
   const grouped = GROUP_ORDER.map(g => ({
     group: g,
     tabs: visibleTabs.filter(t => t.group === g),
@@ -233,9 +250,9 @@ function Sidebar({ user, activeTab, onSelect, onLogout, mobile, onClose }: Sideb
         <BrandMark />
         <div>
           <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '15px', color: 'var(--text-hi)', letterSpacing: '-0.02em' }}>
-            Dube Man
+            Uruu
           </div>
-          <div className="dm-label" style={{ padding: 0 }}>CaféOS</div>
+          <div className="dm-label" style={{ padding: 0 }}>OS</div>
         </div>
         {mobile && (
           <button onClick={onClose} className="dm-icon-btn ml-auto" style={{ width: 34, height: 34 }} aria-label="Close navigation">
@@ -287,7 +304,7 @@ interface TopbarProps {
 
 function Topbar({ user, activeTab, onMenuToggle }: TopbarProps) {
   const tab = TABS.find(t => t.id === activeTab);
-  const crumbs = tab ? [tab.group, tab.label] : ['Dube Man'];
+  const crumbs = tab ? [tab.group, tab.label] : ['Uruu OS'];
 
   return (
     <header
@@ -402,7 +419,7 @@ function LoadingScreen() {
         ))}
       </div>
       <span style={{ color: 'var(--text-low)', fontSize: '0.75rem', fontWeight: 500, letterSpacing: '0.05em' }}>
-        Starting CaféOS…
+        Starting Uruu OS…
       </span>
     </div>
   );
@@ -458,6 +475,7 @@ function RouteFrame({ tab, user }: { tab: TabDef; user: User }) {
 export default function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [user, setUser]                   = useState<User | null>(null);
+  const [businessType, setBusinessType]   = useState<BusinessType>('general');
   const [drawerOpen, setDrawerOpen]       = useState(false);
   const [checking, setChecking]           = useState(true);
   const [authView, setAuthView]           = useState<'login' | 'signup'>('login');
@@ -475,8 +493,13 @@ export default function App() {
       initializeStore();
       const u = await getAuthenticatedUser();
       if (cancelled) return;
-      if (u) { setUser(u); setAuthenticated(true); }
-      else { setAuthenticated(false); }
+      if (u) {
+        setUser(u);
+        setAuthenticated(true);
+        getCurrentOrganizationBusinessType().then(bt => { if (!cancelled) setBusinessType(bt); });
+      } else {
+        setAuthenticated(false);
+      }
       setTimeout(() => { if (!cancelled) setChecking(false); }, 500);
     })();
     return () => { cancelled = true; };
@@ -487,6 +510,7 @@ export default function App() {
     setUser(u);
     setAuthenticated(true);
     setChecking(false);
+    getCurrentOrganizationBusinessType().then(setBusinessType);
     navigate(defaultPathFor(u.role), { replace: true });
   };
 
@@ -494,6 +518,7 @@ export default function App() {
     await logoutUser();
     setUser(null);
     setAuthenticated(false);
+    setBusinessType('general');
     navigate('/login', { replace: true });
   };
 
@@ -519,6 +544,7 @@ export default function App() {
       <aside className="hidden lg:flex flex-col flex-shrink-0" style={{ width: 248, height: '100vh', position: 'sticky', top: 0 }}>
         <Sidebar
           user={user}
+          businessType={businessType}
           activeTab={activeTab}
           onSelect={handleTabSelect}
           onLogout={handleLogout}
@@ -549,6 +575,7 @@ export default function App() {
             >
               <Sidebar
                 user={user}
+                businessType={businessType}
                 activeTab={activeTab}
                 onSelect={handleTabSelect}
                 onLogout={handleLogout}

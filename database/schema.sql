@@ -1,5 +1,5 @@
 -- ============================================================================
--- DUBE MAN INNOVATION SYSTEM - SUPABASE / POSTGRESQL SCHEMA
+-- URUU OS - SUPABASE / POSTGRESQL SCHEMA
 -- Fresh-project schema for the React console, PC agent prototype, and WiFi MVP.
 -- ============================================================================
 

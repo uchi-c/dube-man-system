@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Mail, Lock, ArrowRight, Loader2, AlertCircle } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Loader2, AlertCircle, MailCheck } from 'lucide-react';
 import { motion } from 'motion/react';
-import { isSupabaseConfigured, loginUser } from '../services/supabase';
+import { isSupabaseConfigured, loginUser, supabase } from '../services/supabase';
 import { User } from '../types';
 
 interface LoginProps {
@@ -48,10 +48,10 @@ function CafeNetworkIllustration() {
         <line x1="280" y1="310" x2="240" y2="370" />
       </g>
 
-      {/* Central hub — CaféOS node */}
+      {/* Central hub — Uruu OS node */}
       <circle cx="240" cy="150" r="42" fill="#4C6FFF" opacity="0.15" />
       <circle cx="240" cy="150" r="30" fill="url(#blue-grad)" />
-      <text x="240" y="153" textAnchor="middle" fill="white" fontSize="9" fontWeight="700" fontFamily="'Space Grotesk',Inter,sans-serif">CAFÉ</text>
+      <text x="240" y="153" textAnchor="middle" fill="white" fontSize="9" fontWeight="700" fontFamily="'Space Grotesk',Inter,sans-serif">URUU</text>
       <text x="240" y="164" textAnchor="middle" fill="white" fontSize="8" fontWeight="500" fontFamily="'Space Grotesk',Inter,sans-serif" opacity="0.85">OS</text>
 
       {/* Satellite nodes */}
@@ -103,6 +103,7 @@ export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) 
   const [password, setPassword] = useState('');
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
+  const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -112,6 +113,7 @@ export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) 
     }
     setLoading(true);
     setError('');
+    setResendState('idle');
     try {
       const user = await withTimeout(loginUser(email.trim(), password), LOGIN_TIMEOUT_MS);
       if (user) {
@@ -120,9 +122,26 @@ export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) 
         setError('Incorrect email or password. Try again.');
       }
     } catch (err: any) {
+      // Supabase returns the same generic "Invalid login credentials" for a
+      // wrong password AND for a not-yet-confirmed account — it can't be
+      // told apart client-side. Offering a resend covers the real-world
+      // case (someone signed up but the confirmation email never arrived
+      // or was missed) without falsely claiming that's definitely the cause.
       setError(err?.message || 'Sign-in failed. Check your connection and try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!email.trim() || !isSupabaseConfigured) return;
+    setResendState('sending');
+    try {
+      const { error: resendError } = await supabase.auth.resend({ type: 'signup', email: email.trim() });
+      if (resendError) throw resendError;
+      setResendState('sent');
+    } catch {
+      setResendState('error');
     }
   };
 
@@ -167,13 +186,13 @@ export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) 
               className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: 'linear-gradient(135deg, #4C6FFF, #7DD3FC)', boxShadow: '0 8px 22px -6px rgba(76,111,255,0.7)' }}
             >
-              <span style={{ color: 'white', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '14px' }}>DM</span>
+              <span style={{ color: 'white', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '14px' }}>UO</span>
             </div>
             <div>
               <div style={{ color: 'var(--text-hi)', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '18px', letterSpacing: '-0.02em' }}>
-                Dube Man
+                Uruu
               </div>
-              <div className="dm-label" style={{ padding: 0 }}>CaféOS</div>
+              <div className="dm-label" style={{ padding: 0 }}>OS</div>
             </div>
           </div>
         </div>
@@ -184,13 +203,13 @@ export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) 
             <CafeNetworkIllustration />
             <div className="text-center mt-6 space-y-2">
               <h2 className="dm-display" style={{ fontSize: 'clamp(1.5rem, 2.6vw, 2rem)' }}>
-                Run your café<br />
+                Run your business,<br />
                 <span style={{ background: 'linear-gradient(90deg, #7B93FF, #7DD3FC)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                  &amp; business centre
+                  every module
                 </span>
               </h2>
               <p style={{ color: 'var(--text-mid)', fontSize: '0.9rem', maxWidth: '320px', margin: '0 auto', lineHeight: 1.6 }}>
-                One platform. Every module. Run your business from anywhere.
+                Pharmacy, café, printing, retail — one platform, tailored to what you run.
               </p>
             </div>
           </div>
@@ -211,9 +230,9 @@ export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) 
         {/* Mobile brand */}
         <div className="lg:hidden flex items-center gap-3 mb-8">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #4C6FFF, #7DD3FC)' }}>
-            <span style={{ color: 'white', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '14px' }}>DM</span>
+            <span style={{ color: 'white', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '14px' }}>UO</span>
           </div>
-          <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '20px', color: 'var(--text-hi)' }}>Dube Man</span>
+          <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '20px', color: 'var(--text-hi)' }}>Uruu OS</span>
         </div>
 
         <motion.div
@@ -224,9 +243,9 @@ export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) 
         >
           {/* Header */}
           <div>
-            <h1 className="dm-h1" style={{ fontSize: '1.75rem' }}>Welcome back</h1>
+            <h1 className="dm-h1" style={{ fontSize: '1.75rem' }}>Staff sign in</h1>
             <p style={{ color: 'var(--text-mid)', fontSize: '0.9rem', marginTop: '6px' }}>
-              Sign in to your workspace.
+              For existing Admin, Staff & Café Operator accounts.
             </p>
           </div>
 
@@ -273,12 +292,37 @@ export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) 
                 <motion.div
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
-                  style={{ background: 'var(--danger-bg)', border: '1px solid rgba(255,107,107,0.30)', fontSize: '0.8125rem', color: 'var(--danger)' }}
-                  role="alert"
+                  className="space-y-2"
                 >
-                  <AlertCircle style={{ width: 15, height: 15, flexShrink: 0 }} />
-                  <span>{error}</span>
+                  <div
+                    className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
+                    style={{ background: 'var(--danger-bg)', border: '1px solid rgba(255,107,107,0.30)', fontSize: '0.8125rem', color: 'var(--danger)' }}
+                    role="alert"
+                  >
+                    <AlertCircle style={{ width: 15, height: 15, flexShrink: 0 }} />
+                    <span>{error}</span>
+                  </div>
+
+                  {isSupabaseConfigured && resendState !== 'sent' && (
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-mid)', paddingLeft: 2 }}>
+                      Just signed up? Your email may still need confirming.{' '}
+                      <button
+                        type="button"
+                        onClick={handleResendConfirmation}
+                        disabled={resendState === 'sending'}
+                        style={{ color: 'var(--blue-400)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                      >
+                        {resendState === 'sending' ? 'Sending…' : 'Resend confirmation email'}
+                      </button>
+                      {resendState === 'error' && <span style={{ color: 'var(--danger)' }}> — couldn't send. Check the email address above.</span>}
+                    </div>
+                  )}
+                  {resendState === 'sent' && (
+                    <div className="flex items-center gap-2" style={{ fontSize: '0.75rem', color: 'var(--success)' }}>
+                      <MailCheck style={{ width: 13, height: 13, flexShrink: 0 }} />
+                      <span>Confirmation email sent to {email.trim()} — check your inbox.</span>
+                    </div>
+                  )}
                 </motion.div>
               )}
 

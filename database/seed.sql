@@ -1,5 +1,5 @@
 -- ============================================================================
--- DUBE MAN INNOVATION SYSTEM — DEMO SEED DATA
+-- URUU OS — DEMO SEED DATA
 -- Run in the Supabase SQL editor AFTER schema.sql, print_schema.sql,
 -- migrations/001_multi_tenancy.sql and migrations/002_pharmacy_module.sql.
 -- Populates every module so a fresh project shows a fully working system.
@@ -83,7 +83,7 @@ on conflict do nothing;
 
 -- ---- Router gateway config -------------------------------------------------
 insert into public.router_settings (id, router_name, router_brand, router_model, integration_type) values
-  ('40070001-0000-4000-8000-000000000001', 'Dube Man Mikrotik Core', 'Mikrotik', 'hEX S (RB760iGS)', 'REST_API')
+  ('40070001-0000-4000-8000-000000000001', 'Uruu Mikrotik Core', 'Mikrotik', 'hEX S (RB760iGS)', 'REST_API')
 on conflict do nothing;
 
 -- ============================================================================

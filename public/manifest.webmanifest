@@ -1,7 +1,7 @@
 {
-  "name": "CaféOS by Dube Man Innovation",
-  "short_name": "CaféOS",
-  "description": "CaféOS business management — POS, inventory, printing, café sessions, and WiFi in one workspace.",
+  "name": "Uruu OS",
+  "short_name": "Uruu OS",
+  "description": "Uruu OS business management — POS, inventory, printing, café sessions, and WiFi in one workspace.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
