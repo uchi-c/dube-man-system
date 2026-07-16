@@ -197,7 +197,7 @@ export default function CafeManagement({ userRole }: CafeConsoleProps) {
       {/* Overview */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 text-left">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Dube Man Café Workspace</h1>
+          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Uruu Café Workspace</h1>
           <p className="text-sm text-slate-500 mt-1">
             Real-time minute billing system (<strong>{formatCurrency(1)} per minute</strong>). Activate workstation terminals, review billing, and prepare PC agent sync hooks.
           </p>

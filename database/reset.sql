@@ -1,12 +1,12 @@
 -- ============================================================================
--- DUBE MAN INNOVATION SYSTEM — RESET (teardown)
+-- URUU OS — RESET (teardown)
 -- Run this FIRST if a previous partial run left tables/types behind
 -- (e.g. error: relation "users" already exists). It drops only this app's
 -- objects — it does NOT touch Supabase's auth schema or your login users.
 -- After running this, apply in order: schema.sql, print_schema.sql,
 -- agent_schema.sql, migrations/001_multi_tenancy.sql,
 -- migrations/002_pharmacy_module.sql, migrations/003_organization_signup.sql,
--- seed.sql.
+-- migrations/004_business_type.sql, seed.sql.
 -- Safe to run repeatedly.
 --
 -- Going live and just want to remove seed.sql's demo rows (not tear down
@@ -64,6 +64,7 @@ drop function if exists public.bootstrap_default_organization() cascade;
 drop function if exists public.auto_enroll_default_organization() cascade;
 drop function if exists public.process_dispensing_deduction() cascade;
 drop function if exists public.signup_new_organization(text, text) cascade;
+drop function if exists public.signup_new_organization(text, text, text) cascade;
 
 -- Enum types (drop after the tables that use them)
 drop type if exists public.color_mode cascade;
@@ -72,4 +73,5 @@ drop type if exists public.print_job_status cascade;
 drop type if exists public.printer_status cascade;
 drop type if exists public.prescription_status cascade;
 drop type if exists public.medicine_dosage_form cascade;
+drop type if exists public.business_type cascade;
 drop type if exists public.user_role cascade;

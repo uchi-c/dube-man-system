@@ -21,7 +21,11 @@ Run each file's contents, in this order (paste and **Run**):
 6. `database/migrations/003_organization_signup.sql` — adds
    `signup_new_organization()`, which powers the "Create your workspace"
    self-service signup link on the Login page (see step 2 below).
-7. `database/seed.sql` — demo data so every module (including Pharmacy) shows
+7. `database/migrations/004_business_type.sql` — adds a `business_type` on
+   `organizations` (general/pharmacy/cafe/printing/retail) and updates
+   `signup_new_organization()` to accept it, so a new tenant's nav shows
+   only the modules relevant to what they picked at signup.
+8. `database/seed.sql` — demo data so every module (including Pharmacy) shows
    real records.
 
 > **Re-running after a failed/partial attempt?** If you hit
@@ -46,7 +50,7 @@ the Login page. It creates your account, an organization, and makes you its
 
    ```sql
    insert into public.users (id, name, email, role)
-   select id, 'Dube Man (Owner)', email, 'ADMIN'
+   select id, 'Workspace Owner', email, 'ADMIN'
    from auth.users
    where email = 'YOUR_LOGIN_EMAIL'
    on conflict (id) do update set role = 'ADMIN';

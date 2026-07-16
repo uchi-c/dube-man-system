@@ -1,5 +1,5 @@
 /**
- * Dube Man General Dealers - TypeScript Definitions
+ * Uruu OS - TypeScript Definitions
  */
 
 export type UserRole = 'ADMIN' | 'STAFF' | 'CAFE_OPERATOR';
@@ -8,10 +8,14 @@ export type UserRole = 'ADMIN' | 'STAFF' | 'CAFE_OPERATOR';
 // MULTI-TENANCY — Types
 // ============================================================
 
+/** What kind of business a tenant runs — drives which nav modules show. */
+export type BusinessType = 'general' | 'pharmacy' | 'cafe' | 'printing' | 'retail';
+
 /** A tenant workspace. Every business record is scoped to one of these. */
 export interface Organization {
   id: string;
   name: string;
+  business_type: BusinessType;
   created_at: string;
 }
 

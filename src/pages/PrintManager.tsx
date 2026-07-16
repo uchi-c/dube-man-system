@@ -30,7 +30,7 @@ export default function PrintManager() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <div className="flex items-center space-x-2 text-xs text-slate-400 font-mono mb-1">
-            <span>Dube Man</span>
+            <span>Uruu OS</span>
             <ChevronRight className="w-3 h-3" />
             <span className="text-slate-600 font-semibold">Print Manager</span>
           </div>

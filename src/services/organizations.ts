@@ -11,15 +11,16 @@
  */
 
 import { supabase, isSupabaseConfigured } from './supabase';
-import { Organization } from '../types';
+import { Organization, BusinessType } from '../types';
 
-const ORG_STORAGE_KEY = 'dubeman_org_id';
+const ORG_STORAGE_KEY = 'uruu_org_id';
 
 // Local-demo mode (no Supabase configured) has no real multi-tenancy —
 // everything runs against localStorage under one implicit workspace.
 const LOCAL_DEMO_ORG_ID = 'local-demo-org';
 
 let cachedOrgId: string | null = null;
+let cachedBusinessType: BusinessType | null = null;
 
 /**
  * The organization the current session should write to. Resolution order:
@@ -71,7 +72,33 @@ export function setActiveOrganizationId(orgId: string): void {
 /** Call on logout so the next sign-in re-resolves membership from scratch. */
 export function clearOrganizationCache(): void {
   cachedOrgId = null;
+  cachedBusinessType = null;
   if (typeof window !== 'undefined') localStorage.removeItem(ORG_STORAGE_KEY);
+}
+
+/**
+ * The active organization's business type — drives which nav modules App.tsx
+ * shows. Defaults to 'general' (shows everything) for local demo mode and on
+ * any lookup failure, so a resolution hiccup never hides a module a real
+ * tenant needs.
+ */
+export async function getCurrentOrganizationBusinessType(): Promise<BusinessType> {
+  if (cachedBusinessType) return cachedBusinessType;
+  if (!isSupabaseConfigured) return 'general';
+
+  try {
+    const orgId = await getCurrentOrganizationId();
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('business_type')
+      .eq('id', orgId)
+      .maybeSingle();
+    if (error || !data) return 'general';
+    cachedBusinessType = data.business_type as BusinessType;
+    return cachedBusinessType;
+  } catch {
+    return 'general';
+  }
 }
 
 /** Every organization the signed-in user belongs to (for an org switcher UI). */
@@ -115,11 +142,13 @@ export async function fetchUserOrganizations(): Promise<Organization[]> {
  */
 export async function completeOrganizationSignup(
   orgName: string,
-  ownerName?: string
+  ownerName?: string,
+  businessType?: BusinessType
 ): Promise<{ organizationId: string; role: string }> {
   const { data, error } = await supabase.rpc('signup_new_organization', {
     org_name: orgName,
     owner_name: ownerName || null,
+    business_type: businessType || 'general',
   });
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
@@ -141,13 +170,14 @@ export async function signUpNewOrganization(
   email: string,
   password: string,
   orgName: string,
-  ownerName?: string
+  ownerName?: string,
+  businessType?: BusinessType
 ): Promise<{ needsEmailConfirmation: boolean; organizationId?: string }> {
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { org_name: orgName, owner_name: ownerName || null },
+      data: { org_name: orgName, owner_name: ownerName || null, business_type: businessType || 'general' },
     },
   });
   if (authError) throw authError;
@@ -160,7 +190,7 @@ export async function signUpNewOrganization(
     return { needsEmailConfirmation: true };
   }
 
-  const { organizationId } = await completeOrganizationSignup(orgName, ownerName);
+  const { organizationId } = await completeOrganizationSignup(orgName, ownerName, businessType);
   return { needsEmailConfirmation: false, organizationId };
 }
 

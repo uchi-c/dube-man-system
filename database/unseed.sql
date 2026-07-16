@@ -1,5 +1,5 @@
 -- ============================================================================
--- DUBE MAN INNOVATION SYSTEM — REMOVE DEMO SEED DATA
+-- URUU OS — REMOVE DEMO SEED DATA
 -- Deletes exactly the rows `seed.sql` inserted (matched by their fixed
 -- demo UUIDs), leaving your schema, migrations, organizations, users and
 -- any REAL data you've since created completely untouched.

@@ -74,7 +74,7 @@ export default function WifiManagement() {
         setIntegrationType(settings[0].integration_type);
       } else {
         // Defaults
-        setRouterName('Dube Man Core Gateway');
+        setRouterName('Uruu Core Gateway');
         setRouterBrand('Mikrotik');
         setRouterModel('RB760iGS');
         setIntegrationType('REST_API');

@@ -1,8 +1,8 @@
-/* CaféOS — service worker.
+/* Uruu OS — service worker.
    Network-first so online users always get fresh content (important for a
    data-driven app), with a same-origin cache for offline fallback. Cross-origin
    requests (Supabase, Google Fonts) are left untouched. */
-const CACHE = 'cafeos-v1';
+const CACHE = 'uruu-os-v1';
 
 self.addEventListener('install', () => {
   self.skipWaiting();

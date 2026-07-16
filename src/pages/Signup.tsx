@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
-import { Building2, User as UserIcon, Mail, Lock, ArrowRight, Loader2, AlertCircle, MailCheck } from 'lucide-react';
+import { Building2, User as UserIcon, Mail, Lock, ArrowRight, Loader2, AlertCircle, MailCheck, Pill, Coffee, Printer, ShoppingBag, LayoutGrid } from 'lucide-react';
 import { motion } from 'motion/react';
 import { isSupabaseConfigured, getAuthenticatedUser } from '../services/supabase';
 import { signUpNewOrganization } from '../services/organizations';
-import { User } from '../types';
+import { User, BusinessType } from '../types';
+
+const BUSINESS_TYPES: { value: BusinessType; label: string; icon: React.ElementType }[] = [
+  { value: 'general',  label: 'General / Multi-service', icon: LayoutGrid },
+  { value: 'pharmacy', label: 'Pharmacy',                 icon: Pill },
+  { value: 'cafe',     label: 'Internet Café',             icon: Coffee },
+  { value: 'printing', label: 'Printing & Branding',       icon: Printer },
+  { value: 'retail',   label: 'Retail',                    icon: ShoppingBag },
+];
 
 interface SignupProps {
   onSignupSuccess: (user: User) => void;
@@ -69,6 +77,7 @@ function NewBusinessIllustration() {
 export default function Signup({ onSignupSuccess, onSwitchToLogin }: SignupProps) {
   const [orgName, setOrgName] = useState('');
   const [ownerName, setOwnerName] = useState('');
+  const [businessType, setBusinessType] = useState<BusinessType>('general');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -92,7 +101,7 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin }: SignupProps
     setLoading(true);
     try {
       const result = await withTimeout(
-        signUpNewOrganization(email.trim(), password, orgName.trim(), ownerName.trim() || undefined),
+        signUpNewOrganization(email.trim(), password, orgName.trim(), ownerName.trim() || undefined, businessType),
         SIGNUP_TIMEOUT_MS,
       );
       if (result.needsEmailConfirmation) {
@@ -148,11 +157,11 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin }: SignupProps
         <div className="relative z-10 p-10">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #4C6FFF, #7DD3FC)', boxShadow: '0 8px 22px -6px rgba(76,111,255,0.7)' }}>
-              <span style={{ color: 'white', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '14px' }}>DM</span>
+              <span style={{ color: 'white', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '14px' }}>UO</span>
             </div>
             <div>
-              <div style={{ color: 'var(--text-hi)', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '18px', letterSpacing: '-0.02em' }}>Dube Man</div>
-              <div className="dm-label" style={{ padding: 0 }}>CaféOS</div>
+              <div style={{ color: 'var(--text-hi)', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '18px', letterSpacing: '-0.02em' }}>Uruu</div>
+              <div className="dm-label" style={{ padding: 0 }}>OS</div>
             </div>
           </div>
         </div>
@@ -187,9 +196,9 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin }: SignupProps
       <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 overflow-y-auto">
         <div className="lg:hidden flex items-center gap-3 mb-8">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #4C6FFF, #7DD3FC)' }}>
-            <span style={{ color: 'white', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '14px' }}>DM</span>
+            <span style={{ color: 'white', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '14px' }}>UO</span>
           </div>
-          <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '20px', color: 'var(--text-hi)' }}>Dube Man</span>
+          <span style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '20px', color: 'var(--text-hi)' }}>Uruu OS</span>
         </div>
 
         <motion.div
@@ -233,6 +242,37 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin }: SignupProps
                         onChange={e => setOrgName(e.target.value)}
                         style={inputStyle} onFocus={onFocus} onBlur={onBlur}
                       />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="dm-label" style={{ display: 'block', letterSpacing: '0.06em' }}>Business type</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {BUSINESS_TYPES.map(({ value, label, icon: Icon }) => {
+                        const active = businessType === value;
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setBusinessType(value)}
+                            aria-pressed={active}
+                            title={label}
+                            className="flex flex-col items-center justify-center gap-1 text-center"
+                            style={{
+                              padding: '0.6rem 0.4rem',
+                              borderRadius: 'var(--r-control)',
+                              border: active ? '1px solid #4C6FFF' : '1px solid var(--panel-line)',
+                              background: active ? 'rgba(76,111,255,0.14)' : 'var(--panel-2)',
+                              color: active ? 'var(--text-hi)' : 'var(--text-mid)',
+                              cursor: 'pointer',
+                              transition: 'border-color 0.15s, background 0.15s',
+                            }}
+                          >
+                            <Icon style={{ width: 16, height: 16 }} />
+                            <span style={{ fontSize: '0.6875rem', lineHeight: 1.2, fontWeight: active ? 600 : 500 }}>{label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 

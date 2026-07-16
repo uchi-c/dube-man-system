@@ -23,7 +23,7 @@ import logger
 
 def main():
 
-    logger.info("[AGENT] Starting Dube Man PC Agent")
+    logger.info("[AGENT] Starting Uruu Agent")
 
     session_manager = SessionManager()
     command_manager = CommandManager(session_manager)

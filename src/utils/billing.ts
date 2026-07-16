@@ -1,5 +1,5 @@
 /* ============================================================
-   Dube Man Innovation — Billing math
+   Uruu OS — Billing math
    Pure, framework-free helpers so the money paths (POS cart and
    café time-billing) are testable and shared instead of inlined.
    ============================================================ */

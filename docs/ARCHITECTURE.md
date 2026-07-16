@@ -1,13 +1,13 @@
 # SYSTEM TECHNICAL ARCHITECTURE
-## Dube Man Innovation - Business Management System
+## Uruu OS - Business Management System
 
-This document outlines the architectural flow, modularity, and database mapping rules of the Dube Man Innovation System MVP.
+This document outlines the architectural flow, modularity, and database mapping rules of the Uruu OS MVP.
 
 ---
 
 ### 1. High-Level System Architecture
 
-The Dube Man Innovation System is structured as a modern **full-stack decoupled system** utilizing React + Supabase (PostgreSQL with integrated RLS) to handle five business processes in a single integrated console:
+The Uruu OS is structured as a modern **full-stack decoupled system** utilizing React + Supabase (PostgreSQL with integrated RLS) to handle five business processes in a single integrated console:
 
 ```
                             +-------------------------------------------+
@@ -58,6 +58,7 @@ Every business table carries an `organization_id` foreign key into `public.organ
 - **Trust model**: the `ADMIN` role is platform-wide within a Supabase project (it can see all organizations in that project), not scoped per-tenant. This app targets an owner-operator provisioning their own project — not a multi-tenant SaaS marketplace with mutually-untrusted tenant admins. For that stronger model, `ADMIN`-level policies would need their own `organization_id` scoping too.
 - Two deployment models coexist: **shared multi-tenant** (this migration; many orgs, one database) and **silo-per-tenant** (`scripts/provision-tenant/`; one Supabase project per client). Pick whichever isolation guarantee a client needs.
 - **Self-service tenant signup**: `public.signup_new_organization()` (`database/migrations/003_organization_signup.sql`) lets a brand-new Supabase Auth user create their own organization and become its `ADMIN` in one transaction, from the app's Signup page. It's `SECURITY DEFINER` because a signing-up user isn't an `ADMIN` of anything yet — but it's scoped tightly to `auth.uid()`, so it can only ever act on the calling account, and it refuses to run a second time for an account that already has a profile.
+- **Business type**: `organizations.business_type` (`database/migrations/004_business_type.sql`) — general, pharmacy, cafe, printing, or retail — is chosen at signup and drives `BUSINESS_TYPE_MODULES` in `src/App.tsx`, which filters the sidebar nav to the modules relevant to that tenant. `general` (the default for pre-existing organizations) shows every module, unchanged from before this migration.
 
 ---
 
