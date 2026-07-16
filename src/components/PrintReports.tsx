@@ -34,24 +34,24 @@ function fmtMoney(n: number) {
 // ---- Summary row ------------------------------------------------------------
 
 function SummaryRow({ row, rank }: { row: PrintReportRow; rank: number }) {
-  const profitColor = row.profit >= 0 ? 'text-emerald-600' : 'text-rose-500';
+  const profitColor = row.profit >= 0 ? 'var(--success)' : 'var(--danger)';
   return (
-    <tr className="hover:bg-slate-50/50 transition text-xs">
+    <tr className="dm-row" style={{ fontSize: '0.75rem', borderTop: '1px solid var(--panel-line)' }}>
       <td className="px-4 py-3">
         <div className="flex items-center space-x-3">
-          <div className="w-6 h-6 rounded-lg bg-rose-100 text-rose-600 text-[10px] font-extrabold flex items-center justify-center flex-shrink-0">
+          <div className="flex items-center justify-center flex-shrink-0" style={{ width: 24, height: 24, borderRadius: 8, background: 'var(--blue-bg)', color: 'var(--blue-400)', fontSize: '0.625rem', fontWeight: 700 }}>
             #{rank}
           </div>
-          <span className="font-semibold text-slate-700 truncate">{row.label || '—'}</span>
+          <span className="dm-truncate" style={{ fontWeight: 600, color: 'var(--text-mid)' }}>{row.label || '—'}</span>
         </div>
       </td>
-      <td className="px-4 py-3 text-center text-slate-600">{row.jobs.toLocaleString()}</td>
-      <td className="px-4 py-3 text-center font-semibold text-slate-700">{row.pages.toLocaleString()}</td>
-      <td className="px-4 py-3 text-center text-slate-500">{row.bw_pages.toLocaleString()}</td>
-      <td className="px-4 py-3 text-center text-amber-600">{row.colour_pages.toLocaleString()}</td>
-      <td className="px-4 py-3 text-right font-semibold text-slate-700">{fmtMoney(row.revenue)}</td>
-      <td className="px-4 py-3 text-right text-slate-500">{fmtMoney(row.cost)}</td>
-      <td className={`px-4 py-3 text-right font-bold ${profitColor}`}>{fmtMoney(row.profit)}</td>
+      <td className="px-4 py-3 text-center" style={{ color: 'var(--text-mid)' }}>{row.jobs.toLocaleString()}</td>
+      <td className="px-4 py-3 text-center" style={{ fontWeight: 600, color: 'var(--text-mid)' }}>{row.pages.toLocaleString()}</td>
+      <td className="px-4 py-3 text-center" style={{ color: 'var(--text-low)' }}>{row.bw_pages.toLocaleString()}</td>
+      <td className="px-4 py-3 text-center" style={{ color: 'var(--warning)' }}>{row.colour_pages.toLocaleString()}</td>
+      <td className="px-4 py-3 text-right" style={{ fontWeight: 600, color: 'var(--text-mid)' }}>{fmtMoney(row.revenue)}</td>
+      <td className="px-4 py-3 text-right" style={{ color: 'var(--text-low)' }}>{fmtMoney(row.cost)}</td>
+      <td className="px-4 py-3 text-right" style={{ fontWeight: 700, color: profitColor }}>{fmtMoney(row.profit)}</td>
     </tr>
   );
 }
@@ -61,13 +61,13 @@ function SummaryRow({ row, rank }: { row: PrintReportRow; rank: number }) {
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-slate-900 text-white text-xs px-3 py-2 rounded-xl shadow-lg space-y-1">
-      <div className="font-bold text-slate-300 mb-1 truncate max-w-[180px]">{label}</div>
+    <div style={{ background: 'var(--panel)', border: '1px solid var(--panel-line-strong)', color: 'var(--text-hi)', borderRadius: 10, padding: '8px 12px', fontSize: 12, boxShadow: 'var(--shadow-card)' }}>
+      <div className="dm-truncate" style={{ fontWeight: 700, color: 'var(--text-mid)', marginBottom: 4, maxWidth: 180 }}>{label}</div>
       {payload.map((p: any) => (
         <div key={p.name} className="flex items-center space-x-2">
-          <span className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-          <span>{p.name}:</span>
-          <span className="font-bold">{typeof p.value === 'number' ? p.value.toLocaleString() : p.value}</span>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: p.color, display: 'inline-block' }} />
+          <span style={{ color: 'var(--text-low)' }}>{p.name}:</span>
+          <span style={{ fontWeight: 700 }}>{typeof p.value === 'number' ? p.value.toLocaleString() : p.value}</span>
         </div>
       ))}
     </div>
@@ -120,30 +120,28 @@ export default function PrintReports() {
     Revenue: Math.round(r.revenue * 100) / 100,
   }));
 
-  const inputCls = "px-3 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-rose-500/30";
-
   return (
     <div className="space-y-5" id="print-reports">
       {/* Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-bold text-slate-700 flex items-center space-x-2">
-            <BarChart2 className="w-4 h-4 text-rose-500" />
+          <h2 className="dm-h3 flex items-center space-x-2">
+            <BarChart2 style={{ width: 15, height: 15, color: 'var(--blue-400)' }} />
             <span>Print Reports</span>
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p style={{ color: 'var(--text-low)', fontSize: '0.75rem', marginTop: 3 }}>
             Revenue, pages, and job breakdown
           </p>
         </div>
         <div className="flex items-center space-x-2 flex-wrap gap-y-2">
-          <input type="date" className={inputCls} value={from} onChange={e => setFrom(e.target.value)} />
-          <span className="text-slate-300 text-xs">→</span>
-          <input type="date" className={inputCls} value={to} onChange={e => setTo(e.target.value)} />
+          <input type="date" className="dm-input" style={{ width: 'auto' }} value={from} onChange={e => setFrom(e.target.value)} />
+          <span style={{ color: 'var(--text-low)', fontSize: '0.75rem' }}>→</span>
+          <input type="date" className="dm-input" style={{ width: 'auto' }} value={to} onChange={e => setTo(e.target.value)} />
           <button
             onClick={load}
-            className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition cursor-pointer"
+            className="dm-icon-btn"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-slate-400 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={loading ? 'dm-spin' : ''} style={{ width: 14, height: 14 }} />
           </button>
         </div>
       </div>
@@ -152,17 +150,15 @@ export default function PrintReports() {
       <div className="flex flex-wrap gap-2">
         {GROUPS.map(g => {
           const Icon = g.icon;
+          const active = group === g.id;
           return (
             <button
               key={g.id}
               onClick={() => setGroup(g.id)}
-              className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${
-                group === g.id
-                  ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
-                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-              }`}
+              className={`dm-badge ${active ? 'dm-badge-info' : 'dm-badge-neutral'}`}
+              style={{ cursor: 'pointer', padding: '0.5rem 0.9rem', fontSize: '0.78rem' }}
             >
-              <Icon className={`w-3.5 h-3.5 ${group === g.id ? 'text-white' : 'text-slate-400'}`} />
+              <Icon style={{ width: 13, height: 13 }} />
               <span>{g.label}</span>
             </button>
           );
@@ -177,70 +173,70 @@ export default function PrintReports() {
           { label: 'Total Revenue', value: fmtMoney(totals.revenue) },
           { label: 'Net Profit',    value: fmtMoney(totals.profit) },
         ].map(kpi => (
-          <div key={kpi.label} className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm">
-            <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">{kpi.label}</div>
-            <div className="text-lg font-extrabold text-slate-800 mt-1 tabular-nums">{kpi.value}</div>
+          <div key={kpi.label} className="dm-card p-4">
+            <div className="dm-label" style={{ padding: 0 }}>{kpi.label}</div>
+            <div className="dm-nums" style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-hi)', marginTop: 4 }}>{kpi.value}</div>
           </div>
         ))}
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-slate-400">
-          <RefreshCw className="w-5 h-5 animate-spin mr-2" />
-          <span className="text-sm font-mono">Building report…</span>
+        <div className="flex items-center justify-center py-20" style={{ color: 'var(--text-low)' }}>
+          <RefreshCw className="dm-spin" style={{ width: 18, height: 18, marginRight: 8 }} />
+          <span style={{ fontSize: '0.8125rem', fontFamily: 'monospace' }}>Building report…</span>
         </div>
       ) : rows.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-dashed border-slate-200 py-16 flex flex-col items-center text-slate-300">
-          <FileText className="w-8 h-8 mb-2" />
-          <span className="text-xs">No data in selected period</span>
+        <div className="dm-card-inset flex flex-col items-center text-center" style={{ padding: '4rem 1.5rem', borderStyle: 'dashed' }}>
+          <FileText style={{ width: 32, height: 32, marginBottom: 8, color: 'var(--text-low)' }} />
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-low)' }}>No data in selected period</span>
         </div>
       ) : (
         <>
           {/* Bar chart */}
-          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-sm p-6">
-            <h3 className="text-xs font-bold text-slate-600 mb-4 uppercase tracking-wider">
+          <div className="dm-card p-6">
+            <h3 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-mid)', marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Pages by {GROUPS.find(g => g.id === group)?.label.replace('By ', '') ?? ''}
-              <span className="text-slate-400 font-normal ml-2">(top 8)</span>
+              <span style={{ color: 'var(--text-low)', fontWeight: 400, marginLeft: 8 }}>(top 8)</span>
             </h3>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={chartData} margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#8A93BE' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: '#8A93BE' }} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="B&W"    stackId="a" fill="#f43f5e" radius={[0,0,4,4]} />
-                <Bar dataKey="Colour" stackId="a" fill="#f59e0b" radius={[4,4,0,0]} />
+                <Legend wrapperStyle={{ fontSize: 11 }} formatter={(v: string) => <span style={{ color: 'var(--text-low)' }}>{v}</span>} />
+                <Bar dataKey="B&W"    stackId="a" fill="#4C6FFF" radius={[0,0,4,4]} />
+                <Bar dataKey="Colour" stackId="a" fill="#7DD3FC" radius={[4,4,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           {/* Data table */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full tabular-nums">
+          <div className="dm-card" style={{ overflow: 'hidden', padding: 0 }}>
+            <div className="dm-scroll-x">
+              <table className="w-full dm-nums">
                 <thead>
-                  <tr className="bg-slate-50 text-slate-400 text-[10px] uppercase tracking-wider">
-                    <th className="px-4 py-3 text-left font-semibold">
+                  <tr style={{ background: 'var(--panel-2)', color: 'var(--text-low)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    <th className="px-4 py-3 text-left" style={{ fontWeight: 600 }}>
                       {GROUPS.find(g => g.id === group)?.label.replace('By ', '') ?? 'Label'}
                     </th>
-                    <th className="px-4 py-3 text-center font-semibold">Jobs</th>
-                    <th className="px-4 py-3 text-center font-semibold">Total Pages</th>
-                    <th className="px-4 py-3 text-center font-semibold">B&W</th>
-                    <th className="px-4 py-3 text-center font-semibold">Colour</th>
-                    <th className="px-4 py-3 text-right font-semibold">Revenue</th>
-                    <th className="px-4 py-3 text-right font-semibold">Cost</th>
-                    <th className="px-4 py-3 text-right font-semibold">Profit</th>
+                    <th className="px-4 py-3 text-center" style={{ fontWeight: 600 }}>Jobs</th>
+                    <th className="px-4 py-3 text-center" style={{ fontWeight: 600 }}>Total Pages</th>
+                    <th className="px-4 py-3 text-center" style={{ fontWeight: 600 }}>B&amp;W</th>
+                    <th className="px-4 py-3 text-center" style={{ fontWeight: 600 }}>Colour</th>
+                    <th className="px-4 py-3 text-right" style={{ fontWeight: 600 }}>Revenue</th>
+                    <th className="px-4 py-3 text-right" style={{ fontWeight: 600 }}>Cost</th>
+                    <th className="px-4 py-3 text-right" style={{ fontWeight: 600 }}>Profit</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody>
                   {rows.map((row, i) => (
                     <SummaryRow key={i} row={row} rank={i + 1} />
                   ))}
                 </tbody>
                 {/* Totals row */}
                 <tfoot>
-                  <tr className="bg-slate-50 text-xs font-bold text-slate-700 border-t-2 border-slate-200">
+                  <tr style={{ background: 'var(--panel-2)', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-hi)', borderTop: '2px solid var(--panel-line-strong)' }}>
                     <td className="px-4 py-3">TOTAL</td>
                     <td className="px-4 py-3 text-center">{totals.jobs.toLocaleString()}</td>
                     <td className="px-4 py-3 text-center">{totals.pages.toLocaleString()}</td>
@@ -248,7 +244,7 @@ export default function PrintReports() {
                     <td className="px-4 py-3 text-center">{rows.reduce((a,r) => a+r.colour_pages, 0).toLocaleString()}</td>
                     <td className="px-4 py-3 text-right">{fmtMoney(totals.revenue)}</td>
                     <td className="px-4 py-3 text-right">{fmtMoney(rows.reduce((a,r) => a+r.cost, 0))}</td>
-                    <td className={`px-4 py-3 text-right ${totals.profit >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                    <td className="px-4 py-3 text-right" style={{ color: totals.profit >= 0 ? 'var(--success)' : 'var(--danger)' }}>
                       {fmtMoney(totals.profit)}
                     </td>
                   </tr>

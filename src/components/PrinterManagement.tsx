@@ -11,11 +11,11 @@ import type { Printer, PrinterStatus, PaperSize } from '../types';
 
 const PAPER_SIZES: PaperSize[] = ['A4', 'A3', 'A5', 'Letter', 'Legal', 'Custom'];
 
-const STATUS_STYLES: Record<PrinterStatus, { bg: string; text: string; dot: string; label: string }> = {
-  Online:  { bg: 'bg-emerald-50',  text: 'text-emerald-700', dot: 'bg-emerald-500',  label: 'Online' },
-  Offline: { bg: 'bg-slate-100',   text: 'text-slate-500',   dot: 'bg-slate-400',    label: 'Offline' },
-  Paused:  { bg: 'bg-amber-50',    text: 'text-amber-700',   dot: 'bg-amber-400',    label: 'Paused' },
-  Error:   { bg: 'bg-rose-50',     text: 'text-rose-700',    dot: 'bg-rose-500',     label: 'Error' },
+const STATUS_BADGE: Record<PrinterStatus, string> = {
+  Online: 'dm-badge-success',
+  Offline: 'dm-badge-neutral',
+  Paused: 'dm-badge-warning',
+  Error: 'dm-badge-danger',
 };
 
 // ---- empty form state -------------------------------------------------------
@@ -72,29 +72,27 @@ function PrinterForm({ initial, onSave, onClose, saving }: PrinterFormProps) {
     onSave(initial ? { ...form, id: initial.id } : form);
   };
 
-  const inputCls = "w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-400 bg-slate-50";
-  const labelCls = "block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1";
-
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(7,11,36,0.75)', backdropFilter: 'blur(4px)' }}>
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96 }}
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        className="dm-card-glass w-full max-w-lg"
+        style={{ maxHeight: '90vh', overflowY: 'auto' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+        <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid var(--panel-line)' }}>
           <div className="flex items-center space-x-3">
-            <div className="p-2.5 bg-rose-50 rounded-xl">
-              <PrinterIcon className="w-4 h-4 text-rose-500" />
+            <div className="flex items-center justify-center" style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--blue-bg)', color: 'var(--blue-400)' }}>
+              <PrinterIcon style={{ width: 16, height: 16 }} />
             </div>
-            <h3 className="font-bold text-slate-800 text-sm">
+            <h3 className="dm-h3">
               {initial ? 'Edit Printer' : 'Register Printer'}
             </h3>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl transition cursor-pointer">
-            <X className="w-4 h-4 text-slate-400" />
+          <button onClick={onClose} className="dm-icon-btn">
+            <X style={{ width: 15, height: 15 }} />
           </button>
         </div>
 
@@ -102,44 +100,44 @@ function PrinterForm({ initial, onSave, onClose, saving }: PrinterFormProps) {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>Display Name *</label>
+              <label className="dm-label" style={{ display: 'block', marginBottom: 4 }}>Display Name *</label>
               <input
                 required
-                className={inputCls}
+                className="dm-input"
                 placeholder="e.g. Front Office Printer"
                 value={form.printer_name}
                 onChange={e => setForm(f => ({ ...f, printer_name: e.target.value }))}
               />
             </div>
             <div>
-              <label className={labelCls}>Windows Printer Name *</label>
+              <label className="dm-label" style={{ display: 'block', marginBottom: 4 }}>Windows Printer Name *</label>
               <input
                 required
-                className={inputCls}
+                className="dm-input"
                 placeholder="Exact name in Windows"
                 value={form.windows_printer_name}
                 onChange={e => setForm(f => ({ ...f, windows_printer_name: e.target.value }))}
               />
-              <p className="text-[9px] text-slate-400 mt-1">
-                Must match exactly what Windows shows in Devices & Printers
+              <p style={{ fontSize: '0.5625rem', color: 'var(--text-low)', marginTop: 4 }}>
+                Must match exactly what Windows shows in Devices &amp; Printers
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>Location</label>
+              <label className="dm-label" style={{ display: 'block', marginBottom: 4 }}>Location</label>
               <input
-                className={inputCls}
+                className="dm-input"
                 placeholder="e.g. Reception"
                 value={form.location}
                 onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
               />
             </div>
             <div>
-              <label className={labelCls}>Branch</label>
+              <label className="dm-label" style={{ display: 'block', marginBottom: 4 }}>Branch</label>
               <input
-                className={inputCls}
+                className="dm-input"
                 placeholder="e.g. Main Branch"
                 value={form.branch}
                 onChange={e => setForm(f => ({ ...f, branch: e.target.value }))}
@@ -149,19 +147,21 @@ function PrinterForm({ initial, onSave, onClose, saving }: PrinterFormProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={labelCls}>BW Cost / Page (ZMW)</label>
+              <label className="dm-label" style={{ display: 'block', marginBottom: 4 }}>BW Cost / Page (ZMW)</label>
               <input
                 type="number" min="0" step="0.01"
-                className={inputCls}
+                className="dm-input"
+                style={{ fontFamily: 'monospace' }}
                 value={form.cost_per_bw_page}
                 onChange={e => setForm(f => ({ ...f, cost_per_bw_page: Number(e.target.value) }))}
               />
             </div>
             <div>
-              <label className={labelCls}>Colour Cost / Page (ZMW)</label>
+              <label className="dm-label" style={{ display: 'block', marginBottom: 4 }}>Colour Cost / Page (ZMW)</label>
               <input
                 type="number" min="0" step="0.01"
-                className={inputCls}
+                className="dm-input"
+                style={{ fontFamily: 'monospace' }}
                 value={form.cost_per_colour_page}
                 onChange={e => setForm(f => ({ ...f, cost_per_colour_page: Number(e.target.value) }))}
               />
@@ -170,9 +170,9 @@ function PrinterForm({ initial, onSave, onClose, saving }: PrinterFormProps) {
 
           {/* Status */}
           <div>
-            <label className={labelCls}>Status</label>
+            <label className="dm-label" style={{ display: 'block', marginBottom: 4 }}>Status</label>
             <select
-              className={inputCls}
+              className="dm-select"
               value={form.status}
               onChange={e => setForm(f => ({ ...f, status: e.target.value as PrinterStatus }))}
             >
@@ -184,18 +184,15 @@ function PrinterForm({ initial, onSave, onClose, saving }: PrinterFormProps) {
 
           {/* Paper sizes */}
           <div>
-            <label className={labelCls}>Supported Paper Sizes</label>
+            <label className="dm-label" style={{ display: 'block', marginBottom: 4 }}>Supported Paper Sizes</label>
             <div className="flex flex-wrap gap-2 mt-1">
               {PAPER_SIZES.map(size => (
                 <button
                   key={size}
                   type="button"
                   onClick={() => togglePaperSize(size)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${
-                    form.paper_sizes.includes(size)
-                      ? 'bg-rose-500 text-white border-rose-500'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
-                  }`}
+                  className={`dm-badge ${form.paper_sizes.includes(size) ? 'dm-badge-info' : 'dm-badge-neutral'}`}
+                  style={{ cursor: 'pointer' }}
                 >
                   {size}
                 </button>
@@ -208,19 +205,19 @@ function PrinterForm({ initial, onSave, onClose, saving }: PrinterFormProps) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 transition cursor-pointer"
+              className="dm-btn dm-btn-ghost flex-1"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 py-2.5 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition disabled:opacity-60 flex items-center justify-center space-x-2 cursor-pointer"
+              className="dm-btn dm-btn-primary flex-1"
             >
               {saving ? (
-                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <RefreshCw className="dm-spin" style={{ width: 14, height: 14 }} />
               ) : (
-                <Save className="w-3.5 h-3.5" />
+                <Save style={{ width: 14, height: 14 }} />
               )}
               <span>{saving ? 'Saving…' : 'Save Printer'}</span>
             </button>
@@ -282,19 +279,19 @@ export default function PrinterManagement() {
     <div className="space-y-5" id="printer-management">
       {/* Toolbar */}
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold text-slate-700">Registered Printers</h2>
+        <h2 className="dm-h3">Registered Printers</h2>
         <div className="flex items-center space-x-2">
           <button
             onClick={load}
-            className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition cursor-pointer"
+            className="dm-icon-btn"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-slate-400 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={loading ? 'dm-spin' : ''} style={{ width: 14, height: 14 }} />
           </button>
           <button
             onClick={() => { setEditTarget(null); setShowForm(true); }}
-            className="flex items-center space-x-1.5 bg-rose-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-rose-700 transition shadow-sm cursor-pointer"
+            className="dm-btn dm-btn-primary"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus style={{ width: 14, height: 14 }} />
             <span>Add Printer</span>
           </button>
         </div>
@@ -302,76 +299,74 @@ export default function PrinterManagement() {
 
       {/* Printer cards */}
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-slate-400">
-          <RefreshCw className="w-5 h-5 animate-spin mr-2" />
-          <span className="text-sm font-mono">Loading printers…</span>
+        <div className="flex items-center justify-center py-20" style={{ color: 'var(--text-low)' }}>
+          <RefreshCw className="dm-spin" style={{ width: 18, height: 18, marginRight: 8 }} />
+          <span style={{ fontSize: '0.8125rem', fontFamily: 'monospace' }}>Loading printers…</span>
         </div>
       ) : printers.length === 0 ? (
-        <div className="bg-white rounded-3xl border border-dashed border-slate-200 py-16 flex flex-col items-center text-slate-400">
-          <PrinterIcon className="w-10 h-10 mb-3 text-slate-300" />
-          <p className="text-sm font-semibold">No printers registered yet</p>
-          <p className="text-xs mt-1">Add your first printer to start monitoring print jobs.</p>
+        <div className="dm-card-inset flex flex-col items-center text-center" style={{ padding: '4rem 1.5rem', borderStyle: 'dashed' }}>
+          <PrinterIcon style={{ width: 40, height: 40, marginBottom: 12, color: 'var(--text-low)' }} />
+          <p style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-mid)' }}>No printers registered yet</p>
+          <p style={{ fontSize: '0.75rem', marginTop: 4, color: 'var(--text-low)' }}>Add your first printer to start monitoring print jobs.</p>
           <button
             onClick={() => setShowForm(true)}
-            className="mt-5 flex items-center space-x-2 bg-rose-600 text-white text-xs font-bold px-5 py-2.5 rounded-xl hover:bg-rose-700 transition cursor-pointer"
+            className="dm-btn dm-btn-primary"
+            style={{ marginTop: 20 }}
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus style={{ width: 14, height: 14 }} />
             <span>Register First Printer</span>
           </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {printers.map((printer, i) => {
-            const style = STATUS_STYLES[printer.status] ?? STATUS_STYLES.Offline;
             return (
               <motion.div
                 key={printer.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04 }}
-                className={`bg-white rounded-2xl border shadow-sm p-5 space-y-4 ${
-                  !printer.is_active ? 'opacity-50' : ''
-                } border-slate-200/80`}
+                className="dm-card p-5 space-y-4"
+                style={{ opacity: printer.is_active ? 1 : 0.5 }}
               >
                 {/* Header row */}
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="p-2.5 bg-rose-50 rounded-xl">
-                      <PrinterIcon className="w-4 h-4 text-rose-500" />
+                    <div className="flex items-center justify-center flex-shrink-0" style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--blue-bg)', color: 'var(--blue-400)' }}>
+                      <PrinterIcon style={{ width: 16, height: 16 }} />
                     </div>
                     <div>
-                      <div className="font-bold text-sm text-slate-800">{printer.printer_name}</div>
-                      <div className="text-[10px] text-slate-400 font-mono mt-0.5 truncate max-w-[160px]">
+                      <div style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-hi)' }}>{printer.printer_name}</div>
+                      <div className="dm-truncate" style={{ fontSize: '0.625rem', color: 'var(--text-low)', fontFamily: 'monospace', marginTop: 2, maxWidth: 160 }}>
                         {printer.windows_printer_name}
                       </div>
                     </div>
                   </div>
                   {/* Status badge */}
-                  <span className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${style.bg} ${style.text}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
-                    <span>{style.label}</span>
+                  <span className={`dm-badge ${STATUS_BADGE[printer.status] ?? 'dm-badge-neutral'}`}>
+                    {printer.status}
                   </span>
                 </div>
 
                 {/* Meta */}
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs tabular-nums">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 dm-nums" style={{ fontSize: '0.75rem' }}>
                   <div>
-                    <span className="text-slate-400">Location</span>
-                    <div className="font-semibold text-slate-700 mt-0.5">{printer.location || '—'}</div>
+                    <span style={{ color: 'var(--text-low)' }}>Location</span>
+                    <div style={{ fontWeight: 600, color: 'var(--text-mid)', marginTop: 2 }}>{printer.location || '—'}</div>
                   </div>
                   <div>
-                    <span className="text-slate-400">Branch</span>
-                    <div className="font-semibold text-slate-700 mt-0.5">{printer.branch || '—'}</div>
+                    <span style={{ color: 'var(--text-low)' }}>Branch</span>
+                    <div style={{ fontWeight: 600, color: 'var(--text-mid)', marginTop: 2 }}>{printer.branch || '—'}</div>
                   </div>
                   <div>
-                    <span className="text-slate-400">BW / Page</span>
-                    <div className="font-semibold text-slate-700 mt-0.5">
+                    <span style={{ color: 'var(--text-low)' }}>BW / Page</span>
+                    <div style={{ fontWeight: 600, color: 'var(--text-mid)', marginTop: 2 }}>
                       {formatCurrency(printer.cost_per_bw_page)}
                     </div>
                   </div>
                   <div>
-                    <span className="text-slate-400">Colour / Page</span>
-                    <div className="font-semibold text-slate-700 mt-0.5">
+                    <span style={{ color: 'var(--text-low)' }}>Colour / Page</span>
+                    <div style={{ fontWeight: 600, color: 'var(--text-mid)', marginTop: 2 }}>
                       {formatCurrency(printer.cost_per_colour_page)}
                     </div>
                   </div>
@@ -380,30 +375,32 @@ export default function PrinterManagement() {
                 {/* Paper sizes */}
                 <div className="flex flex-wrap gap-1.5">
                   {printer.paper_sizes.map(size => (
-                    <span key={size} className="bg-slate-100 text-slate-600 text-[9px] font-bold px-2 py-0.5 rounded-full">
+                    <span key={size} className="dm-badge dm-badge-neutral">
                       {size}
                     </span>
                   ))}
                 </div>
 
                 {/* Actions */}
-                <div className="flex space-x-2 pt-1 border-t border-slate-100">
+                <div className="flex space-x-2 pt-1" style={{ borderTop: '1px solid var(--panel-line)' }}>
                   <button
                     onClick={() => { setEditTarget(printer); setShowForm(true); }}
-                    className="flex-1 flex items-center justify-center space-x-1.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-600 font-semibold hover:bg-slate-50 transition cursor-pointer"
+                    className="dm-btn dm-btn-ghost flex-1"
+                    style={{ minHeight: 36, fontSize: '0.6875rem' }}
                   >
-                    <Edit2 className="w-3 h-3" />
+                    <Edit2 style={{ width: 12, height: 12 }} />
                     <span>Edit</span>
                   </button>
                   {printer.is_active && (
                     <button
                       onClick={() => handleDisable(printer.id)}
                       disabled={disabling === printer.id}
-                      className="flex-1 flex items-center justify-center space-x-1.5 py-2 rounded-xl border border-rose-200 text-xs text-rose-600 font-semibold hover:bg-rose-50 transition disabled:opacity-50 cursor-pointer"
+                      className="dm-btn dm-btn-danger flex-1"
+                      style={{ minHeight: 36, fontSize: '0.6875rem' }}
                     >
                       {disabling === printer.id
-                        ? <RefreshCw className="w-3 h-3 animate-spin" />
-                        : <Power className="w-3 h-3" />
+                        ? <RefreshCw className="dm-spin" style={{ width: 12, height: 12 }} />
+                        : <Power style={{ width: 12, height: 12 }} />
                       }
                       <span>Disable</span>
                     </button>

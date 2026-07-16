@@ -21,9 +21,9 @@ function stockPercent(item: PaperInventory): number {
 
 function stockColor(item: PaperInventory): string {
   const pct = stockPercent(item);
-  if (item.reams_remaining <= item.min_stock_reams) return 'bg-rose-500';
-  if (pct < 30) return 'bg-amber-400';
-  return 'bg-emerald-500';
+  if (item.reams_remaining <= item.min_stock_reams) return 'var(--danger)';
+  if (pct < 30) return 'var(--warning)';
+  return 'var(--success)';
 }
 
 function fmtMoney(n: number) {
@@ -42,55 +42,56 @@ interface RestockModalProps {
 function RestockModal({ item, onConfirm, onClose, saving }: RestockModalProps) {
   const [reams, setReams] = useState(5);
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(7,11,36,0.75)', backdropFilter: 'blur(4px)' }}>
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.96 }}
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-5"
+        className="dm-card-glass w-full max-w-sm p-6 space-y-5"
       >
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-slate-800 text-sm">Add Stock — {item.paper_size}</h3>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl cursor-pointer">
-            <X className="w-4 h-4 text-slate-400" />
+          <h3 className="dm-h3">Add Stock — {item.paper_size}</h3>
+          <button onClick={onClose} className="dm-icon-btn">
+            <X style={{ width: 15, height: 15 }} />
           </button>
         </div>
-        <div className="bg-slate-50 rounded-2xl p-4 space-y-1 text-xs">
+        <div className="dm-card-inset space-y-1" style={{ padding: '1rem', fontSize: '0.75rem' }}>
           <div className="flex justify-between">
-            <span className="text-slate-400">Current stock</span>
-            <span className="font-bold text-slate-700">
+            <span style={{ color: 'var(--text-low)' }}>Current stock</span>
+            <span style={{ fontWeight: 700, color: 'var(--text-hi)' }}>
               {item.reams_remaining.toFixed(1)} reams ({Math.round(item.reams_remaining * item.pages_per_ream).toLocaleString()} pages)
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-slate-400">Min threshold</span>
-            <span className="font-semibold text-slate-600">{item.min_stock_reams} reams</span>
+            <span style={{ color: 'var(--text-low)' }}>Min threshold</span>
+            <span style={{ fontWeight: 600, color: 'var(--text-mid)' }}>{item.min_stock_reams} reams</span>
           </div>
         </div>
 
         <div>
-          <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Reams to add</label>
+          <label className="dm-label" style={{ display: 'block', marginBottom: 4 }}>Reams to add</label>
           <input
             type="number" min="0.5" step="0.5"
-            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-400 bg-slate-50"
+            className="dm-input"
             value={reams}
             onChange={e => setReams(Number(e.target.value))}
           />
-          <p className="text-[10px] text-slate-400 mt-1">
+          <p style={{ fontSize: '0.625rem', color: 'var(--text-low)', marginTop: 4 }}>
             1 ream = {item.pages_per_ream} pages · Total after: {(item.reams_remaining + reams).toFixed(1)} reams
           </p>
         </div>
 
         <div className="flex space-x-2">
-          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-600 font-semibold hover:bg-slate-50 cursor-pointer">
+          <button onClick={onClose} className="dm-btn dm-btn-ghost flex-1">
             Cancel
           </button>
           <button
             onClick={() => onConfirm(reams)}
             disabled={saving || reams <= 0}
-            className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 disabled:opacity-60 flex items-center justify-center space-x-1.5 cursor-pointer"
+            className="dm-btn flex-1"
+            style={{ background: 'var(--success)', color: '#06231a', boxShadow: 'none' }}
           >
-            {saving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+            {saving ? <RefreshCw className="dm-spin" style={{ width: 14, height: 14 }} /> : <Plus style={{ width: 14, height: 14 }} />}
             <span>Add Reams</span>
           </button>
         </div>
@@ -131,23 +132,21 @@ function PaperForm({ initial, onSave, onClose, saving }: PaperFormProps) {
         }
   );
 
-  const inputCls = "w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-400";
-  const labelCls = "block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1";
-
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(7,11,36,0.75)', backdropFilter: 'blur(4px)' }}>
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.96 }}
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4 max-h-[90vh] overflow-y-auto"
+        className="dm-card-glass w-full max-w-md p-6 space-y-4"
+        style={{ maxHeight: '90vh', overflowY: 'auto' }}
       >
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-slate-800 text-sm">
+          <h3 className="dm-h3">
             {initial ? 'Edit Paper Stock' : 'Add Paper Stock'}
           </h3>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-xl cursor-pointer">
-            <X className="w-4 h-4 text-slate-400" />
+          <button onClick={onClose} className="dm-icon-btn">
+            <X style={{ width: 15, height: 15 }} />
           </button>
         </div>
 
@@ -157,21 +156,22 @@ function PaperForm({ initial, onSave, onClose, saving }: PaperFormProps) {
         >
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Paper Size *</label>
+              <label className="dm-label" style={{ display: 'block', marginBottom: 4 }}>Paper Size *</label>
               <select
                 required
-                className={inputCls}
+                className="dm-select"
                 value={form.paper_size}
                 onChange={e => setForm(f => ({ ...f, paper_size: e.target.value as PaperSize }))}
                 disabled={!!initial}
+                style={{ opacity: initial ? 0.6 : 1 }}
               >
                 {PAPER_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <div>
-              <label className={labelCls}>Description</label>
+              <label className="dm-label" style={{ display: 'block', marginBottom: 4 }}>Description</label>
               <input
-                className={inputCls}
+                className="dm-input"
                 placeholder="e.g. 80gsm white"
                 value={form.description}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
@@ -181,14 +181,14 @@ function PaperForm({ initial, onSave, onClose, saving }: PaperFormProps) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Reams Purchased</label>
-              <input type="number" min="0" step="0.5" required className={inputCls}
+              <label className="dm-label" style={{ display: 'block', marginBottom: 4 }}>Reams Purchased</label>
+              <input type="number" min="0" step="0.5" required className="dm-input"
                 value={form.reams_purchased}
                 onChange={e => setForm(f => ({ ...f, reams_purchased: Number(e.target.value) }))} />
             </div>
             <div>
-              <label className={labelCls}>Reams Remaining</label>
-              <input type="number" min="0" step="0.5" required className={inputCls}
+              <label className="dm-label" style={{ display: 'block', marginBottom: 4 }}>Reams Remaining</label>
+              <input type="number" min="0" step="0.5" required className="dm-input"
                 value={form.reams_remaining}
                 onChange={e => setForm(f => ({ ...f, reams_remaining: Number(e.target.value) }))} />
             </div>
@@ -196,37 +196,35 @@ function PaperForm({ initial, onSave, onClose, saving }: PaperFormProps) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={labelCls}>Pages per Ream</label>
-              <input type="number" min="1" required className={inputCls}
+              <label className="dm-label" style={{ display: 'block', marginBottom: 4 }}>Pages per Ream</label>
+              <input type="number" min="1" required className="dm-input"
                 value={form.pages_per_ream}
                 onChange={e => setForm(f => ({ ...f, pages_per_ream: Number(e.target.value) }))} />
             </div>
             <div>
-              <label className={labelCls}>Cost per Ream (ZMW)</label>
-              <input type="number" min="0" step="0.01" className={inputCls}
+              <label className="dm-label" style={{ display: 'block', marginBottom: 4 }}>Cost per Ream (ZMW)</label>
+              <input type="number" min="0" step="0.01" className="dm-input"
                 value={form.cost_per_ream}
                 onChange={e => setForm(f => ({ ...f, cost_per_ream: Number(e.target.value) }))} />
             </div>
           </div>
 
           <div>
-            <label className={labelCls}>Min Stock Threshold (reams)</label>
-            <input type="number" min="0" step="0.5" className={inputCls}
+            <label className="dm-label" style={{ display: 'block', marginBottom: 4 }}>Min Stock Threshold (reams)</label>
+            <input type="number" min="0" step="0.5" className="dm-input"
               value={form.min_stock_reams}
               onChange={e => setForm(f => ({ ...f, min_stock_reams: Number(e.target.value) }))} />
-            <p className="text-[9px] text-slate-400 mt-1">
+            <p style={{ fontSize: '0.5625rem', color: 'var(--text-low)', marginTop: 4 }}>
               An alert will appear when remaining stock falls to or below this threshold.
             </p>
           </div>
 
           <div className="flex space-x-2 pt-2">
-            <button type="button" onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold hover:bg-slate-50 cursor-pointer">
+            <button type="button" onClick={onClose} className="dm-btn dm-btn-ghost flex-1">
               Cancel
             </button>
-            <button type="submit" disabled={saving}
-              className="flex-1 py-2.5 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 disabled:opacity-60 flex items-center justify-center space-x-2 cursor-pointer">
-              {saving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            <button type="submit" disabled={saving} className="dm-btn dm-btn-primary flex-1">
+              {saving ? <RefreshCw className="dm-spin" style={{ width: 14, height: 14 }} /> : <Save style={{ width: 14, height: 14 }} />}
               <span>{saving ? 'Saving…' : 'Save'}</span>
             </button>
           </div>
@@ -279,23 +277,23 @@ export default function PrintInventory() {
       {/* Toolbar */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-bold text-slate-700 flex items-center space-x-2">
-            <Package className="w-4 h-4 text-rose-500" />
+          <h2 className="dm-h3 flex items-center space-x-2">
+            <Package style={{ width: 15, height: 15, color: 'var(--blue-400)' }} />
             <span>Paper Inventory</span>
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p style={{ color: 'var(--text-low)', fontSize: '0.75rem', marginTop: 3 }}>
             Track paper stock, usage, and low-stock alerts
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <button onClick={load} className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer">
-            <RefreshCw className={`w-3.5 h-3.5 text-slate-400 ${loading ? 'animate-spin' : ''}`} />
+          <button onClick={load} className="dm-icon-btn">
+            <RefreshCw className={loading ? 'dm-spin' : ''} style={{ width: 14, height: 14 }} />
           </button>
           <button
             onClick={() => { setEditItem(null); setShowForm(true); }}
-            className="flex items-center space-x-1.5 bg-rose-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-rose-700 shadow-sm cursor-pointer"
+            className="dm-btn dm-btn-primary"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus style={{ width: 14, height: 14 }} />
             <span>Add Stock</span>
           </button>
         </div>
@@ -306,16 +304,17 @@ export default function PrintInventory() {
         <motion.div
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-start space-x-3 bg-rose-50 border border-rose-200 rounded-2xl px-4 py-3 text-rose-800"
+          className="dm-badge dm-badge-danger"
+          style={{ width: '100%', padding: '0.75rem 1rem', alignItems: 'flex-start', whiteSpace: 'normal' }}
         >
-          <AlertTriangle className="w-4 h-4 text-rose-500 mt-0.5 flex-shrink-0" />
-          <div className="text-xs">
-            <span className="font-bold">
+          <AlertTriangle style={{ width: 15, height: 15, marginTop: 1, flexShrink: 0 }} />
+          <div style={{ fontSize: '0.75rem' }}>
+            <span style={{ fontWeight: 700 }}>
               {lowStock.length} paper size{lowStock.length > 1 ? 's' : ''} at or below minimum stock:
             </span>
             {' '}
             {lowStock.map(i => (
-              <span key={i.id} className="inline-flex items-center mx-1 bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full text-[9px] font-bold">
+              <span key={i.id} className="dm-card-inset" style={{ display: 'inline-flex', alignItems: 'center', margin: '0 4px', color: 'var(--danger)', padding: '0.15rem 0.5rem', borderRadius: 999, fontSize: '0.5625rem', fontWeight: 700 }}>
                 {i.paper_size} ({i.reams_remaining.toFixed(1)} reams left)
               </span>
             ))}
@@ -325,20 +324,21 @@ export default function PrintInventory() {
 
       {/* Cards */}
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-slate-400">
-          <RefreshCw className="w-5 h-5 animate-spin mr-2" />
-          <span className="text-sm font-mono">Loading inventory…</span>
+        <div className="flex items-center justify-center py-20" style={{ color: 'var(--text-low)' }}>
+          <RefreshCw className="dm-spin" style={{ width: 18, height: 18, marginRight: 8 }} />
+          <span style={{ fontSize: '0.8125rem', fontFamily: 'monospace' }}>Loading inventory…</span>
         </div>
       ) : inventory.length === 0 ? (
-        <div className="bg-white rounded-3xl border border-dashed border-slate-200 py-16 flex flex-col items-center text-slate-400">
-          <Layers className="w-10 h-10 mb-3 text-slate-300" />
-          <p className="text-sm font-semibold">No paper inventory configured</p>
-          <p className="text-xs mt-1">Add stock for each paper size you use.</p>
+        <div className="dm-card-inset flex flex-col items-center text-center" style={{ padding: '4rem 1.5rem', borderStyle: 'dashed' }}>
+          <Layers style={{ width: 40, height: 40, marginBottom: 12, color: 'var(--text-low)' }} />
+          <p style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-mid)' }}>No paper inventory configured</p>
+          <p style={{ fontSize: '0.75rem', marginTop: 4, color: 'var(--text-low)' }}>Add stock for each paper size you use.</p>
           <button
             onClick={() => setShowForm(true)}
-            className="mt-5 flex items-center space-x-2 bg-rose-600 text-white text-xs font-bold px-5 py-2.5 rounded-xl hover:bg-rose-700 cursor-pointer"
+            className="dm-btn dm-btn-primary"
+            style={{ marginTop: 20 }}
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus style={{ width: 14, height: 14 }} />
             <span>Add First Stock</span>
           </button>
         </div>
@@ -347,31 +347,30 @@ export default function PrintInventory() {
           {inventory.map((item, i) => {
             const pct = stockPercent(item);
             const isLow = item.reams_remaining <= item.min_stock_reams;
-            const bar = stockColor(item);
+            const barColor = stockColor(item);
             return (
               <motion.div
                 key={item.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04 }}
-                className={`bg-white rounded-2xl border shadow-sm p-5 space-y-4 ${
-                  isLow ? 'border-rose-200' : 'border-slate-200/80'
-                }`}
+                className="dm-card p-5 space-y-4"
+                style={{ borderColor: isLow ? 'rgba(255,107,107,0.35)' : 'var(--panel-line)' }}
               >
                 {/* Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className={`p-2.5 rounded-xl ${isLow ? 'bg-rose-50' : 'bg-rose-50'}`}>
-                      <Layers className={`w-4 h-4 ${isLow ? 'text-rose-500' : 'text-rose-500'}`} />
+                    <div className="flex items-center justify-center flex-shrink-0" style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--blue-bg)', color: 'var(--blue-400)' }}>
+                      <Layers style={{ width: 16, height: 16 }} />
                     </div>
                     <div>
-                      <div className="font-bold text-sm text-slate-800">{item.paper_size}</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">{item.description || 'Standard paper'}</div>
+                      <div style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-hi)' }}>{item.paper_size}</div>
+                      <div style={{ fontSize: '0.625rem', color: 'var(--text-low)', marginTop: 2 }}>{item.description || 'Standard paper'}</div>
                     </div>
                   </div>
                   {isLow && (
-                    <span className="flex items-center space-x-1 bg-rose-50 border border-rose-200 text-rose-700 text-[9px] font-bold px-2 py-0.5 rounded-full">
-                      <AlertTriangle className="w-2.5 h-2.5" />
+                    <span className="dm-badge dm-badge-danger">
+                      <AlertTriangle style={{ width: 10, height: 10 }} />
                       <span>Low Stock</span>
                     </span>
                   )}
@@ -379,58 +378,59 @@ export default function PrintInventory() {
 
                 {/* Stock bar */}
                 <div>
-                  <div className="flex justify-between text-[10px] text-slate-400 mb-1.5">
+                  <div className="flex justify-between" style={{ fontSize: '0.625rem', color: 'var(--text-low)', marginBottom: 6 }}>
                     <span>Stock level</span>
-                    <span className="font-semibold text-slate-600">
+                    <span style={{ fontWeight: 600, color: 'var(--text-mid)' }}>
                       {item.reams_remaining.toFixed(1)} / {item.reams_purchased.toFixed(1)} reams ({Math.round(pct)}%)
                     </span>
                   </div>
-                  <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div style={{ width: '100%', height: 8, background: 'var(--panel-2)', borderRadius: 999, overflow: 'hidden' }}>
                     <div
-                      className={`h-full rounded-full transition-all ${bar}`}
-                      style={{ width: `${pct}%` }}
+                      style={{ height: '100%', borderRadius: 999, transition: 'width 0.2s', width: `${pct}%`, background: barColor }}
                     />
                   </div>
                 </div>
 
                 {/* Stats */}
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs tabular-nums">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 dm-nums" style={{ fontSize: '0.75rem' }}>
                   <div>
-                    <span className="text-slate-400">Pages remaining</span>
-                    <div className="font-semibold text-slate-700 mt-0.5">
+                    <span style={{ color: 'var(--text-low)' }}>Pages remaining</span>
+                    <div style={{ fontWeight: 600, color: 'var(--text-mid)', marginTop: 2 }}>
                       {Math.round(item.reams_remaining * item.pages_per_ream).toLocaleString()}
                     </div>
                   </div>
                   <div>
-                    <span className="text-slate-400">Min threshold</span>
-                    <div className="font-semibold text-slate-700 mt-0.5">{item.min_stock_reams} reams</div>
+                    <span style={{ color: 'var(--text-low)' }}>Min threshold</span>
+                    <div style={{ fontWeight: 600, color: 'var(--text-mid)', marginTop: 2 }}>{item.min_stock_reams} reams</div>
                   </div>
                   <div>
-                    <span className="text-slate-400">Cost per ream</span>
-                    <div className="font-semibold text-slate-700 mt-0.5">{fmtMoney(item.cost_per_ream)}</div>
+                    <span style={{ color: 'var(--text-low)' }}>Cost per ream</span>
+                    <div style={{ fontWeight: 600, color: 'var(--text-mid)', marginTop: 2 }}>{fmtMoney(item.cost_per_ream)}</div>
                   </div>
                   <div>
-                    <span className="text-slate-400">Stock value</span>
-                    <div className="font-semibold text-slate-700 mt-0.5">
+                    <span style={{ color: 'var(--text-low)' }}>Stock value</span>
+                    <div style={{ fontWeight: 600, color: 'var(--text-mid)', marginTop: 2 }}>
                       {fmtMoney(item.reams_remaining * item.cost_per_ream)}
                     </div>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex space-x-2 border-t border-slate-100 pt-3">
+                <div className="flex space-x-2 pt-3" style={{ borderTop: '1px solid var(--panel-line)' }}>
                   <button
                     onClick={() => { setEditItem(item); setShowForm(true); }}
-                    className="flex-1 flex items-center justify-center space-x-1.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-600 font-semibold hover:bg-slate-50 cursor-pointer"
+                    className="dm-btn dm-btn-ghost flex-1"
+                    style={{ minHeight: 36, fontSize: '0.6875rem' }}
                   >
-                    <Edit2 className="w-3 h-3" />
+                    <Edit2 style={{ width: 12, height: 12 }} />
                     <span>Edit</span>
                   </button>
                   <button
                     onClick={() => setRestockItem(item)}
-                    className="flex-1 flex items-center justify-center space-x-1.5 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-700 font-semibold hover:bg-emerald-100 cursor-pointer"
+                    className="dm-btn flex-1"
+                    style={{ minHeight: 36, fontSize: '0.6875rem', background: 'var(--success-bg)', border: '1px solid rgba(61,220,151,0.30)', color: 'var(--success)', boxShadow: 'none' }}
                   >
-                    <Plus className="w-3 h-3" />
+                    <Plus style={{ width: 12, height: 12 }} />
                     <span>Restock</span>
                   </button>
                 </div>

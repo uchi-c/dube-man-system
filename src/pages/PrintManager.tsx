@@ -29,26 +29,26 @@ export default function PrintManager() {
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <div className="flex items-center space-x-2 text-xs text-slate-400 font-mono mb-1">
+          <div className="flex items-center space-x-2 mb-1" style={{ fontSize: '0.75rem', color: 'var(--text-low)', fontFamily: 'monospace' }}>
             <span>Uruu OS</span>
-            <ChevronRight className="w-3 h-3" />
-            <span className="text-slate-600 font-semibold">Print Manager</span>
+            <ChevronRight style={{ width: 12, height: 12 }} />
+            <span style={{ fontWeight: 600, color: 'var(--text-mid)' }}>Print Manager</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
+          <h1 className="dm-h1">
             Print Manager
           </h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p style={{ color: 'var(--text-mid)', fontSize: '0.8125rem', marginTop: 2 }}>
             Monitor printers, jobs, revenue, paper stock, and settings.
           </p>
         </div>
-        <div className="flex items-center space-x-2 text-[10px] font-mono bg-emerald-50 border border-emerald-200 text-emerald-700 px-3 py-1.5 rounded-full self-start sm:self-auto">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />
+        <div className="dm-badge dm-badge-success self-start sm:self-auto" style={{ fontFamily: 'monospace' }}>
+          <span className="dm-dot dm-dot-success dm-dot-pulse" />
           <span>Live Sync Active</span>
         </div>
       </div>
 
       {/* Tab bar */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-1.5 flex flex-wrap gap-1 shadow-sm">
+      <div className="dm-card flex flex-wrap gap-1" style={{ padding: '0.4rem' }}>
         {TABS.map(tab => {
           const Icon = tab.icon;
           const active = activeTab === tab.id;
@@ -56,16 +56,13 @@ export default function PrintManager() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                active
-                  ? 'bg-rose-600 text-white shadow-sm shadow-rose-500/20'
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-              }`}
+              className={active ? 'dm-btn dm-btn-primary' : 'dm-btn dm-btn-ghost'}
+              style={{ minHeight: 38, padding: '0 1rem', fontSize: '0.75rem', border: active ? 'none' : '1px solid transparent', background: active ? undefined : 'transparent', boxShadow: 'none' }}
             >
-              <Icon className={`w-3.5 h-3.5 ${active ? 'text-white' : 'text-slate-400'}`} />
+              <Icon style={{ width: 14, height: 14 }} />
               <span>{tab.label}</span>
               {tab.badge && (
-                <span className="bg-rose-500 text-white text-[9px] px-1.5 rounded-full font-bold">
+                <span className="dm-badge dm-badge-danger" style={{ padding: '0.1rem 0.4rem', fontSize: '0.5625rem' }}>
                   {tab.badge}
                 </span>
               )}

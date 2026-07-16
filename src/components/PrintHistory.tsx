@@ -9,15 +9,15 @@ import type { PrintJob, Printer, PrintJobStatus, ColorMode } from '../types';
 
 // ---- helpers ----------------------------------------------------------------
 
-const STATUS_STYLES: Record<PrintJobStatus, { bg: string; text: string }> = {
-  Completed: { bg: 'bg-emerald-50', text: 'text-emerald-700' },
-  Cancelled: { bg: 'bg-amber-50',   text: 'text-amber-700'   },
-  Failed:    { bg: 'bg-rose-50',    text: 'text-rose-600'    },
+const STATUS_BADGE: Record<PrintJobStatus, string> = {
+  Completed: 'dm-badge-success',
+  Cancelled: 'dm-badge-warning',
+  Failed:    'dm-badge-danger',
 };
 
-const COLOR_STYLES: Record<ColorMode, { bg: string; text: string }> = {
-  BW:     { bg: 'bg-slate-100', text: 'text-slate-600' },
-  Colour: { bg: 'bg-amber-50',  text: 'text-amber-700' },
+const COLOR_BADGE: Record<ColorMode, string> = {
+  BW:     'dm-badge-neutral',
+  Colour: 'dm-badge-warning',
 };
 
 function fmtDate(iso: string) {
@@ -109,48 +109,46 @@ export default function PrintHistory() {
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated  = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  const inputCls = "px-3 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-400";
-
   return (
     <div className="space-y-5" id="print-history">
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-bold text-slate-700 flex items-center space-x-2">
-            <History className="w-4 h-4 text-rose-500" />
+          <h2 className="dm-h3 flex items-center space-x-2">
+            <History style={{ width: 15, height: 15, color: 'var(--blue-400)' }} />
             <span>Print Job History</span>
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p style={{ color: 'var(--text-low)', fontSize: '0.75rem', marginTop: 3 }}>
             {filtered.length.toLocaleString()} job{filtered.length !== 1 ? 's' : ''} found
           </p>
         </div>
         <div className="flex items-center space-x-2">
           <button
             onClick={() => setShowFilters(f => !f)}
-            className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition cursor-pointer ${
-              showFilters ? 'border-rose-400 bg-rose-50 text-rose-600' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-            }`}
+            className={`dm-btn ${showFilters ? 'dm-btn-primary' : 'dm-btn-ghost'}`}
+            style={{ minHeight: 36, padding: '0 0.85rem', fontSize: '0.75rem' }}
           >
-            <Filter className="w-3.5 h-3.5" />
+            <Filter style={{ width: 13, height: 13 }} />
             <span>Filters</span>
           </button>
           <button
             onClick={loadJobs}
-            className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition cursor-pointer"
+            className="dm-icon-btn"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-slate-400 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={loading ? 'dm-spin' : ''} style={{ width: 14, height: 14 }} />
           </button>
         </div>
       </div>
 
       {/* Filter panel */}
       {showFilters && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="dm-card p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {/* Search */}
           <div className="lg:col-span-2 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2" style={{ width: 14, height: 14, color: 'var(--text-low)' }} />
             <input
-              className={`${inputCls} pl-8 w-full`}
+              className="dm-input w-full"
+              style={{ paddingLeft: '2.25rem' }}
               placeholder="Document, employee, customer…"
               value={filters.search}
               onChange={e => setFilters(f => ({ ...f, search: e.target.value }))}
@@ -158,20 +156,20 @@ export default function PrintHistory() {
           </div>
           {/* Date from */}
           <div>
-            <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">From</label>
-            <input type="date" className={`${inputCls} w-full`} value={filters.from}
+            <label className="dm-label" style={{ display: 'block', padding: 0, marginBottom: 4 }}>From</label>
+            <input type="date" className="dm-input w-full" value={filters.from}
               onChange={e => setFilters(f => ({ ...f, from: e.target.value }))} />
           </div>
           {/* Date to */}
           <div>
-            <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">To</label>
-            <input type="date" className={`${inputCls} w-full`} value={filters.to}
+            <label className="dm-label" style={{ display: 'block', padding: 0, marginBottom: 4 }}>To</label>
+            <input type="date" className="dm-input w-full" value={filters.to}
               onChange={e => setFilters(f => ({ ...f, to: e.target.value }))} />
           </div>
           {/* Printer */}
           <div>
-            <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Printer</label>
-            <select className={`${inputCls} w-full`} value={filters.printer_id}
+            <label className="dm-label" style={{ display: 'block', padding: 0, marginBottom: 4 }}>Printer</label>
+            <select className="dm-select w-full" value={filters.printer_id}
               onChange={e => setFilters(f => ({ ...f, printer_id: e.target.value }))}>
               <option value="">All Printers</option>
               {printers.map(p => (
@@ -181,8 +179,8 @@ export default function PrintHistory() {
           </div>
           {/* Status */}
           <div>
-            <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Status</label>
-            <select className={`${inputCls} w-full`} value={filters.status}
+            <label className="dm-label" style={{ display: 'block', padding: 0, marginBottom: 4 }}>Status</label>
+            <select className="dm-select w-full" value={filters.status}
               onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}>
               <option value="">All</option>
               <option value="Completed">Completed</option>
@@ -192,11 +190,11 @@ export default function PrintHistory() {
           </div>
           {/* Color mode */}
           <div>
-            <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1">Color</label>
-            <select className={`${inputCls} w-full`} value={filters.color_mode}
+            <label className="dm-label" style={{ display: 'block', padding: 0, marginBottom: 4 }}>Color</label>
+            <select className="dm-select w-full" value={filters.color_mode}
               onChange={e => setFilters(f => ({ ...f, color_mode: e.target.value }))}>
               <option value="">All</option>
-              <option value="BW">B&W</option>
+              <option value="BW">B&amp;W</option>
               <option value="Colour">Colour</option>
             </select>
           </div>
@@ -204,71 +202,67 @@ export default function PrintHistory() {
       )}
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+      <div className="dm-card" style={{ overflow: 'hidden', padding: 0 }}>
         {loading ? (
-          <div className="flex items-center justify-center py-20 text-slate-400">
-            <RefreshCw className="w-5 h-5 animate-spin mr-2" />
-            <span className="text-sm font-mono">Loading jobs…</span>
+          <div className="flex items-center justify-center py-20" style={{ color: 'var(--text-low)' }}>
+            <RefreshCw className="dm-spin" style={{ width: 18, height: 18, marginRight: 8 }} />
+            <span style={{ fontSize: '0.8125rem', fontFamily: 'monospace' }}>Loading jobs…</span>
           </div>
         ) : paginated.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-300">
-            <FileText className="w-8 h-8 mb-2" />
-            <span className="text-xs">No print jobs match the current filters</span>
+          <div className="flex flex-col items-center justify-center py-16" style={{ color: 'var(--text-low)' }}>
+            <FileText style={{ width: 32, height: 32, marginBottom: 8 }} />
+            <span style={{ fontSize: '0.75rem' }}>No print jobs match the current filters</span>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs tabular-nums">
+          <div className="dm-scroll-x">
+            <table className="w-full dm-nums" style={{ fontSize: '0.75rem' }}>
               <thead>
-                <tr className="bg-slate-50 text-slate-500 text-[10px] uppercase tracking-wider">
-                  <th className="px-4 py-3 text-left font-semibold">Date / Time</th>
-                  <th className="px-4 py-3 text-left font-semibold">Document</th>
-                  <th className="px-4 py-3 text-left font-semibold">Printer</th>
-                  <th className="px-4 py-3 text-left font-semibold">Computer</th>
-                  <th className="px-4 py-3 text-left font-semibold">Employee</th>
-                  <th className="px-4 py-3 text-left font-semibold">Customer</th>
-                  <th className="px-4 py-3 text-center font-semibold">Pages</th>
-                  <th className="px-4 py-3 text-center font-semibold">Color</th>
-                  <th className="px-4 py-3 text-center font-semibold">Size</th>
-                  <th className="px-4 py-3 text-right font-semibold">Revenue</th>
-                  <th className="px-4 py-3 text-center font-semibold">Status</th>
+                <tr style={{ background: 'var(--panel-2)', color: 'var(--text-low)', fontSize: '0.625rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <th className="px-4 py-3 text-left" style={{ fontWeight: 600 }}>Date / Time</th>
+                  <th className="px-4 py-3 text-left" style={{ fontWeight: 600 }}>Document</th>
+                  <th className="px-4 py-3 text-left" style={{ fontWeight: 600 }}>Printer</th>
+                  <th className="px-4 py-3 text-left" style={{ fontWeight: 600 }}>Computer</th>
+                  <th className="px-4 py-3 text-left" style={{ fontWeight: 600 }}>Employee</th>
+                  <th className="px-4 py-3 text-left" style={{ fontWeight: 600 }}>Customer</th>
+                  <th className="px-4 py-3 text-center" style={{ fontWeight: 600 }}>Pages</th>
+                  <th className="px-4 py-3 text-center" style={{ fontWeight: 600 }}>Color</th>
+                  <th className="px-4 py-3 text-center" style={{ fontWeight: 600 }}>Size</th>
+                  <th className="px-4 py-3 text-right" style={{ fontWeight: 600 }}>Revenue</th>
+                  <th className="px-4 py-3 text-center" style={{ fontWeight: 600 }}>Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
-                {paginated.map(job => {
-                  const statusStyle = STATUS_STYLES[job.status] ?? STATUS_STYLES.Completed;
-                  const colorStyle  = COLOR_STYLES[job.color_mode] ?? COLOR_STYLES.BW;
-                  return (
-                    <tr key={job.id} className="hover:bg-slate-50/50 transition">
-                      <td className="px-4 py-3 text-slate-500 font-mono whitespace-nowrap">
-                        {fmtDate(job.print_time)}
-                      </td>
-                      <td className="px-4 py-3 max-w-[140px]">
-                        <span className="truncate block text-slate-700 font-medium" title={job.document_name ?? ''}>
-                          {job.document_name || <span className="text-slate-300 italic">Untitled</span>}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">{job.printer_name || '—'}</td>
-                      <td className="px-4 py-3 text-slate-500">{job.computer_name || '—'}</td>
-                      <td className="px-4 py-3 text-slate-500">{job.employee_name || '—'}</td>
-                      <td className="px-4 py-3 text-slate-500">{job.customer_name || '—'}</td>
-                      <td className="px-4 py-3 text-center font-bold text-slate-700">{job.page_count}</td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${colorStyle.bg} ${colorStyle.text}`}>
-                          {job.color_mode}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center text-slate-500">{job.paper_size}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-slate-700">
-                        {fmtMoney(job.revenue)}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold ${statusStyle.bg} ${statusStyle.text}`}>
-                          {job.status}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+              <tbody>
+                {paginated.map(job => (
+                  <tr key={job.id} className="dm-row" style={{ borderTop: '1px solid var(--panel-line)' }}>
+                    <td className="px-4 py-3 whitespace-nowrap" style={{ color: 'var(--text-low)', fontFamily: 'monospace' }}>
+                      {fmtDate(job.print_time)}
+                    </td>
+                    <td className="px-4 py-3" style={{ maxWidth: 140 }}>
+                      <span className="dm-truncate" style={{ display: 'block', color: 'var(--text-mid)', fontWeight: 500 }} title={job.document_name ?? ''}>
+                        {job.document_name || <span style={{ color: 'var(--text-low)', fontStyle: 'italic' }}>Untitled</span>}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3" style={{ color: 'var(--text-mid)' }}>{job.printer_name || '—'}</td>
+                    <td className="px-4 py-3" style={{ color: 'var(--text-low)' }}>{job.computer_name || '—'}</td>
+                    <td className="px-4 py-3" style={{ color: 'var(--text-low)' }}>{job.employee_name || '—'}</td>
+                    <td className="px-4 py-3" style={{ color: 'var(--text-low)' }}>{job.customer_name || '—'}</td>
+                    <td className="px-4 py-3 text-center" style={{ fontWeight: 700, color: 'var(--text-mid)' }}>{job.page_count}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`dm-badge ${COLOR_BADGE[job.color_mode] ?? 'dm-badge-neutral'}`}>
+                        {job.color_mode}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center" style={{ color: 'var(--text-low)' }}>{job.paper_size}</td>
+                    <td className="px-4 py-3 text-right" style={{ fontWeight: 600, color: 'var(--text-mid)' }}>
+                      {fmtMoney(job.revenue)}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`dm-badge ${STATUS_BADGE[job.status] ?? 'dm-badge-success'}`}>
+                        {job.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
@@ -278,23 +272,25 @@ export default function PrintHistory() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <span className="text-xs text-slate-400">
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-low)' }}>
             Page {page + 1} of {totalPages} · {filtered.length} total jobs
           </span>
           <div className="flex items-center space-x-2">
             <button
               disabled={page === 0}
               onClick={() => setPage(p => p - 1)}
-              className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer"
+              className="dm-icon-btn"
+              style={{ width: 36, height: 36, opacity: page === 0 ? 0.4 : 1, cursor: page === 0 ? 'not-allowed' : 'pointer' }}
             >
-              <ChevronLeft className="w-3.5 h-3.5 text-slate-500" />
+              <ChevronLeft style={{ width: 14, height: 14 }} />
             </button>
             <button
               disabled={page >= totalPages - 1}
               onClick={() => setPage(p => p + 1)}
-              className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 disabled:opacity-40 transition cursor-pointer"
+              className="dm-icon-btn"
+              style={{ width: 36, height: 36, opacity: page >= totalPages - 1 ? 0.4 : 1, cursor: page >= totalPages - 1 ? 'not-allowed' : 'pointer' }}
             >
-              <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
+              <ChevronRight style={{ width: 14, height: 14 }} />
             </button>
           </div>
         </div>
