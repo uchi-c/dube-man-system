@@ -278,7 +278,7 @@ tenant into an **existing** project by hand:
 
 ```sql
 -- 1. Create the tenant
-insert into public.organizations (name) values ('Acme Pharmacy') returning id;
+insert into public.organizations (name) values ('Acme Pharmacy');
 
 -- 2. Create their login in Authentication > Users first, then:
 insert into public.users (id, name, email, role)
@@ -286,10 +286,13 @@ select id, 'Acme Owner', email, 'ADMIN'
 from auth.users where email = 'owner@acme-pharmacy.com'
 on conflict (id) do update set role = 'ADMIN';
 
--- 3. Add them to the org created in step 1 (use its returned id)
+-- 3. Add them to the org — matched by name, not a copy-pasted id, since
+--    organizations.name is unique (no id to shuttle between statements,
+--    nothing to mistype)
 insert into public.user_organization_memberships (user_id, org_id)
-select u.id, '<org-id-from-step-1>'
-from public.users u where u.email = 'owner@acme-pharmacy.com'
+select u.id, o.id
+from public.users u, public.organizations o
+where u.email = 'owner@acme-pharmacy.com' and o.name = 'Acme Pharmacy'
 on conflict (user_id, org_id) do nothing;
 ```
 
