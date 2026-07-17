@@ -25,7 +25,9 @@ const CHUNK_LOAD_ERROR_RE = /Failed to fetch dynamically imported module|error l
 const RELOAD_GUARD_KEY = 'uruu_chunk_reload_at';
 const RELOAD_GUARD_WINDOW_MS = 10_000;
 
-function isChunkLoadError(error: Error): boolean {
+// Exported so unit tests can exercise the classification logic directly
+// without mounting a component or triggering a real render error.
+export function isChunkLoadError(error: Error): boolean {
   return CHUNK_LOAD_ERROR_RE.test(error.message || '');
 }
 
