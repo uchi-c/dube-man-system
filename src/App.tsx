@@ -5,6 +5,7 @@ import { initializeStore } from './utils/db';
 import { getAuthenticatedUser, logoutUser, supabase } from './services/supabase';
 import { getCurrentOrganizationBusinessType } from './services/organizations';
 import ErrorBoundary from './components/ErrorBoundary';
+import InstallAppButton from './components/InstallAppButton';
 
 // Login, Signup and ResetPassword are needed for first paint (pre-auth), so
 // keep them eager.
@@ -343,8 +344,9 @@ function Topbar({ user, activeTab, onMenuToggle }: TopbarProps) {
         </nav>
       </div>
 
-      {/* Right: sync + notifications + user chip */}
+      {/* Right: install + sync + notifications + user chip */}
       <div className="flex items-center gap-2.5">
+        <InstallAppButton compact />
         <div className="hidden sm:block"><SyncIndicator /></div>
 
         <button className="dm-icon-btn" style={{ width: 40, height: 40 }} aria-label="Notifications">
