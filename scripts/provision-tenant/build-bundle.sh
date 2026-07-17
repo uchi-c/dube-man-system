@@ -22,6 +22,7 @@ files=(
   migrations/003_organization_signup.sql
   migrations/004_business_type.sql
   migrations/005_team_invites.sql
+  migrations/006_staff_financial_reports.sql
 )
 
 {
@@ -33,7 +34,8 @@ files=(
   echo "--        migrations/002_pharmacy_module.sql ->"
   echo "--        migrations/003_organization_signup.sql ->"
   echo "--        migrations/004_business_type.sql ->"
-  echo "--        migrations/005_team_invites.sql"
+  echo "--        migrations/005_team_invites.sql ->"
+  echo "--        migrations/006_staff_financial_reports.sql"
   echo "-- Paste this whole file into a fresh Supabase project's SQL editor,"
   echo "-- then run create-admin.sql to promote the owner account."
   echo "-- ============================================================"
