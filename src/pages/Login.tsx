@@ -3,6 +3,7 @@ import { Mail, Lock, ArrowRight, Loader2, AlertCircle, MailCheck } from 'lucide-
 import { motion } from 'motion/react';
 import { isSupabaseConfigured, loginUser, supabase, signInWithGoogle } from '../services/supabase';
 import { User } from '../types';
+import InstallAppButton from '../components/InstallAppButton';
 
 interface LoginProps {
   onLoginSuccess: (user: User) => void;
@@ -428,6 +429,10 @@ export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) 
               Create your workspace
             </button>
           </p>
+
+          <div className="flex justify-center">
+            <InstallAppButton />
+          </div>
 
           {/* Footer */}
           <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-low)' }}>
