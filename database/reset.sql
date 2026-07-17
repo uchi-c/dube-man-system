@@ -6,7 +6,8 @@
 -- After running this, apply in order: schema.sql, print_schema.sql,
 -- agent_schema.sql, migrations/001_multi_tenancy.sql,
 -- migrations/002_pharmacy_module.sql, migrations/003_organization_signup.sql,
--- migrations/004_business_type.sql, migrations/005_team_invites.sql, seed.sql.
+-- migrations/004_business_type.sql, migrations/005_team_invites.sql,
+-- migrations/006_staff_financial_reports.sql, seed.sql.
 -- Safe to run repeatedly.
 --
 -- Going live and just want to remove seed.sql's demo rows (not tear down

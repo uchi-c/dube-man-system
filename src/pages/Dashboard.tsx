@@ -20,11 +20,13 @@ import { formatCurrency } from '../utils/format';
 
 const currency = formatCurrency;
 
-type Range = 'today' | '7d' | '30d' | 'custom';
+type Range = 'today' | '7d' | '30d' | 'month' | 'year' | 'custom';
 const RANGES: { id: Range; label: string }[] = [
   { id: 'today', label: 'Today' },
   { id: '7d', label: '7d' },
   { id: '30d', label: '30d' },
+  { id: 'month', label: 'Month' },
+  { id: 'year', label: 'Year' },
   { id: 'custom', label: 'Custom' },
 ];
 
@@ -101,6 +103,8 @@ export default function Dashboard() {
     if (range === 'today') start.setHours(0, 0, 0, 0);
     else if (range === '7d') start.setDate(start.getDate() - 6);
     else if (range === '30d') start.setDate(start.getDate() - 29);
+    else if (range === 'month') start.setDate(1);
+    else if (range === 'year') start.setMonth(0, 1);
     else {
       if (customFrom) return { start: new Date(customFrom + 'T00:00:00'), end: customTo ? new Date(customTo + 'T23:59:59') : new Date() };
       start.setDate(start.getDate() - 6);
@@ -154,8 +158,27 @@ export default function Dashboard() {
   const pendingPrint = printOrders.filter(p => ['Pending', 'Designing', 'Printing'].includes(p.status)).length;
 
   // ---- Trend chart buckets ----
-  const chartDays = range === '30d' ? 30 : range === 'custom' ? 14 : 7;
+  // A year view buckets by month (12 bars max) instead of by day — 365
+  // daily bars would be too dense to read, and "month" is the granularity
+  // that actually answers "how did this year go".
+  const chartDays = range === '30d' ? 30 : range === 'month' ? new Date().getDate() : range === 'custom' ? 14 : 7;
   const trendData = useMemo(() => {
+    if (range === 'year') {
+      const now = new Date();
+      const map: Record<string, { date: string; amount: number }> = {};
+      for (let m = 0; m <= now.getMonth(); m++) {
+        const key = `${now.getFullYear()}-${String(m + 1).padStart(2, '0')}`;
+        map[key] = { date: new Date(now.getFullYear(), m, 1).toLocaleDateString('en', { month: 'short' }), amount: 0 };
+      }
+      sales.forEach(s => {
+        const d = new Date(s.created_at);
+        if (d.getFullYear() !== now.getFullYear()) return;
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        if (map[key]) map[key].amount += s.total_amount;
+      });
+      return Object.values(map);
+    }
+
     const map: Record<string, { date: string; amount: number }> = {};
     for (let i = chartDays - 1; i >= 0; i--) {
       const d = new Date(); d.setDate(d.getDate() - i);
@@ -165,9 +188,10 @@ export default function Dashboard() {
     }
     sales.forEach(s => { const k = s.created_at.slice(0, 10); if (map[k]) map[k].amount += s.total_amount; });
     return Object.values(map);
-  }, [sales, chartDays]);
+  }, [sales, chartDays, range]);
 
   const isUp = trendData.length > 1 && trendData[trendData.length - 1].amount >= trendData[trendData.length - 2].amount;
+  const trendComparisonLabel = range === 'year' ? 'vs prior month' : 'vs prior day';
 
   if (loading) {
     return (
@@ -189,13 +213,13 @@ export default function Dashboard() {
             {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="dm-seg">
+        <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
+          <div className="dm-seg dm-scroll-x" style={{ maxWidth: '100%' }}>
             {RANGES.map(r => (
-              <button key={r.id} onClick={() => setRange(r.id)} className={`dm-seg-item ${range === r.id ? 'active' : ''}`}>{r.label}</button>
+              <button key={r.id} onClick={() => setRange(r.id)} className={`dm-seg-item ${range === r.id ? 'active' : ''}`} style={{ flexShrink: 0 }}>{r.label}</button>
             ))}
           </div>
-          <button onClick={load} className="dm-icon-btn" aria-label="Refresh"><RefreshCw style={{ width: 16, height: 16 }} /></button>
+          <button onClick={load} className="dm-icon-btn" aria-label="Refresh" style={{ flexShrink: 0 }}><RefreshCw style={{ width: 16, height: 16 }} /></button>
         </div>
       </div>
 
@@ -253,11 +277,11 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="dm-h2">Revenue trend</h2>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-low)', marginTop: 2 }}>Daily POS sales in ZMW</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-low)', marginTop: 2 }}>{range === 'year' ? 'Monthly' : 'Daily'} POS sales in ZMW</p>
           </div>
           <div className="dm-badge" style={{ padding: '0.3rem 0.6rem', background: isUp ? 'var(--success-bg)' : 'var(--danger-bg)', color: isUp ? 'var(--success)' : 'var(--danger)', border: `1px solid ${isUp ? 'rgba(61,220,151,0.3)' : 'rgba(255,107,107,0.3)'}` }}>
             {isUp ? <ArrowUpRight style={{ width: 13, height: 13 }} /> : <ArrowDownRight style={{ width: 13, height: 13 }} />}
-            {isUp ? 'Up vs prior day' : 'Down vs prior day'}
+            {isUp ? `Up ${trendComparisonLabel}` : `Down ${trendComparisonLabel}`}
           </div>
         </div>
 

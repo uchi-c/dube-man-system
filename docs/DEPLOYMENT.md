@@ -157,6 +157,63 @@ with Google" from the **Signup** page creates a new org (or joins an invite,
 if `?invite=` is present) the same way an email/password signup does; from
 the **Login** page it's only for accounts that already have a profile.
 
+### 3d. Assigning or changing roles per organization
+
+Three ways to control who's `ADMIN`, `STAFF`, or `CAFE_OPERATOR` in which
+organization, from simplest to most manual:
+
+**1. Inviting someone new** — the Team page (§3b above). The role is set
+at invite time and can't be changed until they accept; revoke and re-invite
+with a different role if you picked wrong.
+
+**2. Changing an existing member's role** — also the Team page. Every row
+in the **Members** table has a role dropdown right next to it; picking a
+different value calls `updateUserRole()` immediately, no SQL needed. This
+only works for people already in *your* organization — `public.users`' RLS
+only lets an `ADMIN` see/edit members of orgs they themselves belong to
+(see migration 005's comments for why that's enforced at the database
+level, not just hidden in the UI).
+
+**3. Doing it by hand in the Supabase SQL editor** — for bulk changes, or
+when you're not signed in as that org's admin yourself. The person must
+have signed up at least once (an `auth.users` row must already exist —
+Supabase Auth creates that the moment someone submits any signup form,
+even one they never finished):
+
+```sql
+-- 1. Find the organization's id
+select id, name, business_type from public.organizations order by name;
+
+-- 2. Confirm the person has an auth account
+select id, email from auth.users where email = 'person@example.com';
+
+-- 3. Create or update their profile with the role you want
+--    (role is one of: 'ADMIN', 'STAFF', 'CAFE_OPERATOR')
+insert into public.users (id, name, email, role)
+select id, split_part(email, '@', 1), email, 'STAFF'
+from auth.users where email = 'person@example.com'
+on conflict (id) do update set role = excluded.role;
+
+-- 4. Make sure they're a member of the right organization
+--    (skip if they're already a member and you only changed step 3's role)
+insert into public.user_organization_memberships (user_id, org_id)
+select u.id, o.id
+from public.users u, public.organizations o
+where u.email = 'person@example.com' and o.name = 'Acme Pharmacy'
+on conflict (user_id, org_id) do nothing;
+```
+
+To change *only* the role of someone who's already set up correctly:
+
+```sql
+update public.users set role = 'ADMIN' where email = 'person@example.com';
+```
+
+Note that `public.users` doesn't carry an `organization_id` itself (an
+account's orgs come from `user_organization_memberships`), so this changes
+their role everywhere they're a member — the normal case, since most
+accounts belong to exactly one organization.
+
 ---
 
 ## 4. Removing the demo seed data
@@ -221,7 +278,7 @@ tenant into an **existing** project by hand:
 
 ```sql
 -- 1. Create the tenant
-insert into public.organizations (name) values ('Acme Pharmacy') returning id;
+insert into public.organizations (name) values ('Acme Pharmacy');
 
 -- 2. Create their login in Authentication > Users first, then:
 insert into public.users (id, name, email, role)
@@ -229,10 +286,13 @@ select id, 'Acme Owner', email, 'ADMIN'
 from auth.users where email = 'owner@acme-pharmacy.com'
 on conflict (id) do update set role = 'ADMIN';
 
--- 3. Add them to the org created in step 1 (use its returned id)
+-- 3. Add them to the org — matched by name, not a copy-pasted id, since
+--    organizations.name is unique (no id to shuttle between statements,
+--    nothing to mistype)
 insert into public.user_organization_memberships (user_id, org_id)
-select u.id, '<org-id-from-step-1>'
-from public.users u where u.email = 'owner@acme-pharmacy.com'
+select u.id, o.id
+from public.users u, public.organizations o
+where u.email = 'owner@acme-pharmacy.com' and o.name = 'Acme Pharmacy'
 on conflict (user_id, org_id) do nothing;
 ```
 
