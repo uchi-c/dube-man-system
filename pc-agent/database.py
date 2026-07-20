@@ -3,7 +3,8 @@ from datetime import datetime, timezone
 from supabase import create_client
 from config import (
     SUPABASE_URL,
-    SUPABASE_ANON_KEY
+    SUPABASE_ANON_KEY,
+    ORGANIZATION_ID
 )
 
 supabase = create_client(
@@ -80,13 +81,18 @@ def register_computer(computer_code):
         )
         return computer
 
+    # organization_id must be set explicitly here: the column's DB-side
+    # default silently falls back to whichever organization was created
+    # first *in the entire system*, not the tenant this agent belongs to
+    # (the anon role has no authenticated session for it to infer from).
     result = (
         supabase.table("computers")
         .insert(
             {
                 "computer_code": computer_code,
                 "computer_name": computer_code,
-                "status": "Available"
+                "status": "Available",
+                "organization_id": ORGANIZATION_ID
             }
         )
         .execute()

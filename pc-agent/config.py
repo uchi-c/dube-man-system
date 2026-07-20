@@ -9,6 +9,7 @@ load_dotenv(dotenv_path=BASE_DIR / ".env")
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+ORGANIZATION_ID = os.getenv("ORGANIZATION_ID")
 
 COMPUTER_CODE = os.getenv("COMPUTER_CODE", "PC-01")
 HEARTBEAT_INTERVAL = int(
@@ -30,4 +31,9 @@ if not SUPABASE_URL:
 if not SUPABASE_ANON_KEY:
     raise ValueError(
         "SUPABASE_ANON_KEY is missing in .env"
+    )
+
+if not ORGANIZATION_ID:
+    raise ValueError(
+        "ORGANIZATION_ID is missing in .env"
     )
