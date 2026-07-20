@@ -9,10 +9,11 @@
     # Full install for one PC (secret auto-generated if omitted)
     .\install.ps1 -SupabaseUrl "https://abc.supabase.co" `
                   -SupabaseAnonKey "eyJ..." `
+                  -OrganizationId "<this tenant's organizations.id>" `
                   -ComputerCode "PC-01"
 
     # Reuse a tenant-wide secret across that tenant's PCs
-    .\install.ps1 -SupabaseUrl ... -SupabaseAnonKey ... -ComputerCode "PC-02" `
+    .\install.ps1 -SupabaseUrl ... -SupabaseAnonKey ... -OrganizationId ... -ComputerCode "PC-02" `
                   -AgentSecret "d41d8c...<64 hex>"
 
     # Just check health of an already-installed agent
@@ -22,6 +23,7 @@
 param(
   [string]$SupabaseUrl,
   [string]$SupabaseAnonKey,
+  [string]$OrganizationId,
   [string]$ComputerCode = "PC-01",
   [string]$AgentSecret,
   [int]$HeartbeatInterval = 30,
@@ -58,7 +60,7 @@ function New-Secret {
 if ($VerifyOnly) {
   Write-Host "== Agent health check ==" -ForegroundColor Cyan
   if (Test-Path $envPath) {
-    $keys = @("SUPABASE_URL","SUPABASE_ANON_KEY","COMPUTER_CODE","AGENT_SECRET")
+    $keys = @("SUPABASE_URL","SUPABASE_ANON_KEY","ORGANIZATION_ID","COMPUTER_CODE","AGENT_SECRET")
     foreach ($k in $keys) {
       $line = Select-String -Path $envPath -Pattern "^$k=(.*)$"
       $val  = if ($line) { $line.Matches[0].Groups[1].Value } else { "" }
@@ -83,6 +85,9 @@ Assert-Admin
 
 if ([string]::IsNullOrWhiteSpace($SupabaseUrl) -or [string]::IsNullOrWhiteSpace($SupabaseAnonKey)) {
   throw "SupabaseUrl and SupabaseAnonKey are required. See scripts/provision-tenant/agent.env.template."
+}
+if ([string]::IsNullOrWhiteSpace($OrganizationId)) {
+  throw "OrganizationId is required — this is a shared multi-tenant database, so the agent must be told which tenant it belongs to. Find it under Team (or ask an admin) in Uruu OS, or query: select id, name from organizations;"
 }
 if ([string]::IsNullOrWhiteSpace($AgentSecret)) {
   $AgentSecret = New-Secret
@@ -116,6 +121,7 @@ Write-Host "Writing .env ($ComputerCode)..." -ForegroundColor Cyan
 @"
 SUPABASE_URL=$SupabaseUrl
 SUPABASE_ANON_KEY=$SupabaseAnonKey
+ORGANIZATION_ID=$OrganizationId
 COMPUTER_CODE=$ComputerCode
 HEARTBEAT_INTERVAL=$HeartbeatInterval
 AGENT_SECRET=$AgentSecret

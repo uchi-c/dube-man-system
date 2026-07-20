@@ -56,8 +56,8 @@ const TABS: TabDef[] = [
   { id: 'customers',     label: 'Customers',        icon: Users,           group: 'Operations', path: '/customers',     roles: ['ADMIN','STAFF'] },
   { id: 'pharmacy',      label: 'Pharmacy',         icon: Pill,            group: 'Operations', path: '/pharmacy',      roles: ['ADMIN','STAFF'] },
   // Printing
-  { id: 'print-manager', label: 'Print Manager',    icon: PrinterIcon,     group: 'Printing',   path: '/print-manager', roles: ['ADMIN'] },
-  { id: 'printing',      label: 'Branding & Orders',icon: Printer,         group: 'Printing',   path: '/printing-orders',roles: ['ADMIN'] },
+  { id: 'print-manager', label: 'Print Manager',    icon: PrinterIcon,     group: 'Printing',   path: '/print-manager', roles: ['ADMIN','STAFF','CAFE_OPERATOR'] },
+  { id: 'printing',      label: 'Branding & Orders',icon: Printer,         group: 'Printing',   path: '/printing-orders',roles: ['ADMIN','STAFF','CAFE_OPERATOR'] },
   // Connectivity
   { id: 'cafe',          label: 'Internet Café',    icon: Monitor,         group: 'Connectivity',path: '/cafe-management',roles: ['ADMIN','CAFE_OPERATOR'] },
   { id: 'wifi',          label: 'WiFi Management',  icon: Wifi,            group: 'Connectivity',path: '/wifi',          roles: ['ADMIN','STAFF','CAFE_OPERATOR'] },
@@ -80,10 +80,10 @@ const GROUP_ORDER = ['Home','Operations','Printing','Connectivity','System'];
 // look different, on top of their data already being hard-isolated by RLS.
 const BUSINESS_TYPE_MODULES: Record<BusinessType, string[] | null> = {
   general:  null,
-  pharmacy: ['dashboard', 'pos', 'inventory', 'customers', 'pharmacy', 'wifi', 'pc-agent', 'logs', 'team'],
-  cafe:     ['dashboard', 'pos', 'inventory', 'customers', 'cafe', 'wifi', 'pc-agent', 'logs', 'team'],
-  printing: ['dashboard', 'pos', 'inventory', 'customers', 'print-manager', 'printing', 'wifi', 'pc-agent', 'logs', 'team'],
-  retail:   ['dashboard', 'pos', 'inventory', 'customers', 'wifi', 'pc-agent', 'logs', 'team'],
+  pharmacy: ['dashboard', 'pos', 'inventory', 'customers', 'pharmacy', 'team'],
+  cafe:     ['dashboard', 'print-manager', 'printing', 'team'],
+  printing: ['dashboard', 'print-manager', 'printing', 'team'],
+  retail:   ['dashboard', 'pos', 'inventory', 'customers', 'team'],
 };
 
 // Role-based landing paths.
@@ -92,7 +92,21 @@ const ROLE_DEFAULT_PATH: Record<string, string> = {
   STAFF: '/sales',
   CAFE_OPERATOR: '/cafe-management',
 };
-const defaultPathFor = (role: string) => ROLE_DEFAULT_PATH[role] ?? '/dashboard';
+// Preferred landing path per role, falling back to the first tab that's
+// actually reachable for this org's business type — e.g. a 'cafe'-type org
+// scoped down to printing-only no longer has '/cafe-management', so a
+// CAFE_OPERATOR there lands on Print Manager instead.
+function defaultPathFor(role: string, businessType: BusinessType): string {
+  const allowedModules = BUSINESS_TYPE_MODULES[businessType];
+  const reachable = (tab: TabDef) =>
+    tab.roles.includes(role as UserRole) && (!allowedModules || allowedModules.includes(tab.id));
+
+  const preferred = ROLE_DEFAULT_PATH[role];
+  const preferredTab = preferred && TABS.find(t => t.path === preferred);
+  if (preferredTab && reachable(preferredTab)) return preferred;
+
+  return TABS.find(reachable)?.path ?? '/dashboard';
+}
 
 // ---- Brand mark ------------------------------------------------------------
 
@@ -449,9 +463,12 @@ function renderPage(id: string, role: string) {
 
 // ---- Per-route frame: role guard + animation + lazy boundary ---------------
 
-function RouteFrame({ tab, user }: { tab: TabDef; user: User }) {
+function RouteFrame({ tab, user, businessType }: { tab: TabDef; user: User; businessType: BusinessType }) {
   const navigate = useNavigate();
-  const allowed = tab.roles.includes(user.role as UserRole);
+  const allowedModules = BUSINESS_TYPE_MODULES[businessType];
+  const allowed =
+    tab.roles.includes(user.role as UserRole) &&
+    (!allowedModules || allowedModules.includes(tab.id));
 
   return (
     <motion.div
@@ -467,7 +484,7 @@ function RouteFrame({ tab, user }: { tab: TabDef; user: User }) {
           </Suspense>
         </ErrorBoundary>
       ) : (
-        <UnauthorizedScreen user={user} onBack={() => navigate(defaultPathFor(user.role))} />
+        <UnauthorizedScreen user={user} onBack={() => navigate(defaultPathFor(user.role, businessType))} />
       )}
     </motion.div>
   );
@@ -527,8 +544,10 @@ export default function App() {
     setUser(u);
     setAuthenticated(true);
     setChecking(false);
-    getCurrentOrganizationBusinessType().then(setBusinessType);
-    navigate(defaultPathFor(u.role), { replace: true });
+    getCurrentOrganizationBusinessType().then(bt => {
+      setBusinessType(bt);
+      navigate(defaultPathFor(u.role, bt), { replace: true });
+    });
   };
 
   const handleLogout = async () => {
@@ -564,7 +583,7 @@ export default function App() {
       : <Login onLoginSuccess={handleLogin} onSwitchToSignup={() => setAuthView('signup')} />;
   }
 
-  const homePath = defaultPathFor(user.role);
+  const homePath = defaultPathFor(user.role, businessType);
 
   return (
     <div className="dm-app-bg flex h-screen overflow-hidden" style={{ fontFamily: "'Inter',sans-serif" }}>
@@ -631,7 +650,7 @@ export default function App() {
             <AnimatePresence mode="wait">
               <Routes location={location} key={location.pathname}>
                 {TABS.map(tab => (
-                  <Route key={tab.id} path={tab.path} element={<RouteFrame tab={tab} user={user} />} />
+                  <Route key={tab.id} path={tab.path} element={<RouteFrame tab={tab} user={user} businessType={businessType} />} />
                 ))}
                 {/* Legacy alias + default landings */}
                 <Route path="/users" element={<Navigate to="/logs" replace />} />

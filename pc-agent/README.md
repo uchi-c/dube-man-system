@@ -11,13 +11,24 @@ Run from an **elevated** PowerShell (Run as Administrator):
 cd pc-agent
 .\install.ps1 -SupabaseUrl "https://<tenant-ref>.supabase.co" `
               -SupabaseAnonKey "<tenant-anon-key>" `
+              -OrganizationId "<this tenant's organizations.id>" `
               -ComputerCode "PC-01"
 ```
 
 The installer installs Python deps, writes `.env`, and registers/starts the
 `UruuAgent` Windows service. Give each machine a **unique `-ComputerCode`**
-(PC-01, PC-02, …). All connection values must point at that **one tenant's**
-Supabase project.
+(PC-01, PC-02, …) — this is a shared multi-tenant database, so every
+`computer_code` must be globally unique across every tenant on this Uruu OS
+instance, not just within your own organization.
+
+### Finding your `-OrganizationId`
+
+Uruu OS is one shared Supabase project across every tenant, so the agent
+needs to be told explicitly which organization it belongs to — otherwise a
+newly-registered computer silently lands under whichever organization was
+created first *in the whole system*, not yours. Get your organization's ID
+from an admin (Supabase SQL editor: `select id, name from organizations;`)
+until this is surfaced directly in the Team page.
 
 ### AGENT_SECRET
 
