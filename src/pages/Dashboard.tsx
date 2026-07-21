@@ -9,7 +9,8 @@ import {
   fetchRunningCafeSessions, fetchCompletedCafeSessions, fetchCustomers,
   fetchPrintDashboardStats,
 } from '../services/supabase';
-import { Product, Sale, PrintingOrder, CafeSession, Customer } from '../types';
+import { fetchDispensingRecords } from '../services/pharmacy';
+import { Product, Sale, PrintingOrder, CafeSession, Customer, DispensingRecord } from '../types';
 import DashboardCard from '../components/DashboardCard';
 import {
   AreaChart, Area, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid,
@@ -77,16 +78,19 @@ export default function Dashboard() {
   const [completedSessions, setCompletedSessions] = useState<CafeSession[]>([]);
   const [customers, setCustomers]       = useState<Customer[]>([]);
   const [printRevenue, setPrintRevenue] = useState(0);
+  const [dispensingRecords, setDispensingRecords] = useState<DispensingRecord[]>([]);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [prods, sls, prnts, sess, doneSess, custs, printStats] = await Promise.all([
+      const [prods, sls, prnts, sess, doneSess, custs, printStats, dispensing] = await Promise.all([
         fetchProducts(), fetchSales(), fetchPrintingOrders(),
         fetchRunningCafeSessions(), fetchCompletedCafeSessions(), fetchCustomers(), fetchPrintDashboardStats(),
+        fetchDispensingRecords(2000),
       ]);
       setProducts(prods); setSales(sls); setPrintOrders(prnts);
       setSessions(sess); setCompletedSessions(doneSess); setCustomers(custs); setPrintRevenue(printStats.revenue_today);
+      setDispensingRecords(dispensing);
     } catch (err) {
       console.error('Dashboard load error:', err);
     } finally {
@@ -118,7 +122,7 @@ export default function Dashboard() {
     [sales, start, end],
   );
 
-  const rangeRevenue = windowSales.reduce((sum, s) => sum + s.total_amount, 0);
+  const posRevenue = windowSales.reduce((sum, s) => sum + s.total_amount, 0);
   const rangeTxns = windowSales.length;
 
   // ---- Revenue by channel (same range window as the trend chart) ----
@@ -132,13 +136,25 @@ export default function Dashboard() {
       .reduce((sum, s) => sum + (s.amount || 0), 0),
     [completedSessions, start, end],
   );
+  const windowDispensingRevenue = useMemo(
+    () => dispensingRecords
+      .filter(r => { const d = new Date(r.dispensed_at); return d >= start && d <= end; })
+      .reduce((sum, r) => sum + r.total_price, 0),
+    [dispensingRecords, start, end],
+  );
   const printOrdersRevenue = windowPrintOrders.reduce((sum, o) => sum + o.amount, 0);
   const channelData = useMemo(() => [
-    { name: 'POS Sales', value: rangeRevenue, color: '#4C6FFF' },
+    { name: 'POS Sales', value: posRevenue, color: '#4C6FFF' },
     { name: 'Branding & Printing', value: printOrdersRevenue, color: '#7DD3FC' },
     { name: 'Café Sessions', value: windowCafeRevenue, color: '#3DDC97' },
-  ], [rangeRevenue, printOrdersRevenue, windowCafeRevenue]);
+    { name: 'Pharmacy Dispensing', value: windowDispensingRevenue, color: '#FFB020' },
+  ], [posRevenue, printOrdersRevenue, windowCafeRevenue, windowDispensingRevenue]);
   const hasChannelData = channelData.some(c => c.value > 0);
+  // The headline figure is every channel combined, not just POS -- a
+  // pharmacy or a printing-only org would otherwise always see "Revenue:
+  // K0" here even while actively dispensing medicine or running print jobs,
+  // since neither of those ever touch the sales table.
+  const rangeRevenue = channelData.reduce((sum, c) => sum + c.value, 0);
 
   const topProduct = useMemo(() => {
     const tally: Record<string, number> = {};
@@ -259,7 +275,7 @@ export default function Dashboard() {
 
       {/* ---- Hero numbers ---- */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <HeroStat icon={TrendingUp} label={`Revenue · ${RANGES.find(r => r.id === range)?.label}`} value={currency(rangeRevenue)} tone="blue" sub="POS sales in range" />
+        <HeroStat icon={TrendingUp} label={`Revenue · ${RANGES.find(r => r.id === range)?.label}`} value={currency(rangeRevenue)} tone="blue" sub="All channels in range" />
         <HeroStat icon={Receipt} label="Transactions" value={String(rangeTxns)} tone="cyan" sub={rangeTxns === 1 ? '1 checkout' : `${rangeTxns} checkouts`} />
         <HeroStat icon={Crown} label="Top product" value={topProduct ? topProduct.name : '—'} tone="success" sub={topProduct ? `${topProduct.qty} sold` : 'No sales in range'} />
       </div>
@@ -307,7 +323,7 @@ export default function Dashboard() {
         <div className="mb-5">
           <h2 className="dm-h2">Revenue by channel</h2>
           <p style={{ fontSize: '0.75rem', color: 'var(--text-low)', marginTop: 2 }}>
-            POS, branding &amp; printing orders, and café sessions in the selected range
+            POS, branding &amp; printing orders, café sessions, and pharmacy dispensing in the selected range
           </p>
         </div>
 
