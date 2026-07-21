@@ -118,14 +118,21 @@ if (Test-Path $postInstall) {
 }
 
 Write-Host "Writing .env ($ComputerCode)..." -ForegroundColor Cyan
-@"
+$envContent = @"
 SUPABASE_URL=$SupabaseUrl
 SUPABASE_ANON_KEY=$SupabaseAnonKey
 ORGANIZATION_ID=$OrganizationId
 COMPUTER_CODE=$ComputerCode
 HEARTBEAT_INTERVAL=$HeartbeatInterval
 AGENT_SECRET=$AgentSecret
-"@ | Set-Content -Path $envPath -Encoding UTF8
+"@
+# Windows PowerShell 5.1's "-Encoding UTF8" silently prepends a byte-order
+# mark, which glues an invisible character onto the first key's name
+# (SUPABASE_URL). PowerShell's own readers strip it transparently, but
+# python-dotenv does not, so the agent fails with "SUPABASE_URL is missing"
+# even though the file visibly has it. Writing via .NET's UTF8Encoding with
+# BOM explicitly disabled sidesteps this regardless of dotenv version.
+[System.IO.File]::WriteAllText($envPath, $envContent, (New-Object System.Text.UTF8Encoding($false)))
 
 Write-Host "Registering Windows service ($svcName)..." -ForegroundColor Cyan
 Push-Location $here
@@ -140,7 +147,9 @@ try {
     & $python service.py remove
   }
   & $python service.py install
+  if ($LASTEXITCODE -ne 0) { throw "service.py install exited with code $LASTEXITCODE (see output above)" }
   & $python service.py start
+  if ($LASTEXITCODE -ne 0) { throw "service.py start exited with code $LASTEXITCODE (see output above)" }
 } catch {
   Write-Host ""
   Write-Host "Service registration/start failed: $($_.Exception.Message)" -ForegroundColor Red
