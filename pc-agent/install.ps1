@@ -1,5 +1,5 @@
 <#
-  Uruu OS — PC Agent installer (Windows)
+  Uruu OS - PC Agent installer (Windows)
   ---------------------------------------------------------------------------
   Installs Python deps, writes .env, and registers the agent as a Windows
   service (UruuAgent). Run from an ELEVATED PowerShell (Run as Administrator)
@@ -87,7 +87,7 @@ if ([string]::IsNullOrWhiteSpace($SupabaseUrl) -or [string]::IsNullOrWhiteSpace(
   throw "SupabaseUrl and SupabaseAnonKey are required. See scripts/provision-tenant/agent.env.template."
 }
 if ([string]::IsNullOrWhiteSpace($OrganizationId)) {
-  throw "OrganizationId is required — this is a shared multi-tenant database, so the agent must be told which tenant it belongs to. Find it under Team (or ask an admin) in Uruu OS, or query: select id, name from organizations;"
+  throw "OrganizationId is required - this is a shared multi-tenant database, so the agent must be told which tenant it belongs to. Find it under Team (or ask an admin) in Uruu OS, or query: select id, name from organizations;"
 }
 if ([string]::IsNullOrWhiteSpace($AgentSecret)) {
   $AgentSecret = New-Secret
@@ -105,7 +105,7 @@ Write-Host "Installing dependencies..." -ForegroundColor Cyan
 # (pythoncomXX.dll / pywintypesXX.dll) into System32. Running the agent
 # in the foreground can still work because the interpreter finds the DLLs
 # on sys.path, but the Windows Service Control Manager launches
-# pythonservice.exe without that context — so without this step,
+# pythonservice.exe without that context - so without this step,
 # "service.py install" / "service.py start" below fails with a DLL-load
 # or access error even though pip reported success.
 Write-Host "Registering pywin32 system DLLs..." -ForegroundColor Cyan
