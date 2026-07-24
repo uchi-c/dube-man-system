@@ -530,11 +530,31 @@ export default function App() {
   const [businessType, setBusinessType]   = useState<BusinessType>('general');
   const [drawerOpen, setDrawerOpen]       = useState(false);
   const [checking, setChecking]           = useState(true);
-  const [authView, setAuthView]           = useState<'login' | 'signup'>('login');
   const [passwordRecovery, setPasswordRecovery] = useState(false);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Reported live: an invite link opened by someone not already signed in
+  // just showed the sign-in screen, silently dropping the ?invite= token.
+  // Root cause -- authView always defaulted to 'login' with no regard for
+  // the URL, so a fresh, unauthenticated page load at #/signup?invite=...
+  // never rendered Signup at all. Deriving the initial view from the URL
+  // (evaluated once, at mount, which is exactly when a link like this is
+  // opened) fixes the common case; the effect below also catches an invite
+  // link reached via in-app hash navigation without a full reload.
+  const [authView, setAuthView] = useState<'login' | 'signup'>(() =>
+    location.pathname === '/signup' || new URLSearchParams(location.search).get('invite')
+      ? 'signup'
+      : 'login'
+  );
+  useEffect(() => {
+    if (!authenticated && new URLSearchParams(location.search).get('invite')) {
+      setAuthView('signup');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authenticated, location.search]);
 
   // The URL is the source of truth; derive the active tab from the path.
   const activeTab = PATH_TO_TAB[location.pathname] ?? '';
@@ -549,6 +569,7 @@ export default function App() {
       if (u) {
         setUser(u);
         setAuthenticated(true);
+        setMustChangePassword(!!u.must_change_password);
         getCurrentOrganizationBusinessType().then(bt => { if (!cancelled) setBusinessType(bt); });
       } else {
         setAuthenticated(false);
@@ -576,6 +597,7 @@ export default function App() {
     setUser(u);
     setAuthenticated(true);
     setChecking(false);
+    setMustChangePassword(!!u.must_change_password);
     getCurrentOrganizationBusinessType().then(bt => {
       setBusinessType(bt);
       navigate(defaultPathFor(u.role, bt), { replace: true });
@@ -587,6 +609,7 @@ export default function App() {
     setUser(null);
     setAuthenticated(false);
     setBusinessType('general');
+    setMustChangePassword(false);
     navigate('/login', { replace: true });
   };
 
@@ -613,6 +636,15 @@ export default function App() {
     return authView === 'signup'
       ? <Signup onSignupSuccess={handleLogin} onSwitchToLogin={() => setAuthView('login')} />
       : <Login onLoginSuccess={handleLogin} onSwitchToSignup={() => setAuthView('signup')} />;
+  }
+  if (mustChangePassword) {
+    return (
+      <ResetPassword
+        mode="forced"
+        onComplete={u => { setUser(u); setMustChangePassword(false); }}
+        onCancel={handleLogout}
+      />
+    );
   }
   if (new URLSearchParams(location.search).get('invite')) {
     return (

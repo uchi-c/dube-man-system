@@ -25,6 +25,11 @@ export interface User {
   email: string;
   role: UserRole;
   created_at: string;
+  /** True when the account was created with an admin-issued temporary
+   *  password (see organizations.adminInviteUserWithTempPassword) and
+   *  hasn't set its own password yet — forces the ResetPassword screen
+   *  before the app is usable. */
+  must_change_password?: boolean;
 }
 
 /** A pending/accepted/revoked invitation for someone to join an org with a given role. */
