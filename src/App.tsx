@@ -485,7 +485,7 @@ function renderPage(id: string, role: string) {
     case 'customers':     return <Customers />;
     case 'pharmacy':      return <Pharmacy userRole={role} />;
     case 'wifi':          return <WifiManagement />;
-    case 'pc-agent':      return <PCAgentConsole />;
+    case 'pc-agent':      return <PCAgentConsole userRole={role} />;
     case 'logs':          return <ActivityLogs userRole={role} />;
     case 'team':          return <Team />;
     default:              return null;

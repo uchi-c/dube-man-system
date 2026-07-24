@@ -858,6 +858,30 @@ export async function updateComputerLockStatus(computerId: string, inMaintenance
   return true;
 }
 
+// Queues a remote command for the PC agent to pick up on its next poll
+// (every 2s) and execute -- LOCK/RESTART/SHUTDOWN call real Windows APIs
+// on that machine (see pc-agent/command_manager.py). No local-demo-mode
+// fallback: there's no physical PC to command outside a real connection.
+export async function sendComputerCommand(
+  computerCode: string,
+  command: 'LOCK' | 'RESTART' | 'SHUTDOWN' | 'REFRESH',
+  payload?: Record<string, unknown>,
+): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase
+      .from('computer_commands')
+      .insert([{ computer_code: computerCode, command, payload: payload ?? null }]);
+    if (error) throw error;
+    const user = localDb.getCurrentUser();
+    await insertLog(user.id, `Sent ${command} command to ${computerCode}`);
+    return true;
+  } catch (err) {
+    handleDbError(err, `Failed sending ${command} command`);
+    return false;
+  }
+}
+
 export async function fetchRunningCafeSessions(): Promise<CafeSession[]> {
   if (isSupabaseConfigured) {
     try {

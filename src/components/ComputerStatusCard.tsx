@@ -1,6 +1,6 @@
 import React from 'react';
 import { Computer, CafeSession } from '../types';
-import { Monitor, Activity, Clock, User, ShieldAlert, Printer } from 'lucide-react';
+import { Monitor, Activity, Clock, User, ShieldAlert, Printer, Lock, RotateCcw, Power } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatCurrency } from '../utils/format';
 
@@ -8,6 +8,12 @@ interface ComputerStatusCardProps {
   key?: React.Key;
   computer: Computer;
   activeSession?: CafeSession;
+  // Remote-command handlers -- only PC Agent Hub passes these (CafeManagement's
+  // card stays read-only). Omitting all three renders no action row at all.
+  onLock?: () => void;
+  onRestart?: () => void;
+  onShutdown?: () => void;
+  sendingCommand?: 'LOCK' | 'RESTART' | 'SHUTDOWN' | null;
 }
 
 // Thin usage meter for CPU / RAM / Disk (value is a 0-100 percentage).
@@ -25,7 +31,7 @@ function UsageBar({ label, value }: { label: string; value: number }) {
   );
 }
 
-export default function ComputerStatusCard({ computer, activeSession }: ComputerStatusCardProps) {
+export default function ComputerStatusCard({ computer, activeSession, onLock, onRestart, onShutdown, sendingCommand }: ComputerStatusCardProps) {
   const getSecondsAgo = (isoString?: string) => {
     if (!isoString) return Infinity;
     const diff = Date.now() - new Date(isoString).getTime();
@@ -149,6 +155,47 @@ export default function ComputerStatusCard({ computer, activeSession }: Computer
           )}
         </div>
       </div>
+
+      {(onLock || onRestart || onShutdown) && (
+        <div className="flex gap-1.5 pt-1" style={{ borderTop: '1px solid var(--panel-line)' }}>
+          {onLock && (
+            <button
+              onClick={onLock}
+              disabled={agentStatus !== 'ONLINE' || !!sendingCommand}
+              title={agentStatus !== 'ONLINE' ? 'Agent must be online to receive commands' : 'Lock this PC now'}
+              className="dm-btn dm-btn-ghost flex-1"
+              style={{ minHeight: 32, fontSize: '0.625rem', padding: '0.4rem' }}
+            >
+              <Lock style={{ width: 11, height: 11 }} />
+              <span>{sendingCommand === 'LOCK' ? 'Locking…' : 'Lock'}</span>
+            </button>
+          )}
+          {onRestart && (
+            <button
+              onClick={onRestart}
+              disabled={agentStatus !== 'ONLINE' || !!sendingCommand}
+              title={agentStatus !== 'ONLINE' ? 'Agent must be online to receive commands' : 'Restart this PC now'}
+              className="dm-btn dm-btn-ghost flex-1"
+              style={{ minHeight: 32, fontSize: '0.625rem', padding: '0.4rem' }}
+            >
+              <RotateCcw style={{ width: 11, height: 11 }} />
+              <span>{sendingCommand === 'RESTART' ? 'Restarting…' : 'Restart'}</span>
+            </button>
+          )}
+          {onShutdown && (
+            <button
+              onClick={onShutdown}
+              disabled={agentStatus !== 'ONLINE' || !!sendingCommand}
+              title={agentStatus !== 'ONLINE' ? 'Agent must be online to receive commands' : 'Shut down this PC now'}
+              className="dm-btn dm-btn-danger flex-1"
+              style={{ minHeight: 32, fontSize: '0.625rem', padding: '0.4rem' }}
+            >
+              <Power style={{ width: 11, height: 11 }} />
+              <span>{sendingCommand === 'SHUTDOWN' ? 'Shutting down…' : 'Shutdown'}</span>
+            </button>
+          )}
+        </div>
+      )}
     </motion.div>
   );
 }
