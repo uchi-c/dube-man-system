@@ -2,12 +2,23 @@ import React, { useState } from 'react';
 import { Lock, ArrowRight, Loader2, AlertCircle, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { supabase, getAuthenticatedUser } from '../services/supabase';
+import { clearMustChangePassword } from '../services/organizations';
 import { User } from '../types';
 
 interface ResetPasswordProps {
   /** Called once the new password is saved and the session is confirmed usable. */
   onComplete: (user: User) => void;
   onCancel: () => void;
+  /**
+   * 'recovery' (default): reached via the emailed "reset your password"
+   * link's PASSWORD_RECOVERY session — cancelling just abandons the reset.
+   * 'forced': reached because the signed-in account still has an
+   * admin-issued temporary password (must_change_password) — there's no
+   * real "back to sign in" to cancel into (they're already in), so this
+   * mode signs them out instead, and clears the flag server-side once the
+   * new password is set.
+   */
+  mode?: 'recovery' | 'forced';
 }
 
 // Setting a new password must never hang on a dead connection — cap it and recover.
@@ -29,7 +40,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
  * authenticated (recovery) session, so this page only needs to set a new
  * password on the existing account, not collect an email or re-verify one.
  */
-export default function ResetPassword({ onComplete, onCancel }: ResetPasswordProps) {
+export default function ResetPassword({ onComplete, onCancel, mode = 'recovery' }: ResetPasswordProps) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -48,6 +59,12 @@ export default function ResetPassword({ onComplete, onCancel }: ResetPasswordPro
         RESET_TIMEOUT_MS,
       );
       if (updateError) throw updateError;
+
+      if (mode === 'forced') {
+        // Best-effort: if this fails, the app just asks again next login —
+        // the password itself is already changed either way.
+        try { await clearMustChangePassword(); } catch { /* see above */ }
+      }
 
       const user = await getAuthenticatedUser();
       if (user) {
@@ -100,9 +117,13 @@ export default function ResetPassword({ onComplete, onCancel }: ResetPasswordPro
           <div className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center" style={{ background: 'rgba(76,111,255,0.14)', border: '1px solid rgba(76,111,255,0.28)' }}>
             <ShieldCheck style={{ width: 22, height: 22, color: 'var(--blue-400)' }} />
           </div>
-          <h1 className="dm-h1" style={{ fontSize: '1.5rem' }}>Set a new password</h1>
+          <h1 className="dm-h1" style={{ fontSize: '1.5rem' }}>
+            {mode === 'forced' ? 'Set your permanent password' : 'Set a new password'}
+          </h1>
           <p style={{ color: 'var(--text-mid)', fontSize: '0.9rem', marginTop: '6px' }}>
-            Choose a new password for your account.
+            {mode === 'forced'
+              ? "You signed in with a temporary password. Choose your own to continue — you'll use it every time from now on."
+              : 'Choose a new password for your account.'}
           </p>
         </div>
 
@@ -158,7 +179,7 @@ export default function ResetPassword({ onComplete, onCancel }: ResetPasswordPro
 
         <p style={{ textAlign: 'center', fontSize: '0.8125rem', color: 'var(--text-mid)' }}>
           <button onClick={onCancel} type="button" style={{ color: 'var(--blue-400)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
-            Back to sign in
+            {mode === 'forced' ? 'Sign out instead' : 'Back to sign in'}
           </button>
         </p>
       </motion.div>

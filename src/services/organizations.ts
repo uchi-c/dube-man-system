@@ -219,6 +219,61 @@ export async function createInvite(
   return { token: row.token, email: row.email, role: row.role, expiresAt: row.expires_at };
 }
 
+/**
+ * Admin-only: creates the teammate's account immediately with a one-time
+ * temporary password (instead of a link they'd have to open and complete
+ * signup on themselves) and adds them to the caller's organization with the
+ * chosen role. They log in with the email + temporary password shown here,
+ * then the app forces them to set their own password on that first login
+ * (see must_change_password / ResetPassword's "forced" mode).
+ *
+ * Runs server-side in the admin-invite-user Edge Function because creating
+ * an auth account with a password requires Supabase Auth's admin API
+ * (service role) — not something a plain RPC can do. The function itself
+ * still enforces "caller must be an ADMIN inviting into their own org" by
+ * calling create_organization_invite under the caller's own JWT first.
+ */
+export async function adminInviteUserWithTempPassword(
+  email: string,
+  role: UserRole,
+  name?: string
+): Promise<{ email: string; role: UserRole; tempPassword: string; orgName?: string }> {
+  const { data, error } = await supabase.functions.invoke('admin-invite-user', {
+    body: { email, role, name },
+  });
+  if (error) {
+    // On a non-2xx response, supabase-js's `error` carries the *message*
+    // "Edge Function returned a non-2xx status code" — the actual reason
+    // (e.g. "Only an organization admin can invite teammates") is in the
+    // raw Response body under `error.context`, which still has to be read.
+    let detail: string | undefined;
+    try {
+      const ctx = (error as any)?.context;
+      if (ctx && typeof ctx.json === 'function') {
+        const body = await ctx.json();
+        detail = body?.error;
+      }
+    } catch {
+      // Body wasn't JSON (or was already consumed) — fall through to the
+      // generic message below.
+    }
+    throw new Error(detail || error.message || "Couldn't create that teammate's account.");
+  }
+  if (data?.error) throw new Error(data.error);
+  if (!data?.tempPassword) throw new Error('Account creation did not return a temporary password.');
+  return { email: data.email, role: data.role, tempPassword: data.tempPassword, orgName: data.orgName };
+}
+
+/**
+ * Self-service only: clears the caller's own must_change_password flag.
+ * Called right after a forced password change succeeds — see
+ * ResetPassword's "forced" mode.
+ */
+export async function clearMustChangePassword(): Promise<void> {
+  const { error } = await supabase.rpc('clear_must_change_password');
+  if (error) throw error;
+}
+
 /** Every invite (pending, accepted, or revoked) for the caller's organization. */
 export async function fetchInvites(): Promise<OrganizationInvite[]> {
   if (!isSupabaseConfigured) return [];

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { User, UserRole, OrganizationInvite } from '../types';
 import { fetchAllUsers, updateUserRole } from '../services/supabase';
-import { createInvite, fetchInvites, revokeInvite } from '../services/organizations';
+import { adminInviteUserWithTempPassword, fetchInvites, revokeInvite } from '../services/organizations';
 import {
   UserPlus, Mail, Calendar, AlertCircle, RefreshCw, Check, X,
-  Copy, Ban, Clock, ShieldCheck, Users as UsersIcon,
+  Copy, Ban, Clock, ShieldCheck, Users as UsersIcon, KeyRound,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import DataTable from '../components/DataTable';
@@ -35,7 +35,7 @@ export default function Team() {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<UserRole>('STAFF');
   const [inviteError, setInviteError] = useState('');
-  const [inviteLink, setInviteLink] = useState('');
+  const [inviteResult, setInviteResult] = useState<{ email: string; role: UserRole; tempPassword: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [roleError, setRoleError] = useState('');
@@ -56,7 +56,7 @@ export default function Team() {
   useEffect(() => { loadData(); }, []);
 
   const openInviteForm = () => {
-    setInviteEmail(''); setInviteRole('STAFF'); setInviteError(''); setInviteLink(''); setCopied(false);
+    setInviteEmail(''); setInviteRole('STAFF'); setInviteError(''); setInviteResult(null); setCopied(false);
     setIsInviting(true);
   };
 
@@ -66,24 +66,24 @@ export default function Team() {
     if (!inviteEmail.trim()) { setInviteError('Enter the email address to invite.'); return; }
     setSubmitting(true);
     try {
-      const { token } = await createInvite(inviteEmail.trim(), inviteRole);
-      const link = `${window.location.origin}${window.location.pathname}#/signup?invite=${token}`;
-      setInviteLink(link);
+      const { email, role, tempPassword } = await adminInviteUserWithTempPassword(inviteEmail.trim(), inviteRole);
+      setInviteResult({ email, role, tempPassword });
       await loadData();
     } catch (err: any) {
-      setInviteError(err?.message || "Couldn't create the invite. Try again.");
+      setInviteError(err?.message || "Couldn't create that teammate's account. Try again.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleCopyLink = async () => {
+  const handleCopyPassword = async () => {
+    if (!inviteResult) return;
     try {
-      await navigator.clipboard.writeText(inviteLink);
+      await navigator.clipboard.writeText(inviteResult.tempPassword);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
-      // Clipboard API unavailable — the link is still on-screen to copy manually.
+      // Clipboard API unavailable — the password is still on-screen to copy manually.
     }
   };
 
@@ -243,27 +243,34 @@ export default function Team() {
               <div className="flex items-start justify-between mb-5">
                 <div>
                   <h3 className="dm-h2">Invite teammate</h3>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-mid)', marginTop: 2 }}>They'll join this organization with the role you pick below.</p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-mid)', marginTop: 2 }}>Their account is created immediately with the role you pick below — no link to open or email to confirm.</p>
                 </div>
                 <button onClick={() => setIsInviting(false)} className="dm-icon-btn" aria-label="Close">
                   <X style={{ width: 16, height: 16 }} />
                 </button>
               </div>
 
-              {inviteLink ? (
+              {inviteResult ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: 'var(--success-bg)', border: '1px solid rgba(61,220,151,0.3)', fontSize: '0.78rem', color: 'var(--success)' }}>
                     <Check style={{ width: 15, height: 15, flexShrink: 0 }} strokeWidth={3} />
-                    <span>Invite created for {inviteEmail}. Share this link with them — it expires in 7 days.</span>
+                    <span>Account created for {inviteResult.email}. Give them this email + password to sign in with — they'll be asked to set their own password the first time.</span>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="dm-label" style={{ padding: 0 }}>Invite link</label>
+                    <label className="dm-label" style={{ padding: 0 }}>Email</label>
+                    <input type="text" readOnly className="dm-input" style={{ fontSize: '0.78rem' }} value={inviteResult.email} onFocus={e => e.target.select()} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="dm-label flex items-center gap-1.5" style={{ padding: 0 }}>
+                      <KeyRound style={{ width: 12, height: 12 }} /> Temporary password
+                    </label>
                     <div className="flex items-center gap-2">
-                      <input type="text" readOnly className="dm-input dm-nums" style={{ fontSize: '0.72rem' }} value={inviteLink} onFocus={e => e.target.select()} />
-                      <button onClick={handleCopyLink} className="dm-icon-btn" aria-label="Copy link" title="Copy link">
+                      <input type="text" readOnly className="dm-input dm-nums" style={{ fontSize: '0.85rem', fontWeight: 700, letterSpacing: '0.03em' }} value={inviteResult.tempPassword} onFocus={e => e.target.select()} />
+                      <button onClick={handleCopyPassword} className="dm-icon-btn" aria-label="Copy password" title="Copy password">
                         {copied ? <Check style={{ width: 15, height: 15, color: 'var(--success)' }} /> : <Copy style={{ width: 15, height: 15 }} />}
                       </button>
                     </div>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-low)' }}>Shown once — it isn't stored anywhere. If it's lost, revoke and re-invite them.</p>
                   </div>
                   <div className="flex gap-2 pt-2">
                     <button type="button" onClick={openInviteForm} className="dm-btn dm-btn-ghost flex-1">Invite another</button>
