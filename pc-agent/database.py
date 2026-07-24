@@ -62,8 +62,8 @@ def complete_command(
         )
         .update(
             {
-                "status":
-                "COMPLETED"
+                "status": "COMPLETED",
+                "completed_at": datetime.now(timezone.utc).isoformat(),
             }
         )
         .eq(
