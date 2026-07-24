@@ -131,7 +131,12 @@ begin
       and oi.accepted_at is null
       and oi.revoked_at is null;
 
-    v_token := replace(uuid_generate_v4()::text || uuid_generate_v4()::text, '-', '');
+    -- gen_random_uuid() is built into core Postgres (pg_catalog, always on
+    -- the search_path regardless of this function's own "set search_path"),
+    -- unlike uuid_generate_v4() which lives in the uuid-ossp extension's
+    -- "extensions" schema and is unresolvable here -- that's what was
+    -- throwing "function uuid_generate_v4() does not exist".
+    v_token := replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '');
 
     return query
     insert into public.organization_invites (org_id, email, role, token, invited_by)
