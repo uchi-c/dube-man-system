@@ -46,9 +46,20 @@ function Assert-Admin {
 function Get-Python {
   foreach ($c in @("python", "py")) {
     $exe = (Get-Command $c -ErrorAction SilentlyContinue)
-    if ($exe) { return $exe.Source }
+    if (-not $exe) { continue }
+    # Windows ships a fake "python.exe" App Execution Alias under
+    # ...\WindowsApps\ that sits on PATH even when Python isn't actually
+    # installed. Get-Command finds it happily, but running it produces no
+    # real output (it either no-ops or opens the Microsoft Store page) --
+    # which crashed later downstream here with a cryptic "cannot call a
+    # method on a null-valued expression" instead of a clear error.
+    if ($exe.Source -like "*\WindowsApps\*") { continue }
+    $verOutput = & $exe.Source --version 2>&1
+    if ($LASTEXITCODE -eq 0 -and $verOutput -match "Python 3") {
+      return $exe.Source
+    }
   }
-  throw "Python 3 not found on PATH. Install Python 3.10+ (check 'Add to PATH') and retry."
+  throw "Python 3 not found on PATH (or only the Microsoft Store's placeholder 'python' alias was found, which does not count). Install Python 3.10+ from https://python.org - not the Microsoft Store - and check 'Add to PATH' during setup, then retry. If Windows previously opened a Store prompt when you typed 'python', also turn it off under Settings > Apps > Advanced app settings > App execution aliases."
 }
 
 function New-Secret {
