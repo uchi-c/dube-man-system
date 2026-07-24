@@ -405,6 +405,37 @@ function UnauthorizedScreen({ user, onBack }: { user: User; onBack: () => void }
   );
 }
 
+// Shown when someone opens an invite link while already signed in as a
+// different session. Without this, the app's normal "authenticated? go
+// straight to the dashboard" guard would silently swallow the invite and
+// just show whoever is currently logged in -- indistinguishable from the
+// link "just going to admin" with no explanation.
+function InviteWhileSignedInScreen({ user, onSignOut, onDismiss }: { user: User; onSignOut: () => void; onDismiss: () => void }) {
+  return (
+    <div className="dm-glow flex flex-col items-center justify-center min-h-screen text-center p-8">
+      <div
+        className="w-14 h-14 rounded-2xl mb-4 flex items-center justify-center"
+        style={{ background: 'var(--warning-bg)', border: '1px solid rgba(255,176,32,0.30)' }}
+      >
+        <UserPlus style={{ width: 24, height: 24, color: 'var(--warning)' }} />
+      </div>
+      <h2 className="dm-h1">You're already signed in</h2>
+      <p style={{ color: 'var(--text-mid)', fontSize: '0.875rem', marginTop: 8, maxWidth: 380 }}>
+        This browser is signed in as <strong style={{ color: 'var(--text-hi)' }}>{user.email}</strong>. To accept this
+        invite as a different account, sign out first — otherwise you'll just keep using your current one.
+      </p>
+      <div className="flex gap-3 mt-6">
+        <button onClick={onDismiss} className="dm-btn dm-btn-ghost">
+          Stay signed in as {user.name}
+        </button>
+        <button onClick={onSignOut} className="dm-btn dm-btn-primary">
+          <LogOut style={{ width: 15, height: 15 }} /> Sign out to accept invite
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ---- Lazy page fallback ----------------------------------------------------
 
 function PageFallback() {
@@ -454,7 +485,7 @@ function renderPage(id: string, role: string) {
     case 'customers':     return <Customers />;
     case 'pharmacy':      return <Pharmacy userRole={role} />;
     case 'wifi':          return <WifiManagement />;
-    case 'pc-agent':      return <PCAgentConsole />;
+    case 'pc-agent':      return <PCAgentConsole userRole={role} />;
     case 'logs':          return <ActivityLogs userRole={role} />;
     case 'team':          return <Team />;
     default:              return null;
@@ -581,6 +612,15 @@ export default function App() {
     return authView === 'signup'
       ? <Signup onSignupSuccess={handleLogin} onSwitchToLogin={() => setAuthView('login')} />
       : <Login onLoginSuccess={handleLogin} onSwitchToSignup={() => setAuthView('signup')} />;
+  }
+  if (new URLSearchParams(location.search).get('invite')) {
+    return (
+      <InviteWhileSignedInScreen
+        user={user}
+        onSignOut={handleLogout}
+        onDismiss={() => navigate(location.pathname, { replace: true })}
+      />
+    );
   }
 
   const homePath = defaultPathFor(user.role, businessType);

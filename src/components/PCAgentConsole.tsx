@@ -1,164 +1,102 @@
-import { useState } from 'react';
-import { getComputers } from '../utils/db';
-import { Terminal, ShieldCheck, RefreshCcw, KeyRound } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Monitor, RefreshCw, ShieldAlert } from 'lucide-react';
+import { fetchComputers, fetchRunningCafeSessions, sendComputerCommand } from '../services/supabase';
+import { Computer, CafeSession } from '../types';
+import ComputerStatusCard from './ComputerStatusCard';
 
-export default function PCAgentConsole() {
-  const computers = getComputers();
-  const [activeTab, setActiveTab] = useState<'status' | 'cryptography'>('status');
-  const [isSimulatingHeartbeat, setIsSimulatingHeartbeat] = useState(false);
-  const [heartbeatLogs, setHeartbeatLogs] = useState<string[]>([
-    "[SYSTEM] PC-Agent telemetry listener initialized successfully.",
-    "[PC-01] Valid heartbeat received. HMAC Verified. Status: Busy",
-    "[PC-02] Valid heartbeat received. HMAC Verified. Status: Available",
-    "[PC-04] Valid heartbeat received. HMAC Verified. Status: Busy"
-  ]);
+interface PCAgentConsoleProps {
+  userRole: string;
+}
 
-  const runHeartbeatSimulation = () => {
-    setIsSimulatingHeartbeat(true);
-    setHeartbeatLogs(prev => [
-      `[SYSTEM] Dispatched diagnostic ping request...`,
-      ...prev
-    ]);
+// Matches the RLS policy on computer_commands ("Staff manage computer
+// commands" -- ADMIN/CAFE_OPERATOR only). Enforced server-side regardless;
+// this just keeps the buttons from appearing to someone who can't use them.
+const CAN_SEND_COMMANDS = (role: string) => role === 'ADMIN' || role === 'CAFE_OPERATOR';
 
-    setTimeout(() => {
-      const now = new Date().toLocaleTimeString();
-      const randomPc = computers[Math.floor(Math.random() * computers.length)].computer_code;
-      const hmacHash = Math.random().toString(16).substr(2, 16);
+export default function PCAgentConsole({ userRole }: PCAgentConsoleProps) {
+  const [computers, setComputers] = useState<Computer[]>([]);
+  const [sessions, setSessions] = useState<CafeSession[]>([]);
+  const [loading, setLoading] = useState(true);
+  // Tracks which (computer id, command) is currently in flight, so only
+  // that one card's button shows a busy state.
+  const [sending, setSending] = useState<{ id: string; command: 'LOCK' | 'RESTART' | 'SHUTDOWN' } | null>(null);
 
-      setHeartbeatLogs(prev => [
-        `[${randomPc}] Handshake success - Received cryptographic heartbeat at ${now}. HMAC hash: sha255-${hmacHash}`,
-        ...prev
-      ]);
-      setIsSimulatingHeartbeat(false);
-    }, 1200);
+  const load = async () => {
+    setLoading(true);
+    const [comps, sess] = await Promise.all([fetchComputers(), fetchRunningCafeSessions()]);
+    setComputers(comps);
+    setSessions(sess);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const canSend = CAN_SEND_COMMANDS(userRole);
+
+  const runCommand = async (computer: Computer, command: 'LOCK' | 'RESTART' | 'SHUTDOWN') => {
+    if (command === 'RESTART' && !confirm(`Restart ${computer.computer_name} now? Anyone using it will lose unsaved work.`)) return;
+    if (command === 'SHUTDOWN' && !confirm(`Shut down ${computer.computer_name} now? Anyone using it will lose unsaved work.`)) return;
+
+    setSending({ id: computer.id, command });
+    await sendComputerCommand(computer.computer_code, command);
+    setSending(null);
   };
 
   return (
     <div className="space-y-6" id="pc-agent-tab">
-      {/* Overview */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="dm-h1">PC-Agent Orchestration</h1>
-          <p style={{ color: 'var(--text-mid)', fontSize: '0.8125rem', marginTop: 4 }}>Supervise native computer heartbeats, authenticate security tokens, and plan secure workstation blocking.</p>
+          <h1 className="dm-h1">PC Agent Hub</h1>
+          <p style={{ color: 'var(--text-mid)', fontSize: '0.8125rem', marginTop: 4 }}>
+            Live status for every PC running the Uruu Agent. Commands take effect within one poll interval (~2s) once a PC shows Online.
+          </p>
         </div>
-        <button
-          onClick={runHeartbeatSimulation}
-          disabled={isSimulatingHeartbeat}
-          className="dm-btn dm-btn-ghost"
-        >
-          <RefreshCcw className={isSimulatingHeartbeat ? 'dm-spin' : ''} style={{ width: 14, height: 14 }} />
-          <span>Force Diagnostic Heartbeat Audit</span>
+        <button onClick={load} className="dm-btn dm-btn-ghost">
+          <RefreshCw className={loading ? 'dm-spin' : ''} style={{ width: 14, height: 14 }} />
+          <span>Refresh</span>
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Heartbeat Monitor terminal logs (7 cols) */}
-        <div className="lg:col-span-7">
-          <div className="dm-card p-5 space-y-4">
-            <div className="flex justify-between items-center pb-3" style={{ borderBottom: '1px solid var(--panel-line)' }}>
-              <span style={{ fontSize: '0.75rem', color: 'var(--blue-400)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'monospace', display: 'flex', alignItems: 'center' }}>
-                <Terminal style={{ width: 15, height: 15, marginRight: 6 }} /> Telemetry Stream Listener
-              </span>
-              <span className="dm-dot dm-dot-success dm-dot-pulse" />
-            </div>
-
-            {/* Terminal logs lists */}
-            <div className="dm-card-inset space-y-1.5" style={{ padding: '1rem', height: 280, overflowY: 'auto', fontFamily: 'monospace', fontSize: '0.6875rem' }}>
-              {heartbeatLogs.map((log, idx) => (
-                <div key={idx} style={{ color: log.includes('success') ? 'var(--success)' : log.includes('dispatched') ? 'var(--warning)' : 'var(--text-low)' }}>
-                  {log}
-                </div>
-              ))}
-            </div>
-
-            <div className="flex justify-between items-center" style={{ fontSize: '0.625rem', color: 'var(--text-low)', fontFamily: 'monospace' }}>
-              <span>Listener Port: Gateway (IPC Channel)</span>
-              <span>HMAC Keys status: Activated</span>
-            </div>
-          </div>
+      {!canSend && (
+        <div className="flex items-start gap-3 px-4 py-3 rounded-2xl" style={{ background: 'var(--warning-bg)', border: '1px solid rgba(255,176,32,0.3)' }}>
+          <ShieldAlert style={{ width: 16, height: 16, color: 'var(--warning)', flexShrink: 0, marginTop: 2 }} />
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-hi)' }}>
+            Your role can view PC status but can't send Lock/Restart/Shutdown commands — that needs Admin or Café Operator.
+          </p>
         </div>
+      )}
 
-        {/* Cryptography and Lock Handshake schemas (5 cols) */}
-        <div className="lg:col-span-5">
-          <div className="dm-card p-5 space-y-4">
-            <div className="flex pb-3 mb-2 space-x-4" style={{ borderBottom: '1px solid var(--panel-line)' }}>
-              <button
-                onClick={() => setActiveTab('status')}
-                style={{
-                  fontSize: '0.75rem', fontWeight: 800, paddingBottom: 4, transition: 'all 0.15s',
-                  borderBottom: `2px solid ${activeTab === 'status' ? 'var(--blue-500)' : 'transparent'}`,
-                  color: activeTab === 'status' ? 'var(--blue-400)' : 'var(--text-low)',
-                  background: 'none', border: 'none', borderBottomWidth: 2, cursor: 'pointer',
-                }}
-              >
-                Safe Terminal Locking
-              </button>
-              <button
-                onClick={() => setActiveTab('cryptography')}
-                style={{
-                  fontSize: '0.75rem', fontWeight: 800, paddingBottom: 4, transition: 'all 0.15s',
-                  borderBottom: `2px solid ${activeTab === 'cryptography' ? 'var(--blue-500)' : 'transparent'}`,
-                  color: activeTab === 'cryptography' ? 'var(--blue-400)' : 'var(--text-low)',
-                  background: 'none', border: 'none', borderBottomWidth: 2, cursor: 'pointer',
-                }}
-              >
-                HMAC Verification handshake
-              </button>
-            </div>
-
-            {activeTab === 'status' ? (
-              <div className="space-y-3.5 text-left" style={{ fontSize: '0.75rem', color: 'var(--text-mid)' }}>
-                <div className="flex items-start space-x-2.5" style={{ padding: '1rem', background: 'var(--success-bg)', border: '1px solid rgba(61,220,151,0.28)', borderRadius: 'var(--r-card)' }}>
-                  <ShieldCheck style={{ width: 20, height: 20, color: 'var(--success)', marginTop: 2, flexShrink: 0, strokeWidth: 2.5 }} />
-                  <div>
-                    <span style={{ fontWeight: 800, color: 'var(--success)', fontSize: '0.6875rem', display: 'block', textTransform: 'uppercase' }}>Zero Remote shells policy</span>
-                    <p style={{ marginTop: 2, color: 'var(--text-mid)', lineHeight: 1.4 }}>
-                      To prevent any forms of remote exploit, <strong style={{ color: 'var(--text-hi)' }}>the system strictly forbids any remote code shells</strong>. The local lock screen agent operates strictly inside isolated parameters.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-start space-x-2">
-                    <div className="dm-card-inset flex-shrink-0" style={{ padding: '0.25rem 0.6rem', fontFamily: 'monospace', fontSize: '0.625rem', fontWeight: 700, color: 'var(--text-low)', borderRadius: 6, marginTop: 2 }}>A</div>
-                    <div>
-                      <strong style={{ color: 'var(--text-hi)', display: 'block' }}>Desktop Overlay</strong>
-                      <span style={{ color: 'var(--text-low)' }}>Upon expiry or boot, the client agent overlays an un-bypassable modal blocking keyboard interrupts (Win + D, Alt + Tab, Ctrl+Shift+Esc).</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-2">
-                    <div className="dm-card-inset flex-shrink-0" style={{ padding: '0.25rem 0.6rem', fontFamily: 'monospace', fontSize: '0.625rem', fontWeight: 700, color: 'var(--text-low)', borderRadius: 6, marginTop: 2 }}>B</div>
-                    <div>
-                      <strong style={{ color: 'var(--text-hi)', display: 'block' }}>Remote Lock / Unlock signals</strong>
-                      <span style={{ color: 'var(--text-low)' }}>Upon operator click inside this console, a secure event triggers on the Supabase Realtime socket. The agent processes the state and unlocks.</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3" style={{ fontSize: '0.75rem', color: 'var(--text-mid)' }}>
-                <p style={{ lineHeight: 1.4 }}>
-                  Handshakes safeguard transactions using self-signed tokens validated via backend or per-device HMAC keys:
-                </p>
-
-                <div className="dm-card-inset space-y-1" style={{ padding: '0.85rem', fontFamily: 'monospace', fontSize: '0.625rem', color: 'var(--text-mid)', lineHeight: 1.5, textTransform: 'uppercase' }}>
-                  <div>1. Dispatched packet payloads</div>
-                  <div style={{ color: 'var(--blue-400)', fontWeight: 700 }}>"computer_code": "PC-01"</div>
-                  <div style={{ color: 'var(--blue-400)', fontWeight: 600 }}>"timestamp": 178523945</div>
-                  <div>2. Computed sha256 outputs</div>
-                  <div className="dm-truncate" style={{ color: 'var(--success)', fontWeight: 700 }}>7af802cd43b12dc17abef768297fbc</div>
-                </div>
-
-                <div className="flex items-center space-x-2.5" style={{ color: 'var(--text-low)', background: 'var(--panel-2)', padding: '0.6rem 0.75rem', borderRadius: 'var(--r-control)', border: '1px dashed var(--panel-line-strong)', fontSize: '0.625rem' }}>
-                  <KeyRound style={{ width: 15, height: 15, color: 'var(--text-mid)', flexShrink: 0 }} />
-                  <span>Verify signature headers mismatch triggers immediate workstation block.</span>
-                </div>
-              </div>
-            )}
-          </div>
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {[0, 1, 2].map(i => <div key={i} className="dm-skeleton" style={{ height: 220 }} />)}
         </div>
-      </div>
+      ) : computers.length === 0 ? (
+        <div className="dm-card-inset flex flex-col items-center text-center" style={{ padding: '4rem 1.5rem', borderStyle: 'dashed' }}>
+          <Monitor style={{ width: 40, height: 40, marginBottom: 12, color: 'var(--text-low)' }} />
+          <p style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-mid)' }}>No PCs registered yet</p>
+          <p style={{ fontSize: '0.75rem', marginTop: 4, color: 'var(--text-low)', maxWidth: 360 }}>
+            Install the Uruu Agent on a PC (see pc-agent/README.md) with this organization's ID — it appears here automatically within one heartbeat.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {computers.map(computer => {
+            const activeSession = sessions.find(s => s.computer_id === computer.id && s.status === 'ACTIVE');
+            const busy = sending?.id === computer.id ? sending.command : null;
+            return (
+              <ComputerStatusCard
+                key={computer.id}
+                computer={computer}
+                activeSession={activeSession}
+                onLock={canSend ? () => runCommand(computer, 'LOCK') : undefined}
+                onRestart={canSend ? () => runCommand(computer, 'RESTART') : undefined}
+                onShutdown={canSend ? () => runCommand(computer, 'SHUTDOWN') : undefined}
+                sendingCommand={busy}
+              />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
