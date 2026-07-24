@@ -266,16 +266,17 @@ export async function createUserProfile(id: string, name: string, email: string,
 
 export async function updateUserRole(id: string, role: string): Promise<boolean> {
   if (isSupabaseConfigured) {
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update({ role })
-        .eq('id', id);
-      if (error) throw error;
-      return true;
-    } catch (err) {
-      handleDbError(err, 'Failed updating user role');
-    }
+    // Deliberately not caught-and-swallowed like most functions in this file:
+    // a rejection here is usually the prevent_last_admin_demotion() trigger
+    // doing its job, and the caller needs that message to explain to the
+    // admin why nothing changed, rather than it silently reverting on the
+    // next refresh with zero explanation.
+    const { error } = await supabase
+      .from('users')
+      .update({ role })
+      .eq('id', id);
+    if (error) throw error;
+    return true;
   }
 
   const users = localDb.getAllUsers();

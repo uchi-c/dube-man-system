@@ -38,6 +38,7 @@ export default function Team() {
   const [inviteLink, setInviteLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [roleError, setRoleError] = useState('');
 
   const loadData = async () => {
     setLoading(true);
@@ -92,8 +93,17 @@ export default function Team() {
   };
 
   const handleRoleChange = async (userId: string, role: UserRole) => {
-    const ok = await updateUserRole(userId, role);
-    if (ok) await loadData();
+    setRoleError('');
+    try {
+      await updateUserRole(userId, role);
+      await loadData();
+    } catch (err: any) {
+      // Reload regardless: the dropdown already shows the attempted value
+      // optimistically (it's a plain <select>), so without this it would
+      // keep showing the rejected role instead of snapping back to reality.
+      setRoleError(err?.message || "Couldn't change that member's role.");
+      await loadData();
+    }
   };
 
   const memberColumns = [
@@ -158,6 +168,16 @@ export default function Team() {
           </button>
         </div>
       </div>
+
+      {roleError && (
+        <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: 'var(--danger-bg)', border: '1px solid rgba(255,107,107,0.3)', fontSize: '0.78rem', color: 'var(--danger)' }} role="alert">
+          <AlertCircle style={{ width: 15, height: 15, flexShrink: 0 }} />
+          <span className="flex-1">{roleError}</span>
+          <button onClick={() => setRoleError('')} className="dm-icon-btn" aria-label="Dismiss" style={{ width: 24, height: 24 }}>
+            <X style={{ width: 13, height: 13 }} />
+          </button>
+        </div>
+      )}
 
       <div className="dm-card p-5">
         <h3 className="dm-h3" style={{ marginBottom: 14 }}>Members</h3>
