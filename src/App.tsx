@@ -74,12 +74,13 @@ PATH_TO_TAB['/users'] = 'logs'; // legacy alias
 
 const GROUP_ORDER = ['Home','Operations','Printing','Connectivity','System'];
 
-// Which nav modules each business type sees. 'general' (the default) shows
-// everything, unchanged from before business types existed. Niche types hide
-// modules irrelevant to them — this is what makes two tenants' UIs actually
-// look different, on top of their data already being hard-isolated by RLS.
+// Which nav modules each business type sees. 'general' shows everything
+// except Pharmacy — a general dealer has no use for prescription/dispensing
+// tracking, so it stays out of that nav by default the same way niche types
+// hide modules irrelevant to them. Computed from TABS (rather than hardcoded)
+// so any tab added later is included for 'general' automatically.
 const BUSINESS_TYPE_MODULES: Record<BusinessType, string[] | null> = {
-  general:  null,
+  general:  TABS.map(t => t.id).filter(id => id !== 'pharmacy'),
   pharmacy: ['dashboard', 'pos', 'inventory', 'customers', 'pharmacy', 'team'],
   cafe:     ['dashboard', 'print-manager', 'printing', 'team'],
   printing: ['dashboard', 'print-manager', 'printing', 'team'],

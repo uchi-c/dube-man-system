@@ -157,17 +157,17 @@ export default function ComputerStatusCard({ computer, activeSession, onLock, on
       </div>
 
       {(onLock || onRestart || onShutdown) && (
-        <div className="flex gap-1.5 pt-1" style={{ borderTop: '1px solid var(--panel-line)' }}>
+        <div className="grid gap-1.5 pt-1" style={{ borderTop: '1px solid var(--panel-line)', gridTemplateColumns: `repeat(${[onLock, onRestart, onShutdown].filter(Boolean).length}, minmax(0, 1fr))` }}>
           {onLock && (
             <button
               onClick={onLock}
               disabled={agentStatus !== 'ONLINE' || !!sendingCommand}
               title={agentStatus !== 'ONLINE' ? 'Agent must be online to receive commands' : 'Lock this PC now'}
-              className="dm-btn dm-btn-ghost flex-1"
-              style={{ minHeight: 32, fontSize: '0.625rem', padding: '0.4rem' }}
+              className="dm-btn dm-btn-ghost"
+              style={{ minWidth: 0, minHeight: 32, fontSize: '0.625rem', padding: '0.4rem' }}
             >
-              <Lock style={{ width: 11, height: 11 }} />
-              <span>{sendingCommand === 'LOCK' ? 'Locking…' : 'Lock'}</span>
+              <Lock style={{ width: 11, height: 11, flexShrink: 0 }} />
+              <span className="dm-truncate">{sendingCommand === 'LOCK' ? 'Locking…' : 'Lock'}</span>
             </button>
           )}
           {onRestart && (
@@ -175,11 +175,11 @@ export default function ComputerStatusCard({ computer, activeSession, onLock, on
               onClick={onRestart}
               disabled={agentStatus !== 'ONLINE' || !!sendingCommand}
               title={agentStatus !== 'ONLINE' ? 'Agent must be online to receive commands' : 'Restart this PC now'}
-              className="dm-btn dm-btn-ghost flex-1"
-              style={{ minHeight: 32, fontSize: '0.625rem', padding: '0.4rem' }}
+              className="dm-btn dm-btn-ghost"
+              style={{ minWidth: 0, minHeight: 32, fontSize: '0.625rem', padding: '0.4rem' }}
             >
-              <RotateCcw style={{ width: 11, height: 11 }} />
-              <span>{sendingCommand === 'RESTART' ? 'Restarting…' : 'Restart'}</span>
+              <RotateCcw style={{ width: 11, height: 11, flexShrink: 0 }} />
+              <span className="dm-truncate">{sendingCommand === 'RESTART' ? 'Restarting…' : 'Restart'}</span>
             </button>
           )}
           {onShutdown && (
@@ -187,11 +187,11 @@ export default function ComputerStatusCard({ computer, activeSession, onLock, on
               onClick={onShutdown}
               disabled={agentStatus !== 'ONLINE' || !!sendingCommand}
               title={agentStatus !== 'ONLINE' ? 'Agent must be online to receive commands' : 'Shut down this PC now'}
-              className="dm-btn dm-btn-danger flex-1"
-              style={{ minHeight: 32, fontSize: '0.625rem', padding: '0.4rem' }}
+              className="dm-btn dm-btn-danger"
+              style={{ minWidth: 0, minHeight: 32, fontSize: '0.625rem', padding: '0.4rem' }}
             >
-              <Power style={{ width: 11, height: 11 }} />
-              <span>{sendingCommand === 'SHUTDOWN' ? 'Shutting down…' : 'Shutdown'}</span>
+              <Power style={{ width: 11, height: 11, flexShrink: 0 }} />
+              <span className="dm-truncate">{sendingCommand === 'SHUTDOWN' ? 'Shutting down…' : 'Shutdown'}</span>
             </button>
           )}
         </div>
