@@ -84,7 +84,19 @@ if ($VerifyOnly) {
     Write-Host "  .env not found at $envPath" -ForegroundColor Red
   }
   $svc = Get-Service -Name $svcName -ErrorAction SilentlyContinue
-  if ($svc) { Write-Host ("  Service            {0}" -f $svc.Status) -ForegroundColor Green }
+  if ($svc) {
+    Write-Host ("  Service            {0}" -f $svc.Status) -ForegroundColor Green
+    $startMode = (Get-CimInstance Win32_Service -Filter "Name='$svcName'" -ErrorAction SilentlyContinue).StartMode
+    # "Manual" here means the agent will NOT come back on its own after the
+    # next reboot/shutdown -- it only looks fine until then. Reproduced
+    # live: every PC went quiet at end-of-day and stayed offline the next
+    # morning because of exactly this.
+    $startColor = if ($startMode -eq "Auto") { "Green" } else { "Red" }
+    Write-Host ("  Startup type       {0}" -f $startMode) -ForegroundColor $startColor
+    if ($startMode -ne "Auto") {
+      Write-Host "    Fix: sc.exe config $svcName start= delayed-auto" -ForegroundColor Yellow
+    }
+  }
   else      { Write-Host  "  Service            NOT INSTALLED" -ForegroundColor Red }
   $log = Join-Path $here "agent.log"
   if (Test-Path $log) { Write-Host "`n-- last log lines --"; Get-Content $log -Tail 8 }
@@ -159,6 +171,17 @@ try {
   }
   & $python service.py install
   if ($LASTEXITCODE -ne 0) { throw "service.py install exited with code $LASTEXITCODE (see output above)" }
+  # pywin32's plain "install" registers the service as Manual startup, not
+  # Automatic -- it stays running fine right after this script starts it
+  # below, but silently never comes back the next time the PC is shut down
+  # or restarted (e.g. overnight) until someone opens Services.msc and
+  # starts it by hand. Reproduced live: every registered PC went quiet in
+  # the same ~70-minute window (end of day) and stayed offline the next
+  # morning despite being powered back on. "Automatic (Delayed Start)"
+  # avoids racing the network stack at boot, which a plain "auto" start can
+  # hit before Wi-Fi/Ethernet is up.
+  & sc.exe config $svcName start= delayed-auto | Out-Null
+  if ($LASTEXITCODE -ne 0) { throw "sc.exe config (delayed-auto startup) exited with code $LASTEXITCODE" }
   & $python service.py start
   if ($LASTEXITCODE -ne 0) { throw "service.py start exited with code $LASTEXITCODE (see output above)" }
 } catch {
