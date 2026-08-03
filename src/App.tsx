@@ -7,8 +7,9 @@ import { getCurrentOrganizationBusinessType } from './services/organizations';
 import ErrorBoundary from './components/ErrorBoundary';
 import InstallAppButton from './components/InstallAppButton';
 
-// Login, Signup and ResetPassword are needed for first paint (pre-auth), so
-// keep them eager.
+// LandingPage, Login, Signup and ResetPassword are needed for first paint
+// (pre-auth), so keep them eager.
+import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ResetPassword from './pages/ResetPassword';
@@ -544,10 +545,16 @@ export default function App() {
   // (evaluated once, at mount, which is exactly when a link like this is
   // opened) fixes the common case; the effect below also catches an invite
   // link reached via in-app hash navigation without a full reload.
-  const [authView, setAuthView] = useState<'login' | 'signup'>(() =>
+  //
+  // 'landing' is the default for everyone else -- this system is internal
+  // only, with no public self-service signup, so the bare domain shows a
+  // front page instead of dropping straight into a login form. 'signup'
+  // stays reachable ONLY via a token-bearing invite link, never as a
+  // general destination anyone can navigate to.
+  const [authView, setAuthView] = useState<'landing' | 'login' | 'signup'>(() =>
     location.pathname === '/signup' || new URLSearchParams(location.search).get('invite')
       ? 'signup'
-      : 'login'
+      : 'landing'
   );
   useEffect(() => {
     if (!authenticated && new URLSearchParams(location.search).get('invite')) {
@@ -633,9 +640,13 @@ export default function App() {
   }
   if (checking) return <LoadingScreen />;
   if (!authenticated || !user) {
-    return authView === 'signup'
-      ? <Signup onSignupSuccess={handleLogin} onSwitchToLogin={() => setAuthView('login')} />
-      : <Login onLoginSuccess={handleLogin} onSwitchToSignup={() => setAuthView('signup')} />;
+    if (authView === 'signup') {
+      return <Signup onSignupSuccess={handleLogin} onSwitchToLogin={() => setAuthView('login')} />;
+    }
+    if (authView === 'login') {
+      return <Login onLoginSuccess={handleLogin} />;
+    }
+    return <LandingPage onSignIn={() => setAuthView('login')} />;
   }
   if (mustChangePassword) {
     return (

@@ -308,16 +308,31 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin }: SignupProps
               </p>
               <button onClick={onSwitchToLogin} className="dm-btn dm-btn-ghost w-full mt-2">Back to sign in</button>
             </div>
+          ) : !isInviteMode ? (
+            // This system has no public self-service signup -- accounts are
+            // created by an admin (Team page invite) or by opening a valid
+            // ?invite= link. Reached only by someone navigating to /signup
+            // directly without a token; the "Create your workspace" form
+            // that used to live here is gone from every reachable path.
+            <div className="dm-card-glass p-6 text-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center" style={{ background: 'rgba(76,111,255,0.14)', border: '1px solid rgba(76,111,255,0.28)' }}>
+                <ShieldCheck style={{ width: 22, height: 22, color: 'var(--blue-400)' }} />
+              </div>
+              <h1 className="dm-h1" style={{ fontSize: '1.4rem' }}>This is an internal system</h1>
+              <p style={{ color: 'var(--text-mid)', fontSize: '0.875rem', lineHeight: 1.6 }}>
+                Accounts here are created by an admin, not self-signup. If you're expecting access,
+                ask your admin to invite you — otherwise, sign in with an existing account.
+              </p>
+              <button onClick={onSwitchToLogin} className="dm-btn dm-btn-ghost w-full mt-2">Back to sign in</button>
+            </div>
           ) : (
             <>
               <div>
                 <h1 className="dm-h1" style={{ fontSize: '1.75rem' }}>
-                  {isInviteMode ? `Join ${inviteInfo?.orgName ?? 'your team'}` : 'Create your workspace'}
+                  Join {inviteInfo?.orgName ?? 'your team'}
                 </h1>
                 <p style={{ color: 'var(--text-mid)', fontSize: '0.9rem', marginTop: '6px' }}>
-                  {isInviteMode
-                    ? `You've been invited as ${inviteInfo ? ROLE_LABEL[inviteInfo.role] : 'a teammate'}.`
-                    : 'Set up your business and become its first admin.'}
+                  You've been invited as {inviteInfo ? ROLE_LABEL[inviteInfo.role] : 'a teammate'}.
                 </p>
               </div>
 

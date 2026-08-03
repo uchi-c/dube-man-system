@@ -7,7 +7,6 @@ import InstallAppButton from '../components/InstallAppButton';
 
 interface LoginProps {
   onLoginSuccess: (user: User) => void;
-  onSwitchToSignup: () => void;
 }
 
 // The official Google "G" mark — required as-is on OAuth buttons per
@@ -113,7 +112,7 @@ function CafeNetworkIllustration() {
 
 // ---- Main component ---------------------------------------------------------
 
-export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) {
+export default function Login({ onLoginSuccess }: LoginProps) {
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading]   = useState(false);
@@ -422,13 +421,6 @@ export default function Login({ onLoginSuccess, onSwitchToSignup }: LoginProps) 
               Continue with Google
             </button>
           </div>
-
-          <p style={{ textAlign: 'center', fontSize: '0.8125rem', color: 'var(--text-mid)' }}>
-            New business?{' '}
-            <button onClick={onSwitchToSignup} type="button" style={{ color: 'var(--blue-400)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
-              Create your workspace
-            </button>
-          </p>
 
           <div className="flex justify-center">
             <InstallAppButton />
