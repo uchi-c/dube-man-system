@@ -230,8 +230,11 @@ export default function PCAgentConsole({ userRole }: PCAgentConsoleProps) {
               ) : (
                 <form onSubmit={handleProvision} className="space-y-4">
                   <div className="space-y-1.5">
-                    <label className="dm-label" style={{ padding: 0 }}>Computer name <span style={{ opacity: 0.6, textTransform: 'none' }}>(optional)</span></label>
-                    <input type="text" className="dm-input" placeholder="e.g. PC-06" value={provisionName} onChange={e => setProvisionName(e.target.value)} />
+                    <label className="dm-label" style={{ padding: 0 }}>Computer name <span style={{ opacity: 0.6, textTransform: 'none' }}>(optional — auto-numbered if left blank)</span></label>
+                    <input type="text" className="dm-input" placeholder="e.g. PC-06 — leave blank to auto-number" value={provisionName} onChange={e => setProvisionName(e.target.value)} />
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-low)' }}>
+                      Every PC needs a unique name — a name already in use (or with a pending code) is rejected here, not later at install time.
+                    </p>
                   </div>
 
                   {provisionError && (
