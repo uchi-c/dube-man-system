@@ -5,6 +5,24 @@ and Windows service support.
 
 ## Install on a café PC (Windows)
 
+### Option A: remote install (no admin needed on-site)
+
+An admin generates a one-time code from **PC Agent Hub → Add a PC** in Uruu
+OS (valid 48 hours, single use). Whoever is physically at the new PC — they
+don't need to be an admin, or know anything about Supabase — opens an
+**elevated** PowerShell (right-click Start → Terminal (Admin)) and pastes
+the command shown, which already has the code baked in:
+
+```powershell
+$env:URUU_CODE = "ABCD1234"
+irm https://raw.githubusercontent.com/uchi-c/dube-man-system/main/pc-agent/remote-install.ps1 | iex
+```
+
+That downloads the agent, resolves the code to the right organization, and
+runs the real installer below with everything filled in automatically.
+
+### Option B: manual install
+
 Run from an **elevated** PowerShell (Run as Administrator):
 
 ```powershell
@@ -26,9 +44,9 @@ instance, not just within your own organization.
 Uruu OS is one shared Supabase project across every tenant, so the agent
 needs to be told explicitly which organization it belongs to — otherwise a
 newly-registered computer silently lands under whichever organization was
-created first *in the whole system*, not yours. Get your organization's ID
-from an admin (Supabase SQL editor: `select id, name from organizations;`)
-until this is surfaced directly in the Team page.
+created first *in the whole system*, not yours. The remote-install path
+above resolves this automatically; for a manual install, get it from an
+admin (Supabase SQL editor: `select id, name from organizations;`).
 
 ### AGENT_SECRET
 
