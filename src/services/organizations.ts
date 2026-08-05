@@ -274,6 +274,28 @@ export async function clearMustChangePassword(): Promise<void> {
   if (error) throw error;
 }
 
+// ==========================================
+// PC AGENT REMOTE PROVISIONING
+// ==========================================
+
+/**
+ * Admin-only: generates a short, single-use code (valid 48h) that lets
+ * whoever is physically at a new PC install the agent themselves via
+ * pc-agent/remote-install.ps1, without the admin needing to be there or
+ * relay Supabase credentials by hand.
+ */
+export async function createPcProvisioningCode(
+  computerCode?: string
+): Promise<{ code: string; computerCode: string; expiresAt: string }> {
+  const { data, error } = await supabase.rpc('create_pc_provisioning_code', {
+    p_computer_code: computerCode || null,
+  });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) throw new Error('Provisioning code creation did not return a result.');
+  return { code: row.code, computerCode: row.computer_code, expiresAt: row.expires_at };
+}
+
 /** Every invite (pending, accepted, or revoked) for the caller's organization. */
 export async function fetchInvites(): Promise<OrganizationInvite[]> {
   if (!isSupabaseConfigured) return [];
