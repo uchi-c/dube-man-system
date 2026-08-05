@@ -17,6 +17,7 @@ import ResetPassword from './pages/ResetPassword';
 // Authenticated pages are code-split so they load on demand,
 // keeping the initial bundle small.
 const Dashboard      = lazy(() => import('./pages/Dashboard'));
+const PharmacyDashboard = lazy(() => import('./pages/PharmacyDashboard'));
 const Inventory      = lazy(() => import('./pages/Inventory'));
 const Sales          = lazy(() => import('./pages/Sales'));
 const PrintingOrders = lazy(() => import('./pages/PrintingOrders'));
@@ -476,9 +477,11 @@ function LoadingScreen() {
 
 // ---- Page renderer ---------------------------------------------------------
 
-function renderPage(id: string, role: string) {
+function renderPage(id: string, role: string, businessType: BusinessType) {
   switch (id) {
-    case 'dashboard':     return <Dashboard />;
+    // Pharmacy gets its own Overview -- the generic one leads with café
+    // sessions and print orders, which don't apply to a pharmacy-only org.
+    case 'dashboard':     return businessType === 'pharmacy' ? <PharmacyDashboard /> : <Dashboard />;
     case 'pos':           return <Sales userRole={role} />;
     case 'inventory':     return <Inventory userRole={role} />;
     case 'printing':      return <PrintingOrders userRole={role} />;
@@ -513,7 +516,7 @@ function RouteFrame({ tab, user, businessType }: { tab: TabDef; user: User; busi
       {allowed ? (
         <ErrorBoundary section={tab.label}>
           <Suspense fallback={<PageFallback />}>
-            {renderPage(tab.id, user.role)}
+            {renderPage(tab.id, user.role, businessType)}
           </Suspense>
         </ErrorBoundary>
       ) : (
