@@ -23,6 +23,12 @@ files=(
   migrations/004_business_type.sql
   migrations/005_team_invites.sql
   migrations/006_staff_financial_reports.sql
+  migrations/007_prevent_last_admin_demotion.sql
+  migrations/008_temp_password_invites.sql
+  migrations/009_pc_provisioning_codes.sql
+  migrations/010_unique_pc_names.sql
+  migrations/012_pc_agent_authentication.sql
+  migrations/013_close_cross_tenant_rls_gaps.sql
 )
 
 {
@@ -35,7 +41,13 @@ files=(
   echo "--        migrations/003_organization_signup.sql ->"
   echo "--        migrations/004_business_type.sql ->"
   echo "--        migrations/005_team_invites.sql ->"
-  echo "--        migrations/006_staff_financial_reports.sql"
+  echo "--        migrations/006_staff_financial_reports.sql ->"
+  echo "--        migrations/007_prevent_last_admin_demotion.sql ->"
+  echo "--        migrations/008_temp_password_invites.sql ->"
+  echo "--        migrations/009_pc_provisioning_codes.sql ->"
+  echo "--        migrations/010_unique_pc_names.sql ->"
+  echo "--        migrations/012_pc_agent_authentication.sql ->"
+  echo "--        migrations/013_close_cross_tenant_rls_gaps.sql"
   echo "-- Paste this whole file into a fresh Supabase project's SQL editor,"
   echo "-- then run create-admin.sql to promote the owner account."
   echo "-- ============================================================"

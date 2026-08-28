@@ -30,7 +30,8 @@ cd pc-agent
 .\install.ps1 -SupabaseUrl "https://<tenant-ref>.supabase.co" `
               -SupabaseAnonKey "<tenant-anon-key>" `
               -OrganizationId "<this tenant's organizations.id>" `
-              -ComputerCode "PC-01"
+              -ComputerCode "PC-01" `
+              -AgentSecret "<this tenant's agent secret>"
 ```
 
 The installer installs Python deps, writes `.env`, and registers/starts the
@@ -50,15 +51,19 @@ admin (Supabase SQL editor: `select id, name from organizations;`).
 
 ### AGENT_SECRET
 
-- Omit `-AgentSecret` and the installer generates a fresh 64-hex secret for that
-  PC and prints its length (never the value).
-- To share one secret across a tenant's fleet, generate it once and pass the
-  same `-AgentSecret "<64 hex>"` to every PC in that tenant. Generate one with:
-  ```powershell
-  -join ((1..32) | ForEach-Object { '{0:x2}' -f (Get-Random -Maximum 256) })
-  ```
-- **Never reuse a secret across different tenants.** Record each tenant's secret
-  with its account (see the tenant dashboard).
+Every request this agent makes is checked server-side against one secret
+Postgres already generated and stored on the tenant's `organizations` row
+(`agent_secret_ok()` in `database/migrations/012_pc_agent_authentication.sql`)
+— it's **not** something you invent locally, and a made-up value will never
+authenticate.
+
+- **Remote install (Option A)** fetches it automatically as part of
+  resolving the provisioning code — nothing to do here.
+- **Manual install (Option B)** needs `-AgentSecret` passed explicitly. Get
+  the real value from an admin: PC Agent Hub → **Agent secret** in Uruu OS
+  (admin only), which calls `get_my_org_agent_secret()`. It's the same
+  secret for every PC in that tenant — pass the same value to each.
+- **Never reuse a secret across different tenants.**
 
 ### Verify / health-check
 

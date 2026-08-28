@@ -30,8 +30,15 @@ silo comes with both out of the box.
 | `tenants.example.json` | Canonical registry shape; copy to `tenants.json`. |
 
 For the per-PC agent install itself, use **`pc-agent/install.ps1`** (elevated
-PowerShell) — it installs deps, writes `.env`, generates/records the
-`AGENT_SECRET`, and registers the `UruuAgent` service. See `pc-agent/README.md`.
+PowerShell) — it installs deps, writes `.env`, records the `AGENT_SECRET`
+you pass it, and registers the `UruuAgent` service. See `pc-agent/README.md`.
+`AGENT_SECRET` is **not** something you invent — since migration 012, every
+agent request is checked against the one secret Postgres generated and
+stored on that tenant's `organizations` row, so a locally made-up value
+will never authenticate. Get the real value from PC Agent Hub > "Agent
+secret" in the app (admin only) once step 3 below has created the owner
+login, or use `remote-install.ps1` with a provisioning code, which fetches
+it automatically and needs no manual secret at all.
 
 ## Checklist
 
@@ -66,7 +73,8 @@ On each café PC, copy `pc-agent/` and create `pc-agent/.env` from
 `agent.env.template`:
 - `SUPABASE_URL` / `SUPABASE_ANON_KEY` → this tenant's project
 - `COMPUTER_CODE` → **unique per machine** (PC-01, PC-02, …)
-- `AGENT_SECRET` → a **fresh** secret for this tenant (`openssl rand -hex 32`)
+- `AGENT_SECRET` → **not** self-generated — get this tenant's real secret
+  from PC Agent Hub > "Agent secret" in the app (see note above)
 
 Then start the agent (`pc-agent/README.md`). It self-registers into
 `computers` on first heartbeat; the workstation appears in the console.

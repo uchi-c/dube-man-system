@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Monitor, RefreshCw, ShieldAlert, UserPlus, X, Check, Copy } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { fetchComputers, fetchRunningCafeSessions, sendComputerCommand } from '../services/supabase';
-import { createPcProvisioningCode } from '../services/organizations';
+import { createPcProvisioningCode, getMyOrgAgentSecret } from '../services/organizations';
 import { Computer, CafeSession } from '../types';
 import ComputerStatusCard from './ComputerStatusCard';
 
@@ -34,7 +34,12 @@ export default function PCAgentConsole({ userRole }: PCAgentConsoleProps) {
   const [provisionResult, setProvisionResult] = useState<{ code: string; computerCode: string } | null>(null);
   const [provisionError, setProvisionError] = useState('');
   const [provisionSubmitting, setProvisionSubmitting] = useState(false);
-  const [copied, setCopied] = useState<'code' | 'command' | null>(null);
+  const [copied, setCopied] = useState<'code' | 'command' | 'secret' | null>(null);
+
+  const [showSecret, setShowSecret] = useState(false);
+  const [agentSecret, setAgentSecret] = useState('');
+  const [secretLoading, setSecretLoading] = useState(false);
+  const [secretError, setSecretError] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -77,7 +82,21 @@ export default function PCAgentConsole({ userRole }: PCAgentConsoleProps) {
     }
   };
 
-  const handleCopy = async (text: string, which: 'code' | 'command') => {
+  const openSecretReveal = async () => {
+    setShowSecret(true);
+    setSecretError('');
+    if (agentSecret) return;
+    setSecretLoading(true);
+    try {
+      setAgentSecret(await getMyOrgAgentSecret());
+    } catch (err: any) {
+      setSecretError(err?.message || "Couldn't load the agent secret. Try again.");
+    } finally {
+      setSecretLoading(false);
+    }
+  };
+
+  const handleCopy = async (text: string, which: 'code' | 'command' | 'secret') => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(which);
@@ -97,6 +116,11 @@ export default function PCAgentConsole({ userRole }: PCAgentConsoleProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {isAdmin && (
+            <button onClick={openSecretReveal} className="dm-btn dm-btn-ghost" title="Only needed for a manual install -- remote-install.ps1 fetches this automatically">
+              <span>Agent secret</span>
+            </button>
+          )}
           {isAdmin && (
             <button onClick={openProvisionForm} className="dm-btn dm-btn-primary">
               <UserPlus style={{ width: 14, height: 14 }} />
@@ -249,6 +273,59 @@ export default function PCAgentConsole({ userRole }: PCAgentConsoleProps) {
                     <button type="submit" disabled={provisionSubmitting} className="dm-btn dm-btn-primary flex-1">{provisionSubmitting ? 'Generating…' : 'Generate code'}</button>
                   </div>
                 </form>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ---- Agent secret reveal ---- */}
+      <AnimatePresence>
+        {showSecret && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setShowSecret(false)}
+              className="fixed inset-0 z-40"
+              style={{ background: 'rgba(7,11,36,0.6)', backdropFilter: 'blur(4px)' }}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}
+              transition={{ duration: 0.2 }}
+              className="fixed z-50 w-full max-w-sm p-6"
+              style={{
+                top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                background: 'var(--bg-1)', border: '1px solid var(--panel-line)', borderRadius: 'var(--r-card)', boxShadow: 'var(--shadow-modal)',
+              }}
+              role="dialog" aria-label="Agent secret"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="dm-h2">Agent secret</h3>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-mid)', marginTop: 2 }}>
+                    Only needed for a manual install (-AgentSecret). "Add a PC" above already handles this automatically — most people won't need this.
+                  </p>
+                </div>
+                <button onClick={() => setShowSecret(false)} className="dm-icon-btn" aria-label="Close">
+                  <X style={{ width: 16, height: 16 }} />
+                </button>
+              </div>
+
+              {secretLoading ? (
+                <div className="dm-skeleton" style={{ height: 44 }} />
+              ) : secretError ? (
+                <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: 'var(--danger-bg)', border: '1px solid rgba(255,107,107,0.3)', fontSize: '0.78rem', color: 'var(--danger)' }} role="alert">
+                  <ShieldAlert style={{ width: 15, height: 15, flexShrink: 0 }} />
+                  <span>{secretError}</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <input type="text" readOnly className="dm-input dm-nums" style={{ fontSize: '0.75rem' }} value={agentSecret} onFocus={e => e.target.select()} />
+                  <button onClick={() => handleCopy(agentSecret, 'secret')} className="dm-icon-btn" aria-label="Copy agent secret" title="Copy">
+                    {copied === 'secret' ? <Check style={{ width: 15, height: 15, color: 'var(--success)' }} /> : <Copy style={{ width: 15, height: 15 }} />}
+                  </button>
+                </div>
               )}
             </motion.div>
           </>

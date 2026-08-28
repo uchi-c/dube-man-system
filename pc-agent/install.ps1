@@ -6,15 +6,19 @@
   because service install and the print spooler hook need admin rights.
 
   Examples
-    # Full install for one PC (secret auto-generated if omitted)
+    # Full install for one PC
     .\install.ps1 -SupabaseUrl "https://abc.supabase.co" `
                   -SupabaseAnonKey "eyJ..." `
                   -OrganizationId "<this tenant's organizations.id>" `
-                  -ComputerCode "PC-01"
+                  -ComputerCode "PC-01" `
+                  -AgentSecret "<this org's agent_secret>"
 
-    # Reuse a tenant-wide secret across that tenant's PCs
+    # Every PC in a tenant shares that tenant's one agent_secret - get it
+    # from an admin (PC Agent Hub > "Agent secret" in the app, or the organizations
+    # table) and pass it explicitly. Installs done via remote-install.ps1
+    # fetch it automatically from the provisioning code and don't need this.
     .\install.ps1 -SupabaseUrl ... -SupabaseAnonKey ... -OrganizationId ... -ComputerCode "PC-02" `
-                  -AgentSecret "d41d8c...<64 hex>"
+                  -AgentSecret "<this org's agent_secret>"
 
     # Just check health of an already-installed agent
     .\install.ps1 -VerifyOnly
@@ -60,11 +64,6 @@ function Get-Python {
     }
   }
   throw "Python 3 not found on PATH (or only the Microsoft Store's placeholder 'python' alias was found, which does not count). Install Python 3.10+ from https://python.org - not the Microsoft Store - and check 'Add to PATH' during setup, then retry. If Windows previously opened a Store prompt when you typed 'python', also turn it off under Settings > Apps > Advanced app settings > App execution aliases."
-}
-
-function New-Secret {
-  # 32 random bytes -> 64 hex chars
-  -join ((1..32) | ForEach-Object { '{0:x2}' -f (Get-Random -Maximum 256) })
 }
 
 # ----- Verify-only path -----------------------------------------------------
@@ -113,8 +112,7 @@ if ([string]::IsNullOrWhiteSpace($OrganizationId)) {
   throw "OrganizationId is required - this is a shared multi-tenant database, so the agent must be told which tenant it belongs to. Find it under Team (or ask an admin) in Uruu OS, or query: select id, name from organizations;"
 }
 if ([string]::IsNullOrWhiteSpace($AgentSecret)) {
-  $AgentSecret = New-Secret
-  Write-Host "Generated a new AGENT_SECRET for this install." -ForegroundColor Yellow
+  throw "AgentSecret is required - every request this agent makes is now checked against this tenant's stored secret (see database/migrations/012_pc_agent_authentication.sql), so a locally made-up value will not authenticate. Get the real one from an admin (PC Agent Hub > \"Agent secret\" in the app), or install via a fresh remote provisioning code with remote-install.ps1, which fetches it automatically."
 }
 
 $python = Get-Python

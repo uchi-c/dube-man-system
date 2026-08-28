@@ -296,6 +296,19 @@ export async function createPcProvisioningCode(
   return { code: row.code, computerCode: row.computer_code, expiresAt: row.expires_at };
 }
 
+/**
+ * Admin-only: the caller's own organization's agent_secret -- the value
+ * every pc-agent install needs as AGENT_SECRET / -AgentSecret. Only needed
+ * for a manual install; remote-install.ps1 fetches it automatically via a
+ * provisioning code and never needs this called directly.
+ */
+export async function getMyOrgAgentSecret(): Promise<string> {
+  const { data, error } = await supabase.rpc('get_my_org_agent_secret');
+  if (error) throw error;
+  if (!data) throw new Error('No agent secret was returned.');
+  return data as string;
+}
+
 /** Every invite (pending, accepted, or revoked) for the caller's organization. */
 export async function fetchInvites(): Promise<OrganizationInvite[]> {
   if (!isSupabaseConfigured) return [];
