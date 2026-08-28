@@ -30,6 +30,38 @@ export interface User {
    *  hasn't set its own password yet — forces the ResetPassword screen
    *  before the app is usable. */
   must_change_password?: boolean;
+  /** Cross-tenant platform operator — can create tenants and manage every
+   *  organization's billing (see services/organizations.ts's tenant
+   *  functions). Not a per-org role; almost always false. */
+  is_platform_admin?: boolean;
+}
+
+export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'suspended' | 'cancelled';
+
+/** One tenant's billing summary — platform-admin only (see list_tenants_billing()). */
+export interface TenantBilling {
+  organization_id: string;
+  name: string;
+  business_type: BusinessType;
+  monthly_price: number | null;
+  currency: string;
+  subscription_status: SubscriptionStatus;
+  next_payment_due: string | null;
+  last_payment_at: string | null;
+  billing_notes: string | null;
+  member_count: number;
+  admin_emails: string | null;
+  created_at: string;
+}
+
+/** One recorded payment against a tenant — platform-admin only. */
+export interface TenantPayment {
+  id: string;
+  amount: number;
+  currency: string;
+  paid_at: string;
+  note: string | null;
+  recorded_by_name: string | null;
 }
 
 /** A pending/accepted/revoked invitation for someone to join an org with a given role. */

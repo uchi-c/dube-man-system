@@ -11,7 +11,7 @@
  */
 
 import { supabase, isSupabaseConfigured } from './supabase';
-import { Organization, BusinessType, OrganizationInvite, UserRole } from '../types';
+import { Organization, BusinessType, OrganizationInvite, UserRole, TenantBilling, TenantPayment, SubscriptionStatus } from '../types';
 
 const ORG_STORAGE_KEY = 'uruu_org_id';
 const PENDING_GOOGLE_SIGNUP_KEY = 'uruu_pending_google_signup';
@@ -233,6 +233,27 @@ export async function createInvite(
  * still enforces "caller must be an ADMIN inviting into their own org" by
  * calling create_organization_invite under the caller's own JWT first.
  */
+/**
+ * On a non-2xx response, supabase-js's `error` carries the generic message
+ * "Edge Function returned a non-2xx status code" — the actual reason (e.g.
+ * "Only an organization admin can invite teammates") is in the raw
+ * Response body under `error.context`, which still has to be read.
+ */
+async function resolveEdgeFunctionError(error: unknown, fallback: string): Promise<string> {
+  let detail: string | undefined;
+  try {
+    const ctx = (error as any)?.context;
+    if (ctx && typeof ctx.json === 'function') {
+      const body = await ctx.json();
+      detail = body?.error;
+    }
+  } catch {
+    // Body wasn't JSON (or was already consumed) — fall through to the
+    // generic message below.
+  }
+  return detail || (error as any)?.message || fallback;
+}
+
 export async function adminInviteUserWithTempPassword(
   email: string,
   role: UserRole,
@@ -241,24 +262,7 @@ export async function adminInviteUserWithTempPassword(
   const { data, error } = await supabase.functions.invoke('admin-invite-user', {
     body: { email, role, name },
   });
-  if (error) {
-    // On a non-2xx response, supabase-js's `error` carries the *message*
-    // "Edge Function returned a non-2xx status code" — the actual reason
-    // (e.g. "Only an organization admin can invite teammates") is in the
-    // raw Response body under `error.context`, which still has to be read.
-    let detail: string | undefined;
-    try {
-      const ctx = (error as any)?.context;
-      if (ctx && typeof ctx.json === 'function') {
-        const body = await ctx.json();
-        detail = body?.error;
-      }
-    } catch {
-      // Body wasn't JSON (or was already consumed) — fall through to the
-      // generic message below.
-    }
-    throw new Error(detail || error.message || "Couldn't create that teammate's account.");
-  }
+  if (error) throw new Error(await resolveEdgeFunctionError(error, "Couldn't create that teammate's account."));
   if (data?.error) throw new Error(data.error);
   if (!data?.tempPassword) throw new Error('Account creation did not return a temporary password.');
   return { email: data.email, role: data.role, tempPassword: data.tempPassword, orgName: data.orgName };
@@ -502,4 +506,88 @@ export async function createOrganization(name: string): Promise<Organization | n
     console.warn('Failed creating organization:', (err as any)?.message || err);
     return null;
   }
+}
+
+// ==========================================
+// PLATFORM ADMIN — TENANTS & BILLING
+// ==========================================
+// Everything below is gated server-side by is_platform_admin() (see
+// database/migrations/014_platform_tenants_billing.sql) — a cross-tenant
+// capability distinct from a regular org ADMIN, held by almost no one.
+// Billing is manual: no payment processor, just a status + a payment log
+// the platform admin updates by hand.
+
+/** Every tenant's billing summary, platform-admin only. */
+export async function listTenantsBilling(): Promise<TenantBilling[]> {
+  const { data, error } = await supabase.rpc('list_tenants_billing');
+  if (error) throw error;
+  return (data ?? []) as TenantBilling[];
+}
+
+/**
+ * Creates a brand-new tenant plus its owner's account in one call (via the
+ * admin-create-tenant Edge Function — creating a password-based auth
+ * account needs Supabase Auth's admin API, not something a plain RPC can
+ * do). The owner logs in with the email + temporary password returned
+ * here and is forced to set their own password on first login, same as
+ * adminInviteUserWithTempPassword.
+ */
+export async function createTenant(params: {
+  orgName: string;
+  businessType: BusinessType;
+  monthlyPrice: number | null;
+  currency: string;
+  ownerEmail: string;
+  ownerName?: string;
+}): Promise<{ organizationId: string; orgName: string; email: string; tempPassword: string }> {
+  const { data, error } = await supabase.functions.invoke('admin-create-tenant', { body: params });
+  if (error) throw new Error(await resolveEdgeFunctionError(error, "Couldn't create that tenant."));
+  if (data?.error) throw new Error(data.error);
+  if (!data?.tempPassword) throw new Error('Tenant creation did not return a temporary password.');
+  return {
+    organizationId: data.organizationId,
+    orgName: data.orgName,
+    email: data.email,
+    tempPassword: data.tempPassword,
+  };
+}
+
+/** Edits a tenant's price/currency/status/next-due-date/notes. Pass only the fields changing. */
+export async function updateTenantBilling(
+  organizationId: string,
+  patch: {
+    monthlyPrice?: number;
+    currency?: string;
+    subscriptionStatus?: SubscriptionStatus;
+    nextPaymentDue?: string | null;
+    billingNotes?: string;
+  }
+): Promise<void> {
+  const { error } = await supabase.rpc('update_tenant_billing', {
+    p_org_id: organizationId,
+    p_monthly_price: patch.monthlyPrice ?? null,
+    p_currency: patch.currency ?? null,
+    p_subscription_status: patch.subscriptionStatus ?? null,
+    p_next_payment_due: patch.nextPaymentDue === null ? null : patch.nextPaymentDue ?? null,
+    p_billing_notes: patch.billingNotes ?? null,
+    p_clear_next_payment_due: patch.nextPaymentDue === null,
+  });
+  if (error) throw error;
+}
+
+/** Logs a payment and rolls the tenant's due date forward a month. */
+export async function recordTenantPayment(organizationId: string, amount: number, note?: string): Promise<void> {
+  const { error } = await supabase.rpc('record_tenant_payment', {
+    p_org_id: organizationId,
+    p_amount: amount,
+    p_note: note || null,
+  });
+  if (error) throw error;
+}
+
+/** A tenant's payment history, most recent first. */
+export async function listTenantPayments(organizationId: string): Promise<TenantPayment[]> {
+  const { data, error } = await supabase.rpc('list_tenant_payments', { p_org_id: organizationId });
+  if (error) throw error;
+  return (data ?? []) as TenantPayment[];
 }
