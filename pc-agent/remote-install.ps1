@@ -77,6 +77,10 @@ if (-not $row -or -not $row.organization_id) {
 }
 $OrganizationId = $row.organization_id
 $ComputerCode = $row.computer_code
+$AgentSecret = $row.agent_secret
+if ([string]::IsNullOrWhiteSpace($AgentSecret)) {
+  throw "That code resolved but did not include an agent secret - the server-side code may be out of date. Ask your admin to check migration 012."
+}
 Write-Host "Code accepted - installing as $ComputerCode." -ForegroundColor Green
 
 # ProgramData (not a user's Desktop/Documents) so the install doesn't
@@ -109,7 +113,8 @@ try {
     -SupabaseUrl $SUPABASE_URL `
     -SupabaseAnonKey $SUPABASE_ANON_KEY `
     -OrganizationId $OrganizationId `
-    -ComputerCode $ComputerCode
+    -ComputerCode $ComputerCode `
+    -AgentSecret $AgentSecret
   if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne $null) {
     throw "install.ps1 exited with code $LASTEXITCODE (see output above)"
   }

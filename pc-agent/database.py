@@ -1,15 +1,31 @@
 from datetime import datetime, timezone
 
 from supabase import create_client
+from supabase.lib.client_options import ClientOptions
 from config import (
     SUPABASE_URL,
     SUPABASE_ANON_KEY,
-    ORGANIZATION_ID
+    ORGANIZATION_ID,
+    AGENT_SECRET
 )
 
+if not AGENT_SECRET:
+    raise ValueError(
+        "AGENT_SECRET is missing in .env -- required since migration 012. "
+        "Get your organization's secret from an admin (PC Agent Hub > "
+        "\"Agent secret\" in the app) and add AGENT_SECRET=... to .env, or "
+        "reinstall via a fresh remote provisioning code."
+    )
+
+# Every request needs this header -- the server-side RLS policies for
+# computers/computer_commands/cafe_sessions/print_jobs/printers all check it
+# via agent_secret_ok() (see database/migrations/012_pc_agent_authentication.sql).
+# Without it every request below is rejected by Postgres, not silently
+# scoped down -- so it's sent at the client level here rather than per-call.
 supabase = create_client(
     SUPABASE_URL,
-    SUPABASE_ANON_KEY
+    SUPABASE_ANON_KEY,
+    options=ClientOptions(headers={"x-agent-secret": AGENT_SECRET})
 )
 
 
