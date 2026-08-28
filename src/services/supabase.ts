@@ -50,7 +50,8 @@ const mapProfileToUser = (profile: any): User => ({
   email: profile.email,
   role: profile.role as UserRole,
   created_at: profile.created_at,
-  must_change_password: profile.must_change_password
+  must_change_password: profile.must_change_password,
+  is_platform_admin: !!profile.is_platform_admin
 });
 
 async function fetchProfileForAuthUser(authUser: any): Promise<User | null> {

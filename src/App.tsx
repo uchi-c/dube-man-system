@@ -29,11 +29,12 @@ const Pharmacy       = lazy(() => import('./pages/Pharmacy'));
 const PCAgentConsole = lazy(() => import('./components/PCAgentConsole'));
 const ActivityLogs   = lazy(() => import('./components/ActivityLogs'));
 const Team           = lazy(() => import('./pages/Team'));
+const TenantsAdmin   = lazy(() => import('./pages/TenantsAdmin'));
 
 import {
   LayoutDashboard, Package, ShoppingCart, Printer, Monitor,
   Wifi, History, Users, Shield, LogOut, Menu, X,
-  RefreshCw, PrinterIcon, ChevronRight, Bell, Pill, UserPlus,
+  RefreshCw, PrinterIcon, ChevronRight, Bell, Pill, UserPlus, Building2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Analytics } from '@vercel/analytics/react';
@@ -47,6 +48,10 @@ interface TabDef {
   group: string;
   path: string;
   roles: UserRole[];
+  /** Ignores `roles` and business-type module gating entirely — visible
+   *  and reachable only when the signed-in user is a platform admin
+   *  (see User.is_platform_admin), regardless of their per-org role. */
+  platformOnly?: boolean;
 }
 
 const TABS: TabDef[] = [
@@ -67,6 +72,8 @@ const TABS: TabDef[] = [
   { id: 'pc-agent',      label: 'PC Agent Hub',     icon: Shield,          group: 'System',     path: '/pc-agent',      roles: ['ADMIN'] },
   { id: 'logs',          label: 'Security Logs',    icon: History,         group: 'System',     path: '/logs',          roles: ['ADMIN'] },
   { id: 'team',          label: 'Team',             icon: UserPlus,        group: 'System',     path: '/team',          roles: ['ADMIN'] },
+  // Platform (platform admins only — see TabDef.platformOnly)
+  { id: 'tenants',       label: 'Tenants',          icon: Building2,       group: 'Platform',   path: '/tenants',       roles: [], platformOnly: true },
 ];
 
 const PATH_TO_TAB: Record<string, string> = Object.fromEntries(
@@ -74,7 +81,7 @@ const PATH_TO_TAB: Record<string, string> = Object.fromEntries(
 );
 PATH_TO_TAB['/users'] = 'logs'; // legacy alias
 
-const GROUP_ORDER = ['Home','Operations','Printing','Connectivity','System'];
+const GROUP_ORDER = ['Home','Operations','Printing','Connectivity','System','Platform'];
 
 // Which nav modules each business type sees. 'general' shows everything
 // except Pharmacy — a general dealer has no use for prescription/dispensing
@@ -241,8 +248,8 @@ interface SidebarProps {
 function Sidebar({ user, businessType, activeTab, onSelect, onLogout, mobile, onClose }: SidebarProps) {
   const allowedModules = BUSINESS_TYPE_MODULES[businessType];
   const visibleTabs = TABS
-    .filter(t => t.roles.includes(user.role as UserRole))
-    .filter(t => !allowedModules || allowedModules.includes(t.id));
+    .filter(t => t.platformOnly ? !!user.is_platform_admin : t.roles.includes(user.role as UserRole))
+    .filter(t => t.platformOnly || !allowedModules || allowedModules.includes(t.id));
   const grouped = GROUP_ORDER.map(g => ({
     group: g,
     tabs: visibleTabs.filter(t => t.group === g),
@@ -493,6 +500,7 @@ function renderPage(id: string, role: string, businessType: BusinessType) {
     case 'pc-agent':      return <PCAgentConsole userRole={role} />;
     case 'logs':          return <ActivityLogs userRole={role} />;
     case 'team':          return <Team />;
+    case 'tenants':       return <TenantsAdmin />;
     default:              return null;
   }
 }
@@ -502,9 +510,9 @@ function renderPage(id: string, role: string, businessType: BusinessType) {
 function RouteFrame({ tab, user, businessType }: { tab: TabDef; user: User; businessType: BusinessType }) {
   const navigate = useNavigate();
   const allowedModules = BUSINESS_TYPE_MODULES[businessType];
-  const allowed =
-    tab.roles.includes(user.role as UserRole) &&
-    (!allowedModules || allowedModules.includes(tab.id));
+  const allowed = tab.platformOnly
+    ? !!user.is_platform_admin
+    : tab.roles.includes(user.role as UserRole) && (!allowedModules || allowedModules.includes(tab.id));
 
   return (
     <motion.div
