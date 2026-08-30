@@ -30,11 +30,12 @@ const PCAgentConsole = lazy(() => import('./components/PCAgentConsole'));
 const ActivityLogs   = lazy(() => import('./components/ActivityLogs'));
 const Team           = lazy(() => import('./pages/Team'));
 const TenantsAdmin   = lazy(() => import('./pages/TenantsAdmin'));
+const PlatformFinance = lazy(() => import('./pages/PlatformFinance'));
 
 import {
   LayoutDashboard, Package, ShoppingCart, Printer, Monitor,
   Wifi, History, Users, Shield, LogOut, Menu, X,
-  RefreshCw, PrinterIcon, ChevronRight, Bell, Pill, UserPlus, Building2, Lock,
+  RefreshCw, PrinterIcon, ChevronRight, Bell, Pill, UserPlus, Building2, Lock, LineChart,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Analytics } from '@vercel/analytics/react';
@@ -74,6 +75,7 @@ const TABS: TabDef[] = [
   { id: 'team',          label: 'Team',             icon: UserPlus,        group: 'System',     path: '/team',          roles: ['ADMIN'] },
   // Platform (platform admins only — see TabDef.platformOnly)
   { id: 'tenants',       label: 'Tenants',          icon: Building2,       group: 'Platform',   path: '/tenants',       roles: [], platformOnly: true },
+  { id: 'finance',       label: 'Finance',          icon: LineChart,       group: 'Platform',   path: '/finance',       roles: [], platformOnly: true },
 ];
 
 const PATH_TO_TAB: Record<string, string> = Object.fromEntries(
@@ -551,6 +553,7 @@ function renderPage(id: string, role: string, businessType: BusinessType) {
     case 'logs':          return <ActivityLogs userRole={role} />;
     case 'team':          return <Team />;
     case 'tenants':       return <TenantsAdmin />;
+    case 'finance':       return <PlatformFinance />;
     default:              return null;
   }
 }
