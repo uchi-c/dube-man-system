@@ -2,13 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Pill, Plus, Search, AlertTriangle, Check, RefreshCw, PackagePlus,
-  Stethoscope, ClipboardList, History, X, ShieldAlert, ChevronRight,
+  Stethoscope, ClipboardList, History, X, ShieldAlert, ChevronRight, Trash2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   fetchMedicines, insertMedicine, fetchMedicineBatches, fetchExpiringBatches,
   receiveMedicineBatch, fetchPrescriptions, createPrescription,
-  fetchDispensingRecords, dispenseMedicine,
+  fetchDispensingRecords, dispenseMedicine, deleteMedicine, deleteMedicineBatch,
 } from '../services/pharmacy';
 import { fetchCustomers } from '../services/supabase';
 import {
@@ -81,6 +81,7 @@ export default function Pharmacy({ userRole }: PharmacyProps) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [deleteError, setDeleteError] = useState('');
 
   const canManage = userRole === 'ADMIN' || userRole === 'STAFF';
 
@@ -119,6 +120,22 @@ export default function Pharmacy({ userRole }: PharmacyProps) {
 
   const criticalExpiring = expiring.filter(b => b.alert_level === 'EXPIRED' || b.alert_level === 'CRITICAL');
 
+  const handleDeleteMedicine = async (m: Medicine) => {
+    if (!window.confirm(`Delete "${m.name}" from the catalog? Its dispensing history is kept, but it'll disappear from the catalog.`)) return;
+    setDeleteError('');
+    const ok = await deleteMedicine(m.id);
+    if (ok) await loadAll();
+    else setDeleteError("Couldn't delete that medicine.");
+  };
+
+  const handleDeleteBatch = async (b: MedicineBatch) => {
+    if (!window.confirm(`Delete batch ${b.batch_number} (${b.medicine_name})?`)) return;
+    setDeleteError('');
+    const result = await deleteMedicineBatch(b.id);
+    if (result === true) await loadAll();
+    else setDeleteError(result);
+  };
+
   return (
     <div className="space-y-6 dm-animate-in" id="pharmacy-tab">
       {/* Header */}
@@ -150,6 +167,16 @@ export default function Pharmacy({ userRole }: PharmacyProps) {
           )}
         </div>
       </div>
+
+      {deleteError && (
+        <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: 'var(--danger-bg)', border: '1px solid rgba(255,107,107,0.3)', fontSize: '0.78rem', color: 'var(--danger)' }} role="alert">
+          <AlertTriangle style={{ width: 15, height: 15, flexShrink: 0 }} />
+          <span className="flex-1">{deleteError}</span>
+          <button onClick={() => setDeleteError('')} className="dm-icon-btn" aria-label="Dismiss" style={{ width: 24, height: 24 }}>
+            <X style={{ width: 13, height: 13 }} />
+          </button>
+        </div>
+      )}
 
       {/* Expiry alert banner */}
       {criticalExpiring.length > 0 && (
@@ -229,13 +256,21 @@ export default function Pharmacy({ userRole }: PharmacyProps) {
                         <td style={{ padding: '12px 16px' }}><StockPill m={m} /></td>
                         {canManage && (
                           <td className="dm-num-cell" style={{ padding: '12px 16px' }}>
-                            <button
-                              onClick={() => setIsDispensing({ medicine: m })}
-                              disabled={(m.total_quantity ?? 0) <= 0}
-                              className="dm-btn dm-btn-ghost" style={{ minHeight: 34, padding: '0 0.75rem' }}
-                            >
-                              Dispense
-                            </button>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => setIsDispensing({ medicine: m })}
+                                disabled={(m.total_quantity ?? 0) <= 0}
+                                className="dm-btn dm-btn-ghost" style={{ minHeight: 34, padding: '0 0.75rem' }}
+                              >
+                                Dispense
+                              </button>
+                              <button
+                                onClick={() => handleDeleteMedicine(m)}
+                                className="dm-icon-btn" style={{ width: 34, height: 34 }} title="Delete medicine"
+                              >
+                                <Trash2 style={{ width: 14, height: 14, color: 'var(--danger)' }} />
+                              </button>
+                            </div>
                           </td>
                         )}
                       </tr>
@@ -265,6 +300,7 @@ export default function Pharmacy({ userRole }: PharmacyProps) {
                     <th className="dm-label dm-num-cell" style={{ padding: '12px 16px' }}>Qty</th>
                     <th className="dm-label" style={{ padding: '12px 16px' }}>Supplier</th>
                     <th className="dm-label" style={{ padding: '12px 16px' }}>Expiry</th>
+                    {canManage && <th className="dm-label dm-num-cell" style={{ padding: '12px 16px' }}>Action</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -277,6 +313,16 @@ export default function Pharmacy({ userRole }: PharmacyProps) {
                       <td style={{ padding: '12px 16px' }}>
                         {expiring.find(e => e.id === b.id) ? <ExpiryPill b={expiring.find(e => e.id === b.id)!} /> : <span className="dm-badge dm-badge-neutral">{new Date(b.expiry_date).toLocaleDateString()}</span>}
                       </td>
+                      {canManage && (
+                        <td className="dm-num-cell" style={{ padding: '12px 16px' }}>
+                          <button
+                            onClick={() => handleDeleteBatch(b)}
+                            className="dm-icon-btn" style={{ width: 34, height: 34 }} title="Delete batch"
+                          >
+                            <Trash2 style={{ width: 14, height: 14, color: 'var(--danger)' }} />
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

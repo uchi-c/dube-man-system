@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { User, UserRole, OrganizationInvite } from '../types';
-import { fetchAllUsers, updateUserRole } from '../services/supabase';
+import { fetchAllUsers, updateUserRole, removeStaffMember } from '../services/supabase';
 import { adminInviteUserWithTempPassword, fetchInvites, revokeInvite } from '../services/organizations';
 import {
   UserPlus, Mail, Calendar, AlertCircle, RefreshCw, Check, X,
-  Copy, Ban, Clock, ShieldCheck, Users as UsersIcon, KeyRound,
+  Copy, Ban, Clock, ShieldCheck, Users as UsersIcon, KeyRound, Trash2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import DataTable from '../components/DataTable';
@@ -39,6 +39,7 @@ export default function Team() {
   const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [roleError, setRoleError] = useState('');
+  const [removeError, setRemoveError] = useState('');
 
   const loadData = async () => {
     setLoading(true);
@@ -106,6 +107,17 @@ export default function Team() {
     }
   };
 
+  const handleRemove = async (user: User) => {
+    if (!window.confirm(`Remove ${user.name} from this organization? They'll immediately lose access. Their past sales and activity history stays intact.`)) return;
+    setRemoveError('');
+    try {
+      await removeStaffMember(user.id);
+      await loadData();
+    } catch (err: any) {
+      setRemoveError(err?.message || "Couldn't remove that member.");
+    }
+  };
+
   const memberColumns = [
     {
       header: '',
@@ -145,6 +157,14 @@ export default function Team() {
         </span>
       ),
     },
+    {
+      header: '',
+      accessor: (u: User) => (
+        <button onClick={() => handleRemove(u)} className="dm-icon-btn" title="Remove from organization" aria-label="Remove from organization">
+          <Trash2 style={{ width: 14, height: 14, color: 'var(--danger)' }} />
+        </button>
+      ),
+    },
   ];
 
   const pendingInvites = invites.filter(i => inviteStatus(i).label === 'Pending');
@@ -174,6 +194,16 @@ export default function Team() {
           <AlertCircle style={{ width: 15, height: 15, flexShrink: 0 }} />
           <span className="flex-1">{roleError}</span>
           <button onClick={() => setRoleError('')} className="dm-icon-btn" aria-label="Dismiss" style={{ width: 24, height: 24 }}>
+            <X style={{ width: 13, height: 13 }} />
+          </button>
+        </div>
+      )}
+
+      {removeError && (
+        <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: 'var(--danger-bg)', border: '1px solid rgba(255,107,107,0.3)', fontSize: '0.78rem', color: 'var(--danger)' }} role="alert">
+          <AlertCircle style={{ width: 15, height: 15, flexShrink: 0 }} />
+          <span className="flex-1">{removeError}</span>
+          <button onClick={() => setRemoveError('')} className="dm-icon-btn" aria-label="Dismiss" style={{ width: 24, height: 24 }}>
             <X style={{ width: 13, height: 13 }} />
           </button>
         </div>

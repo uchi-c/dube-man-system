@@ -194,6 +194,29 @@ export async function updateMedicine(medicine: Medicine): Promise<boolean> {
   }
 }
 
+/**
+ * Removes a medicine from the active catalog. Soft delete (is_active =
+ * false) -- dispensing_records.medicine_id and prescription_items.medicine_id
+ * are ON DELETE RESTRICT, so a medicine that's ever been prescribed or
+ * dispensed can't be hard-deleted anyway. Its batches/dispensing history
+ * stays intact; it just drops out of fetchMedicines().
+ */
+export async function deleteMedicine(medicineId: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const { error } = await supabase
+      .from('medicines')
+      .update({ is_active: false })
+      .eq('id', medicineId);
+    if (error) throw error;
+    await insertLog(await currentUserId(), `Removed medicine from pharmacy catalog: ${medicineId}`);
+    return true;
+  } catch (err) {
+    handleError(err, 'Failed deleting medicine');
+    return false;
+  }
+}
+
 // ==========================================
 // BATCHES (stock, by expiry)
 // ==========================================
@@ -266,6 +289,32 @@ export async function receiveMedicineBatch(batch: {
   } catch (err) {
     handleError(err, 'Failed receiving medicine batch');
     return null;
+  }
+}
+
+/**
+ * Deletes a batch outright -- unlike medicines/products/customers, nothing
+ * else in the schema soft-deletes batches, and a never-dispensed batch has
+ * no incoming references. dispensing_records.batch_id is ON DELETE
+ * RESTRICT though, so a batch that's actually been dispensed from will be
+ * rejected by Postgres (code 23503); that's surfaced as a friendly message
+ * instead of a raw constraint error.
+ */
+export async function deleteMedicineBatch(batchId: string): Promise<true | string> {
+  if (!isSupabaseConfigured) return 'Pharmacy requires a connected Supabase project.';
+  try {
+    const { error } = await supabase.from('medicine_batches').delete().eq('id', batchId);
+    if (error) {
+      if (error.code === '23503') {
+        return "Can't delete this batch — it already has dispensing records against it.";
+      }
+      throw error;
+    }
+    await insertLog(await currentUserId(), `Deleted medicine batch ${batchId}`);
+    return true;
+  } catch (err: any) {
+    handleError(err, 'Failed deleting medicine batch');
+    return err?.message || "Couldn't delete that batch.";
   }
 }
 

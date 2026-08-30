@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Product } from '../types';
-import { fetchProducts, insertProduct, adjustStockLevel, updateProduct } from '../services/supabase';
+import { fetchProducts, insertProduct, adjustStockLevel, updateProduct, deleteProduct } from '../services/supabase';
 import {
   Package, Plus, Search, AlertTriangle, Check, ShieldX,
-  RefreshCw, ArrowUp, ArrowDown, X, PackagePlus, Tag, Briefcase,
+  RefreshCw, ArrowUp, ArrowDown, X, PackagePlus, Tag, Briefcase, Trash2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatCurrency } from '../utils/format';
@@ -62,6 +62,7 @@ export default function Inventory({ userRole }: InventoryProps) {
   const [bulkQty, setBulkQty] = useState(10);
   const [bulkPricePct, setBulkPricePct] = useState(10);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   const canEdit = userRole === 'ADMIN' || userRole === 'STAFF';
   const categories = ['All', 'Stationery', 'Printing', 'Embroidery', 'Digital', 'Cafe'];
@@ -157,6 +158,18 @@ export default function Inventory({ userRole }: InventoryProps) {
     }
   };
 
+  // ---- Delete product ----
+  const handleDelete = async (product: Product) => {
+    if (!window.confirm(`Delete "${product.name}" from the catalog? Its sales history is kept, but it'll disappear from Inventory.`)) return;
+    setDeleteError('');
+    try {
+      await deleteProduct(product.id);
+      await pullProductsFromDb();
+    } catch (err: any) {
+      setDeleteError(err?.message || "Couldn't delete that product.");
+    }
+  };
+
   // ---- Bulk restock ----
   const runBulkRestock = async () => {
     if (bulkQty <= 0) return;
@@ -212,6 +225,16 @@ export default function Inventory({ userRole }: InventoryProps) {
           )}
         </div>
       </div>
+
+      {deleteError && (
+        <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: 'var(--danger-bg)', border: '1px solid rgba(255,107,107,0.3)', fontSize: '0.78rem', color: 'var(--danger)' }} role="alert">
+          <AlertTriangle style={{ width: 15, height: 15, flexShrink: 0 }} />
+          <span className="flex-1">{deleteError}</span>
+          <button onClick={() => setDeleteError('')} className="dm-icon-btn" aria-label="Dismiss" style={{ width: 24, height: 24 }}>
+            <X style={{ width: 13, height: 13 }} />
+          </button>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="dm-card p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -299,6 +322,12 @@ export default function Inventory({ userRole }: InventoryProps) {
                               className="dm-icon-btn" style={{ width: 34, height: 34, color: 'var(--blue-400)', background: 'var(--blue-bg)', borderColor: 'rgba(76,111,255,0.3)' }} title="Stock in"
                             >
                               <ArrowUp style={{ width: 14, height: 14 }} />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(product)}
+                              className="dm-icon-btn" style={{ width: 34, height: 34 }} title="Delete product"
+                            >
+                              <Trash2 style={{ width: 14, height: 14, color: 'var(--danger)' }} />
                             </button>
                           </div>
                         </td>

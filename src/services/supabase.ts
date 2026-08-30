@@ -291,6 +291,32 @@ export async function updateUserRole(id: string, role: string): Promise<boolean>
   return false;
 }
 
+/**
+ * Removes a teammate from the caller's organization -- deletes their
+ * user_organization_memberships row only, never their auth account or
+ * public.users profile, so every sale/log/dispensing record they ever
+ * created keeps their real name (those reference users.id with
+ * ON DELETE SET NULL, not the membership). Not caught-and-swallowed: a
+ * rejection here is the tr_prevent_last_admin_removal trigger (migration
+ * 017) doing its job, and the caller needs that message.
+ */
+export async function removeStaffMember(userId: string): Promise<boolean> {
+  if (isSupabaseConfigured) {
+    const organization_id = await getCurrentOrganizationId();
+    const { error } = await supabase
+      .from('user_organization_memberships')
+      .delete()
+      .eq('user_id', userId)
+      .eq('org_id', organization_id);
+    if (error) throw error;
+    return true;
+  }
+
+  const users = localDb.getAllUsers().filter(u => u.id !== userId);
+  localStorage.setItem('dubeman_users', JSON.stringify(users));
+  return true;
+}
+
 // ==========================================
 // 2. PRODUCTS MODULE (INVENTORY)
 // ==========================================
@@ -301,6 +327,7 @@ export async function fetchProducts(): Promise<Product[]> {
       const { data, error } = await supabase
         .from('products')
         .select('*')
+        .eq('is_active', true)
         .order('name', { ascending: true });
       if (error) throw error;
       if (data) {
@@ -397,6 +424,32 @@ export async function updateProduct(product: Product): Promise<boolean> {
   return true;
 }
 
+/**
+ * Deletes a product from the active catalog. Soft delete (is_active =
+ * false), not a row removal -- sale_items.product_id is ON DELETE
+ * RESTRICT, so a product that's ever been sold can't be hard-deleted
+ * anyway. Its stock/sales history stays intact; it just drops out of
+ * fetchProducts().
+ */
+export async function deleteProduct(productId: string): Promise<boolean> {
+  if (isSupabaseConfigured) {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq('id', productId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      handleDbError(err, 'Failed to delete product');
+    }
+  }
+
+  const products = localDb.getProducts().filter(p => p.id !== productId);
+  localStorage.setItem('dubeman_products', JSON.stringify(products));
+  return true;
+}
+
 export async function adjustStockLevel(productId: string, delta: number, type: 'STOCK_IN' | 'STOCK_OUT' | 'ADJUSTMENT'): Promise<boolean> {
   if (isSupabaseConfigured) {
     try {
@@ -455,6 +508,7 @@ export async function fetchCustomers(): Promise<Customer[]> {
       const { data, error } = await supabase
         .from('customers')
         .select('*')
+        .eq('is_active', true)
         .order('name', { ascending: true });
       if (error) throw error;
       if (data) return data;
@@ -463,6 +517,32 @@ export async function fetchCustomers(): Promise<Customer[]> {
     }
   }
   return localDb.getCustomers();
+}
+
+/**
+ * Deletes a customer from the active list. Soft delete (is_active =
+ * false) -- printing_orders.customer_id is ON DELETE RESTRICT, so a
+ * customer with any printing order can't be hard-deleted anyway. Their
+ * sales/dispensing/prescription history stays intact (those FKs are
+ * ON DELETE SET NULL); they just drop out of fetchCustomers().
+ */
+export async function deleteCustomer(customerId: string): Promise<boolean> {
+  if (isSupabaseConfigured) {
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .update({ is_active: false })
+        .eq('id', customerId);
+      if (error) throw error;
+      return true;
+    } catch (err) {
+      handleDbError(err, 'Failed to delete customer');
+    }
+  }
+
+  const customers = localDb.getCustomers().filter(c => c.id !== customerId);
+  localStorage.setItem('dubeman_customers', JSON.stringify(customers));
+  return true;
 }
 
 export async function insertCustomer(name: string, phone: string, email: string): Promise<Customer | null> {
@@ -777,6 +857,32 @@ export async function addPrintingOrderPayment(orderId: string, addedAmountPaid: 
   }
 
   localDb.updatePrintingOrderPayment(orderId, addedAmountPaid);
+  return true;
+}
+
+/**
+ * Deletes a printing order outright -- nothing in the schema references
+ * printing_orders.id, so unlike products/customers/medicines this has no
+ * RESTRICT to work around and no history to preserve.
+ */
+export async function deletePrintingOrder(orderId: string): Promise<boolean> {
+  if (isSupabaseConfigured) {
+    try {
+      const { error } = await supabase
+        .from('printing_orders')
+        .delete()
+        .eq('id', orderId);
+      if (error) throw error;
+      const user = localDb.getCurrentUser();
+      await insertLog(user.id, `Deleted Printing Order (${orderId})`);
+      return true;
+    } catch (err) {
+      handleDbError(err, 'Failed deleting printing order');
+    }
+  }
+
+  const orders = localDb.getPrintingOrders().filter(o => o.id !== orderId);
+  localStorage.setItem('dubeman_printing_orders', JSON.stringify(orders));
   return true;
 }
 
