@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import {
   Building2, RefreshCw, Plus, X, Check, Copy, AlertCircle,
   KeyRound, Wallet, History as HistoryIcon, Users as UsersIcon,
+  BellRing, Phone, Pencil,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import DataTable from '../components/DataTable';
 import {
   listTenantsBilling, createTenant, updateTenantBilling,
   recordTenantPayment, listTenantPayments,
+  getPlatformPaymentInstructions, updatePlatformPaymentInstructions,
 } from '../services/organizations';
 import { BusinessType, SubscriptionStatus, TenantBilling, TenantPayment } from '../types';
 
@@ -60,10 +62,27 @@ function isOverdue(t: TenantBilling): boolean {
   return new Date(t.next_payment_due) < new Date();
 }
 
+function hasPendingPayment(t: TenantBilling): boolean {
+  return t.balance_due > 0 || isOverdue(t);
+}
+
 export default function TenantsAdmin() {
   const [tenants, setTenants] = useState<TenantBilling[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+
+  const [paymentInstructions, setPaymentInstructions] = useState('');
+  const [editingInstructions, setEditingInstructions] = useState(false);
+  const [instructionsDraft, setInstructionsDraft] = useState('');
+  const [instructionsSaving, setInstructionsSaving] = useState(false);
+
+  const loadInstructions = async () => {
+    try {
+      setPaymentInstructions(await getPlatformPaymentInstructions());
+    } catch {
+      // Non-critical — the page still works without this loading.
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -77,7 +96,28 @@ export default function TenantsAdmin() {
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); loadInstructions(); }, []);
+
+  const openEditInstructions = () => {
+    setInstructionsDraft(paymentInstructions);
+    setEditingInstructions(true);
+  };
+
+  const handleSaveInstructions = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setInstructionsSaving(true);
+    try {
+      await updatePlatformPaymentInstructions(instructionsDraft.trim());
+      setPaymentInstructions(instructionsDraft.trim());
+      setEditingInstructions(false);
+    } catch {
+      // Leave the editor open so they can retry.
+    } finally {
+      setInstructionsSaving(false);
+    }
+  };
+
+  const pendingTenants = tenants.filter(hasPendingPayment);
 
   // ---- Add tenant ----
   const [isAdding, setIsAdding] = useState(false);
@@ -150,7 +190,7 @@ export default function TenantsAdmin() {
 
   // ---- Manage tenant (billing edit + record payment + history) ----
   const [managing, setManaging] = useState<TenantBilling | null>(null);
-  const [editForm, setEditForm] = useState({ monthlyPrice: '', currency: 'USD', subscriptionStatus: 'trialing' as SubscriptionStatus, nextPaymentDue: '', billingNotes: '' });
+  const [editForm, setEditForm] = useState({ monthlyPrice: '', currency: 'USD', subscriptionStatus: 'trialing' as SubscriptionStatus, nextPaymentDue: '', billingNotes: '', balanceDue: '0' });
   const [editError, setEditError] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -168,9 +208,10 @@ export default function TenantsAdmin() {
       subscriptionStatus: t.subscription_status as SubscriptionStatus,
       nextPaymentDue: t.next_payment_due || '',
       billingNotes: t.billing_notes || '',
+      balanceDue: String(t.balance_due),
     });
     setEditError(''); setPaymentError('');
-    setPaymentAmount(t.monthly_price !== null ? String(t.monthly_price) : '');
+    setPaymentAmount(t.balance_due > 0 ? String(t.balance_due) : t.monthly_price !== null ? String(t.monthly_price) : '');
     setPaymentNote('');
     setHistoryLoading(true);
     try {
@@ -191,6 +232,11 @@ export default function TenantsAdmin() {
       setEditError('Monthly price must be a non-negative number.');
       return;
     }
+    const balance = editForm.balanceDue.trim() === '' ? undefined : Number(editForm.balanceDue);
+    if (balance !== undefined && (!Number.isFinite(balance) || balance < 0)) {
+      setEditError('Balance owed must be a non-negative number.');
+      return;
+    }
     setEditSaving(true);
     try {
       await updateTenantBilling(managing.organization_id, {
@@ -199,6 +245,7 @@ export default function TenantsAdmin() {
         subscriptionStatus: editForm.subscriptionStatus,
         nextPaymentDue: editForm.nextPaymentDue.trim() === '' ? null : editForm.nextPaymentDue,
         billingNotes: editForm.billingNotes,
+        balanceDue: balance,
       });
       await load();
       setManaging(null);
@@ -230,8 +277,9 @@ export default function TenantsAdmin() {
       const updated = freshTenants.find(t => t.organization_id === managing.organization_id);
       if (updated) {
         setManaging(updated);
-        setEditForm(f => ({ ...f, subscriptionStatus: updated.subscription_status as SubscriptionStatus, nextPaymentDue: updated.next_payment_due || '' }));
+        setEditForm(f => ({ ...f, subscriptionStatus: updated.subscription_status as SubscriptionStatus, nextPaymentDue: updated.next_payment_due || '', balanceDue: String(updated.balance_due) }));
       }
+      setPaymentAmount(updated && updated.balance_due > 0 ? String(updated.balance_due) : '');
       setPaymentNote('');
     } catch (err: any) {
       setPaymentError(err?.message || "Couldn't record that payment.");
@@ -255,6 +303,14 @@ export default function TenantsAdmin() {
     {
       header: 'Price',
       accessor: (t: TenantBilling) => <span className="dm-nums">{formatMoney(t.monthly_price, t.currency)}/mo</span>,
+    },
+    {
+      header: 'Balance owed',
+      accessor: (t: TenantBilling) => (
+        <span className="dm-nums" style={{ color: t.balance_due > 0 ? 'var(--danger)' : 'var(--text-low)', fontWeight: t.balance_due > 0 ? 700 : 400 }}>
+          {t.balance_due > 0 ? formatMoney(t.balance_due, t.currency) : '—'}
+        </span>
+      ),
     },
     {
       header: 'Status',
@@ -320,6 +376,39 @@ export default function TenantsAdmin() {
           <span>{loadError}</span>
         </div>
       )}
+
+      {!loading && pendingTenants.length > 0 && (
+        <div className="flex items-start gap-3 px-4 py-3 rounded-2xl" style={{ background: 'var(--warning-bg)', border: '1px solid rgba(255,176,32,0.3)' }}>
+          <BellRing style={{ width: 16, height: 16, color: 'var(--warning)', flexShrink: 0, marginTop: 2 }} />
+          <div style={{ fontSize: '0.8125rem', color: 'var(--text-hi)' }}>
+            <strong>{pendingTenants.length} tenant{pendingTenants.length > 1 ? 's' : ''}</strong> {pendingTenants.length > 1 ? 'have' : 'has'} a payment pending: {pendingTenants.map(t => `${t.name} (${t.balance_due > 0 ? formatMoney(t.balance_due, t.currency) : 'overdue'})`).join(', ')}.
+          </div>
+        </div>
+      )}
+
+      <div className="dm-card-inset p-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <h3 className="flex items-center gap-1.5" style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-hi)' }}>
+            <Phone style={{ width: 14, height: 14 }} /> How tenants pay you
+          </h3>
+          {!editingInstructions && (
+            <button onClick={openEditInstructions} className="dm-icon-btn" style={{ width: 28, height: 28 }} aria-label="Edit payment instructions" title="Edit">
+              <Pencil style={{ width: 13, height: 13 }} />
+            </button>
+          )}
+        </div>
+        {editingInstructions ? (
+          <form onSubmit={handleSaveInstructions} className="flex items-center gap-2">
+            <input type="text" className="dm-input" style={{ fontSize: '0.8rem' }} placeholder="e.g. MTN Mobile Money: 0979501830 or 0764502661" value={instructionsDraft} onChange={e => setInstructionsDraft(e.target.value)} autoFocus />
+            <button type="submit" disabled={instructionsSaving} className="dm-btn dm-btn-primary" style={{ flexShrink: 0 }}>{instructionsSaving ? '…' : 'Save'}</button>
+            <button type="button" onClick={() => setEditingInstructions(false)} className="dm-icon-btn" aria-label="Cancel"><X style={{ width: 14, height: 14 }} /></button>
+          </form>
+        ) : (
+          <p style={{ fontSize: '0.8125rem', color: paymentInstructions ? 'var(--text-mid)' : 'var(--text-low)' }}>
+            {paymentInstructions || 'Not set — click the pencil to add how tenants should pay you.'}
+          </p>
+        )}
+      </div>
 
       <DataTable
         data={tenants}
@@ -472,6 +561,11 @@ export default function TenantsAdmin() {
                   <h4 className="flex items-center gap-1.5" style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-hi)' }}>
                     <Wallet style={{ width: 14, height: 14 }} /> Record a payment
                   </h4>
+                  {managing.balance_due > 0 && (
+                    <p style={{ fontSize: '0.78rem', color: 'var(--danger)', fontWeight: 600 }}>
+                      Currently owes {formatMoney(managing.balance_due, managing.currency)}
+                    </p>
+                  )}
                   <form onSubmit={handleRecordPayment} className="space-y-2.5">
                     <div className="flex gap-2">
                       <input type="number" min="0" step="0.01" className="dm-input dm-nums" style={{ fontSize: '0.85rem' }} placeholder="Amount" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} />
@@ -521,6 +615,11 @@ export default function TenantsAdmin() {
                       <label className="dm-label" style={{ padding: 0 }}>Currency</label>
                       <input type="text" className="dm-input dm-nums" value={editForm.currency} onChange={e => setEditForm(f => ({ ...f, currency: e.target.value.toUpperCase() }))} />
                     </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="dm-label" style={{ padding: 0 }}>Balance owed <span style={{ opacity: 0.6, textTransform: 'none' }}>(arrears — separate from the monthly price)</span></label>
+                    <input type="number" min="0" step="0.01" className="dm-input dm-nums" value={editForm.balanceDue} onChange={e => setEditForm(f => ({ ...f, balanceDue: e.target.value }))} />
                   </div>
 
                   <div className="space-y-1.5">

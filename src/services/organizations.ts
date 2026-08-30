@@ -552,7 +552,7 @@ export async function createTenant(params: {
   };
 }
 
-/** Edits a tenant's price/currency/status/next-due-date/notes. Pass only the fields changing. */
+/** Edits a tenant's price/currency/status/next-due-date/notes/balance. Pass only the fields changing. */
 export async function updateTenantBilling(
   organizationId: string,
   patch: {
@@ -561,6 +561,7 @@ export async function updateTenantBilling(
     subscriptionStatus?: SubscriptionStatus;
     nextPaymentDue?: string | null;
     billingNotes?: string;
+    balanceDue?: number;
   }
 ): Promise<void> {
   const { error } = await supabase.rpc('update_tenant_billing', {
@@ -571,11 +572,12 @@ export async function updateTenantBilling(
     p_next_payment_due: patch.nextPaymentDue === null ? null : patch.nextPaymentDue ?? null,
     p_billing_notes: patch.billingNotes ?? null,
     p_clear_next_payment_due: patch.nextPaymentDue === null,
+    p_balance_due: patch.balanceDue ?? null,
   });
   if (error) throw error;
 }
 
-/** Logs a payment and rolls the tenant's due date forward a month. */
+/** Logs a payment, rolls the tenant's due date forward a month, and draws down balance_due by the amount paid. */
 export async function recordTenantPayment(organizationId: string, amount: number, note?: string): Promise<void> {
   const { error } = await supabase.rpc('record_tenant_payment', {
     p_org_id: organizationId,
@@ -590,4 +592,16 @@ export async function listTenantPayments(organizationId: string): Promise<Tenant
   const { data, error } = await supabase.rpc('list_tenant_payments', { p_org_id: organizationId });
   if (error) throw error;
   return (data ?? []) as TenantPayment[];
+}
+
+/** How tenants should pay you (e.g. mobile money lines) — platform-admin only, shown on the Tenants page. */
+export async function getPlatformPaymentInstructions(): Promise<string> {
+  const { data, error } = await supabase.rpc('get_platform_payment_instructions');
+  if (error) throw error;
+  return (data as string) || '';
+}
+
+export async function updatePlatformPaymentInstructions(text: string): Promise<void> {
+  const { error } = await supabase.rpc('update_platform_payment_instructions', { p_text: text });
+  if (error) throw error;
 }
