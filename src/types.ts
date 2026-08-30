@@ -49,6 +49,8 @@ export interface TenantBilling {
   next_payment_due: string | null;
   last_payment_at: string | null;
   billing_notes: string | null;
+  /** Outstanding amount owed, independent of the monthly_price cycle — arrears, an opening balance, etc. */
+  balance_due: number;
   member_count: number;
   admin_emails: string | null;
   created_at: string;
