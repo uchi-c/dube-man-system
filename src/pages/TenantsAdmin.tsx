@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import {
   Building2, RefreshCw, Plus, X, Check, Copy, AlertCircle,
   KeyRound, Wallet, History as HistoryIcon, Users as UsersIcon,
-  BellRing, Phone, Pencil,
+  BellRing, Phone, Pencil, CircleCheck,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import DataTable from '../components/DataTable';
+import DashboardCard from '../components/DashboardCard';
 import {
   listTenantsBilling, createTenant, updateTenantBilling,
   recordTenantPayment, listTenantPayments,
@@ -82,13 +83,32 @@ function hasPendingPayment(t: TenantBilling): boolean {
 }
 
 function pendingPaymentNote(t: TenantBilling): string | null {
-  if (t.balance_due > 0) return formatMoney(t.balance_due, t.currency);
-  if (isOverdue(t)) return 'overdue';
+  if (isOverdue(t)) return t.balance_due > 0 ? `${formatMoney(t.balance_due, t.currency)} · overdue` : 'overdue';
+  if (t.balance_due > 0) return `owes ${formatMoney(t.balance_due, t.currency)}`;
   if (isDueSoon(t)) {
     const days = daysUntilDue(t)!;
     return days === 0 ? 'due today' : `due in ${days} day${days === 1 ? '' : 's'}`;
   }
   return null;
+}
+
+// Overdue outranks an unpaid balance, which outranks merely approaching —
+// worst-first ordering for the "Needs attention" list.
+function severityRank(t: TenantBilling): number {
+  if (isOverdue(t)) return 0;
+  if (t.balance_due > 0) return 1;
+  if (isDueSoon(t)) return 2;
+  return 3;
+}
+
+/** e.g. "ZMW 1,000.00" or, across mixed currencies, "ZMW 1,000.00 + USD 50.00". */
+function totalOutstandingLabel(tenants: TenantBilling[]): string {
+  const byCurrency = new Map<string, number>();
+  for (const t of tenants) {
+    if (t.balance_due > 0) byCurrency.set(t.currency, (byCurrency.get(t.currency) || 0) + t.balance_due);
+  }
+  if (byCurrency.size === 0) return 'All settled';
+  return [...byCurrency.entries()].map(([currency, amount]) => formatMoney(amount, currency)).join(' + ');
 }
 
 export default function TenantsAdmin() {
@@ -97,6 +117,7 @@ export default function TenantsAdmin() {
   const [loadError, setLoadError] = useState('');
 
   const [paymentInstructions, setPaymentInstructions] = useState('');
+  const [showInstructionsModal, setShowInstructionsModal] = useState(false);
   const [editingInstructions, setEditingInstructions] = useState(false);
   const [instructionsDraft, setInstructionsDraft] = useState('');
   const [instructionsSaving, setInstructionsSaving] = useState(false);
@@ -123,6 +144,11 @@ export default function TenantsAdmin() {
 
   useEffect(() => { load(); loadInstructions(); }, []);
 
+  const openInstructionsModal = () => {
+    setEditingInstructions(false);
+    setShowInstructionsModal(true);
+  };
+
   const openEditInstructions = () => {
     setInstructionsDraft(paymentInstructions);
     setEditingInstructions(true);
@@ -142,7 +168,8 @@ export default function TenantsAdmin() {
     }
   };
 
-  const pendingTenants = tenants.filter(hasPendingPayment);
+  const pendingTenants = [...tenants.filter(hasPendingPayment)].sort((a, b) => severityRank(a) - severityRank(b));
+  const activeCount = tenants.filter(t => t.subscription_status === 'active').length;
 
   // ---- Add tenant ----
   const [isAdding, setIsAdding] = useState(false);
@@ -390,6 +417,9 @@ export default function TenantsAdmin() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={openInstructionsModal} className="dm-icon-btn" title="How tenants pay you">
+            <Phone style={{ width: 16, height: 16 }} />
+          </button>
           <button onClick={load} className="dm-icon-btn" title="Reload">
             <RefreshCw className={loading ? 'dm-spin' : ''} style={{ width: 16, height: 16 }} />
           </button>
@@ -406,38 +436,46 @@ export default function TenantsAdmin() {
         </div>
       )}
 
-      {!loading && pendingTenants.length > 0 && (
-        <div className="flex items-start gap-3 px-4 py-3 rounded-2xl" style={{ background: 'var(--warning-bg)', border: '1px solid rgba(255,176,32,0.3)' }}>
-          <BellRing style={{ width: 16, height: 16, color: 'var(--warning)', flexShrink: 0, marginTop: 2 }} />
-          <div style={{ fontSize: '0.8125rem', color: 'var(--text-hi)' }}>
-            <strong>{pendingTenants.length} tenant{pendingTenants.length > 1 ? 's' : ''}</strong> {pendingTenants.length > 1 ? 'need' : 'needs'} attention: {pendingTenants.map(t => `${t.name} (${pendingPaymentNote(t)})`).join(', ')}.
-          </div>
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {[0, 1, 2, 3].map(i => <div key={i} className="dm-skeleton" style={{ height: 120 }} />)}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          <DashboardCard title="Tenants" value={String(tenants.length)} subValue="Total organizations" icon={Building2} colorScheme="blue" trend="neutral" />
+          <DashboardCard
+            title="Needs attention"
+            value={String(pendingTenants.length)}
+            subValue={pendingTenants.length > 0 ? 'Owed, overdue, or due soon' : 'Nothing pending'}
+            icon={BellRing}
+            colorScheme={pendingTenants.length > 0 ? 'amber' : 'slate'}
+            trend="neutral"
+          />
+          <DashboardCard title="Active" value={String(activeCount)} subValue={`of ${tenants.length} total`} icon={CircleCheck} colorScheme="emerald" trend="neutral" />
+          <DashboardCard title="Outstanding" value={totalOutstandingLabel(tenants)} subValue="Across all tenants" icon={Wallet} colorScheme={totalOutstandingLabel(tenants) === 'All settled' ? 'slate' : 'amber'} trend="neutral" />
         </div>
       )}
 
-      <div className="dm-card-inset p-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <h3 className="flex items-center gap-1.5" style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-hi)' }}>
-            <Phone style={{ width: 14, height: 14 }} /> How tenants pay you
+      {!loading && pendingTenants.length > 0 && (
+        <div className="dm-card p-5 space-y-3">
+          <h3 className="flex items-center gap-1.5" style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-hi)' }}>
+            <BellRing style={{ width: 15, height: 15, color: 'var(--warning)' }} /> Needs attention
           </h3>
-          {!editingInstructions && (
-            <button onClick={openEditInstructions} className="dm-icon-btn" style={{ width: 28, height: 28 }} aria-label="Edit payment instructions" title="Edit">
-              <Pencil style={{ width: 13, height: 13 }} />
-            </button>
-          )}
+          <div className="space-y-2">
+            {pendingTenants.map(t => (
+              <div key={t.organization_id} className="flex items-center justify-between py-2.5 px-3 rounded-xl" style={{ background: 'var(--panel-2)', border: '1px solid var(--panel-line)' }}>
+                <div className="min-w-0 flex-1 pr-3">
+                  <div className="dm-truncate" style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-hi)' }}>{t.name}</div>
+                  <div style={{ fontSize: '0.72rem', color: isOverdue(t) ? 'var(--danger)' : 'var(--warning)', fontWeight: 600 }}>{pendingPaymentNote(t)}</div>
+                </div>
+                <button onClick={() => openManage(t)} className="dm-btn dm-btn-ghost" style={{ minHeight: 32, padding: '0.3rem 0.7rem', fontSize: '0.75rem', flexShrink: 0 }}>
+                  Manage
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
-        {editingInstructions ? (
-          <form onSubmit={handleSaveInstructions} className="flex items-center gap-2">
-            <input type="text" className="dm-input" style={{ fontSize: '0.8rem' }} placeholder="e.g. MTN Mobile Money: 0979501830 or 0764502661" value={instructionsDraft} onChange={e => setInstructionsDraft(e.target.value)} autoFocus />
-            <button type="submit" disabled={instructionsSaving} className="dm-btn dm-btn-primary" style={{ flexShrink: 0 }}>{instructionsSaving ? '…' : 'Save'}</button>
-            <button type="button" onClick={() => setEditingInstructions(false)} className="dm-icon-btn" aria-label="Cancel"><X style={{ width: 14, height: 14 }} /></button>
-          </form>
-        ) : (
-          <p style={{ fontSize: '0.8125rem', color: paymentInstructions ? 'var(--text-mid)' : 'var(--text-low)' }}>
-            {paymentInstructions || 'Not set — click the pencil to add how tenants should pay you.'}
-          </p>
-        )}
-      </div>
+      )}
 
       <DataTable
         data={tenants}
@@ -678,6 +716,60 @@ export default function TenantsAdmin() {
                   <button type="submit" disabled={editSaving} className="dm-btn dm-btn-primary w-full">{editSaving ? 'Saving…' : 'Save billing details'}</button>
                 </form>
               </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ---- Payment instructions modal ---- */}
+      <AnimatePresence>
+        {showInstructionsModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setShowInstructionsModal(false)}
+              className="fixed inset-0 z-40"
+              style={{ background: 'rgba(7,11,36,0.6)', backdropFilter: 'blur(4px)' }}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}
+              transition={{ duration: 0.2 }}
+              className="fixed z-50 w-full max-w-sm p-6"
+              style={{
+                top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                background: 'var(--bg-1)', border: '1px solid var(--panel-line)', borderRadius: 'var(--r-card)', boxShadow: 'var(--shadow-modal)',
+              }}
+              role="dialog" aria-label="How tenants pay you"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="dm-h2 flex items-center gap-1.5"><Phone style={{ width: 15, height: 15 }} /> How tenants pay you</h3>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-mid)', marginTop: 2 }}>Shown here for your own reference — not visible to tenants yet.</p>
+                </div>
+                <button onClick={() => setShowInstructionsModal(false)} className="dm-icon-btn" aria-label="Close">
+                  <X style={{ width: 16, height: 16 }} />
+                </button>
+              </div>
+
+              {editingInstructions ? (
+                <form onSubmit={handleSaveInstructions} className="space-y-3">
+                  <input type="text" className="dm-input" style={{ fontSize: '0.8rem' }} placeholder="e.g. MTN Mobile Money: 0979501830 or 0764502661" value={instructionsDraft} onChange={e => setInstructionsDraft(e.target.value)} autoFocus />
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setEditingInstructions(false)} className="dm-btn dm-btn-ghost flex-1">Cancel</button>
+                    <button type="submit" disabled={instructionsSaving} className="dm-btn dm-btn-primary flex-1">{instructionsSaving ? 'Saving…' : 'Save'}</button>
+                  </div>
+                </form>
+              ) : (
+                <div className="space-y-3">
+                  <p style={{ fontSize: '0.8125rem', color: paymentInstructions ? 'var(--text-mid)' : 'var(--text-low)' }}>
+                    {paymentInstructions || 'Not set yet — add how tenants should pay you.'}
+                  </p>
+                  <button onClick={openEditInstructions} className="dm-btn dm-btn-ghost w-full">
+                    <Pencil style={{ width: 13, height: 13 }} /> {paymentInstructions ? 'Edit' : 'Add'}
+                  </button>
+                </div>
+              )}
             </motion.div>
           </>
         )}
