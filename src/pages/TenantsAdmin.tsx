@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Building2, RefreshCw, Plus, X, Check, Copy, AlertCircle,
   KeyRound, Wallet, History as HistoryIcon, Users as UsersIcon,
-  BellRing, Phone, Pencil, CircleCheck,
+  BellRing, Phone, Pencil, CircleCheck, Lock, LockOpen,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import DataTable from '../components/DataTable';
@@ -175,7 +175,7 @@ export default function TenantsAdmin() {
   const [isAdding, setIsAdding] = useState(false);
   const [addForm, setAddForm] = useState({
     orgName: '', businessType: 'general' as BusinessType, monthlyPrice: String(SUGGESTED_PRICE.general),
-    currency: 'USD', ownerEmail: '', ownerName: '',
+    currency: 'USD', paymentMethod: '', ownerEmail: '', ownerName: '',
   });
   const [addError, setAddError] = useState('');
   const [addSubmitting, setAddSubmitting] = useState(false);
@@ -183,7 +183,7 @@ export default function TenantsAdmin() {
   const [copiedPassword, setCopiedPassword] = useState(false);
 
   const openAddForm = () => {
-    setAddForm({ orgName: '', businessType: 'general', monthlyPrice: String(SUGGESTED_PRICE.general), currency: 'USD', ownerEmail: '', ownerName: '' });
+    setAddForm({ orgName: '', businessType: 'general', monthlyPrice: String(SUGGESTED_PRICE.general), currency: 'USD', paymentMethod: '', ownerEmail: '', ownerName: '' });
     setAddError(''); setAddResult(null); setCopiedPassword(false);
     setIsAdding(true);
   };
@@ -217,6 +217,7 @@ export default function TenantsAdmin() {
         businessType: addForm.businessType,
         monthlyPrice: price,
         currency: addForm.currency.trim() || 'USD',
+        paymentMethod: addForm.paymentMethod.trim() || undefined,
         ownerEmail: addForm.ownerEmail.trim(),
         ownerName: addForm.ownerName.trim() || undefined,
       });
@@ -242,7 +243,8 @@ export default function TenantsAdmin() {
 
   // ---- Manage tenant (billing edit + record payment + history) ----
   const [managing, setManaging] = useState<TenantBilling | null>(null);
-  const [editForm, setEditForm] = useState({ monthlyPrice: '', currency: 'USD', subscriptionStatus: 'trialing' as SubscriptionStatus, nextPaymentDue: '', billingNotes: '', balanceDue: '0' });
+  const [editForm, setEditForm] = useState({ monthlyPrice: '', currency: 'USD', subscriptionStatus: 'trialing' as SubscriptionStatus, nextPaymentDue: '', billingNotes: '', balanceDue: '0', paymentMethod: '' });
+  const [lockSaving, setLockSaving] = useState(false);
   const [editError, setEditError] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -261,6 +263,7 @@ export default function TenantsAdmin() {
       nextPaymentDue: t.next_payment_due || '',
       billingNotes: t.billing_notes || '',
       balanceDue: String(t.balance_due),
+      paymentMethod: t.payment_method || '',
     });
     setEditError(''); setPaymentError('');
     setPaymentAmount(t.balance_due > 0 ? String(t.balance_due) : t.monthly_price !== null ? String(t.monthly_price) : '');
@@ -298,6 +301,7 @@ export default function TenantsAdmin() {
         nextPaymentDue: editForm.nextPaymentDue.trim() === '' ? null : editForm.nextPaymentDue,
         billingNotes: editForm.billingNotes,
         balanceDue: balance,
+        paymentMethod: editForm.paymentMethod.trim() || undefined,
       });
       await load();
       setManaging(null);
@@ -305,6 +309,28 @@ export default function TenantsAdmin() {
       setEditError(err?.message || "Couldn't save billing changes.");
     } finally {
       setEditSaving(false);
+    }
+  };
+
+  const isLocked = (t: TenantBilling) => t.subscription_status === 'suspended' || t.subscription_status === 'cancelled';
+
+  const handleToggleLock = async () => {
+    if (!managing) return;
+    setLockSaving(true);
+    try {
+      const nextStatus: SubscriptionStatus = isLocked(managing) ? 'active' : 'suspended';
+      await updateTenantBilling(managing.organization_id, { subscriptionStatus: nextStatus });
+      const freshTenants = await listTenantsBilling();
+      setTenants(freshTenants);
+      const updated = freshTenants.find(t => t.organization_id === managing.organization_id);
+      if (updated) {
+        setManaging(updated);
+        setEditForm(f => ({ ...f, subscriptionStatus: updated.subscription_status as SubscriptionStatus }));
+      }
+    } catch (err: any) {
+      setEditError(err?.message || "Couldn't change access.");
+    } finally {
+      setLockSaving(false);
     }
   };
 
@@ -365,9 +391,14 @@ export default function TenantsAdmin() {
       ),
     },
     {
+      header: 'Pays via',
+      accessor: (t: TenantBilling) => <span style={{ color: t.payment_method ? 'var(--text-mid)' : 'var(--text-low)' }}>{t.payment_method || '—'}</span>,
+    },
+    {
       header: 'Status',
       accessor: (t: TenantBilling) => (
         <div className="flex items-center gap-1.5">
+          {isLocked(t) && <Lock style={{ width: 12, height: 12, color: 'var(--danger)' }} />}
           <span className={`dm-badge ${STATUS_BADGE[t.subscription_status as SubscriptionStatus]}`}>{statusLabel(t.subscription_status as SubscriptionStatus)}</span>
           {isOverdue(t)
             ? <span className="dm-badge dm-badge-danger">Overdue</span>
@@ -567,6 +598,11 @@ export default function TenantsAdmin() {
                   </div>
 
                   <div className="space-y-1.5">
+                    <label className="dm-label" style={{ padding: 0 }}>Payment method <span style={{ opacity: 0.6, textTransform: 'none' }}>(optional)</span></label>
+                    <input type="text" className="dm-input" placeholder="e.g. MTN Mobile Money" value={addForm.paymentMethod} onChange={e => setAddForm(f => ({ ...f, paymentMethod: e.target.value }))} />
+                  </div>
+
+                  <div className="space-y-1.5">
                     <label className="dm-label" style={{ padding: 0 }}>Owner's email</label>
                     <input type="email" required className="dm-input" placeholder="owner@business.com" value={addForm.ownerEmail} onChange={e => setAddForm(f => ({ ...f, ownerEmail: e.target.value }))} />
                   </div>
@@ -574,6 +610,11 @@ export default function TenantsAdmin() {
                   <div className="space-y-1.5">
                     <label className="dm-label" style={{ padding: 0 }}>Owner's name <span style={{ opacity: 0.6, textTransform: 'none' }}>(optional)</span></label>
                     <input type="text" className="dm-input" value={addForm.ownerName} onChange={e => setAddForm(f => ({ ...f, ownerName: e.target.value }))} />
+                  </div>
+
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: 'var(--blue-bg)', border: '1px solid rgba(76,111,255,0.3)' }}>
+                    <BellRing style={{ width: 14, height: 14, color: 'var(--blue-400)', flexShrink: 0 }} />
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-mid)' }}>Starts on a 7-day trial — due date is set automatically.</p>
                   </div>
 
                   {addError && (
@@ -619,6 +660,22 @@ export default function TenantsAdmin() {
                 </div>
                 <button onClick={() => setManaging(null)} className="dm-icon-btn" aria-label="Close">
                   <X style={{ width: 16, height: 16 }} />
+                </button>
+              </div>
+
+              <div
+                className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl mb-6"
+                style={{
+                  background: isLocked(managing) ? 'var(--danger-bg)' : 'var(--success-bg)',
+                  border: `1px solid ${isLocked(managing) ? 'rgba(255,107,107,0.3)' : 'rgba(61,220,151,0.3)'}`,
+                }}
+              >
+                <span className="flex items-center gap-1.5" style={{ fontSize: '0.8rem', fontWeight: 600, color: isLocked(managing) ? 'var(--danger)' : 'var(--success)' }}>
+                  {isLocked(managing) ? <Lock style={{ width: 14, height: 14 }} /> : <LockOpen style={{ width: 14, height: 14 }} />}
+                  {isLocked(managing) ? 'Access locked' : 'Access active'}
+                </span>
+                <button onClick={handleToggleLock} disabled={lockSaving} className={`dm-btn ${isLocked(managing) ? 'dm-btn-primary' : 'dm-btn-danger'}`} style={{ minHeight: 32, padding: '0.35rem 0.8rem', fontSize: '0.75rem' }}>
+                  {lockSaving ? '…' : isLocked(managing) ? 'Unlock' : 'Lock'}
                 </button>
               </div>
 
@@ -687,6 +744,11 @@ export default function TenantsAdmin() {
                   <div className="space-y-1.5">
                     <label className="dm-label" style={{ padding: 0 }}>Balance owed <span style={{ opacity: 0.6, textTransform: 'none' }}>(arrears — separate from the monthly price)</span></label>
                     <input type="number" min="0" step="0.01" className="dm-input dm-nums" value={editForm.balanceDue} onChange={e => setEditForm(f => ({ ...f, balanceDue: e.target.value }))} />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="dm-label" style={{ padding: 0 }}>Payment method</label>
+                    <input type="text" className="dm-input" placeholder="e.g. MTN Mobile Money" value={editForm.paymentMethod} onChange={e => setEditForm(f => ({ ...f, paymentMethod: e.target.value }))} />
                   </div>
 
                   <div className="space-y-1.5">
