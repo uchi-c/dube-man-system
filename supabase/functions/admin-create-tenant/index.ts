@@ -78,6 +78,7 @@ Deno.serve(async (req: Request) => {
   const businessType = typeof body?.businessType === 'string' ? body.businessType : 'general';
   const monthlyPrice = body?.monthlyPrice === null || body?.monthlyPrice === undefined ? null : Number(body.monthlyPrice);
   const currency = typeof body?.currency === 'string' && body.currency.trim() ? body.currency.trim() : 'USD';
+  const paymentMethod = typeof body?.paymentMethod === 'string' ? body.paymentMethod.trim() : '';
   const ownerEmail = typeof body?.ownerEmail === 'string' ? body.ownerEmail.trim().toLowerCase() : '';
   const ownerName = typeof body?.ownerName === 'string' ? body.ownerName.trim() : '';
 
@@ -98,6 +99,7 @@ Deno.serve(async (req: Request) => {
     p_business_type: businessType,
     p_monthly_price: monthlyPrice,
     p_currency: currency,
+    p_payment_method: paymentMethod || null,
   });
   if (orgErr) return json({ error: orgErr.message }, 400);
   if (!orgId) return json({ error: 'Tenant creation did not return an id' }, 500);

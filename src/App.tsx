@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { User, UserRole, BusinessType } from './types';
 import { initializeStore } from './utils/db';
 import { getAuthenticatedUser, logoutUser, supabase } from './services/supabase';
-import { getCurrentOrganizationBusinessType, fetchUserOrganizations } from './services/organizations';
+import { getCurrentOrganizationBusinessType, fetchUserOrganizations, getCurrentOrganizationId, isOrgLocked, getPlatformPaymentInstructions } from './services/organizations';
 import ErrorBoundary from './components/ErrorBoundary';
 import InstallAppButton from './components/InstallAppButton';
 
@@ -34,7 +34,7 @@ const TenantsAdmin   = lazy(() => import('./pages/TenantsAdmin'));
 import {
   LayoutDashboard, Package, ShoppingCart, Printer, Monitor,
   Wifi, History, Users, Shield, LogOut, Menu, X,
-  RefreshCw, PrinterIcon, ChevronRight, Bell, Pill, UserPlus, Building2,
+  RefreshCw, PrinterIcon, ChevronRight, Bell, Pill, UserPlus, Building2, Lock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Analytics } from '@vercel/analytics/react';
@@ -458,6 +458,44 @@ function InviteWhileSignedInScreen({ user, onSignOut, onDismiss }: { user: User;
   );
 }
 
+// Shown instead of the normal app when the signed-in user's organization
+// is suspended/cancelled (see organizations.is_org_locked). The real
+// enforcement already happened server-side -- current_org_ids() excludes
+// a locked org, so every operational table is already empty for this
+// user regardless of this screen. This just explains why, instead of
+// leaving them looking at a blank, broken app.
+function AccountPausedScreen({ onSignOut }: { onSignOut: () => void }) {
+  const [paymentInstructions, setPaymentInstructions] = useState('');
+
+  useEffect(() => {
+    getPlatformPaymentInstructions().then(setPaymentInstructions).catch(() => {});
+  }, []);
+
+  return (
+    <div className="dm-glow flex flex-col items-center justify-center min-h-screen text-center p-8">
+      <div
+        className="w-14 h-14 rounded-2xl mb-4 flex items-center justify-center"
+        style={{ background: 'var(--danger-bg)', border: '1px solid rgba(255,107,107,0.30)' }}
+      >
+        <Lock style={{ width: 24, height: 24, color: 'var(--danger)' }} />
+      </div>
+      <h2 className="dm-h1">Access paused</h2>
+      <p style={{ color: 'var(--text-mid)', fontSize: '0.875rem', marginTop: 8, maxWidth: 380 }}>
+        Your organization's access to Uruu OS has been paused. Contact the platform to resolve this and get reactivated.
+      </p>
+      {paymentInstructions && (
+        <div className="mt-4 px-4 py-2.5 rounded-xl" style={{ background: 'var(--panel-2)', border: '1px solid var(--panel-line)', maxWidth: 380 }}>
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-hi)', fontWeight: 600 }}>How to pay</p>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-mid)', marginTop: 2 }}>{paymentInstructions}</p>
+        </div>
+      )}
+      <button onClick={onSignOut} className="dm-btn dm-btn-primary mt-6">
+        <LogOut style={{ width: 15, height: 15 }} /> Sign out
+      </button>
+    </div>
+  );
+}
+
 // ---- Lazy page fallback ----------------------------------------------------
 
 function PageFallback() {
@@ -556,6 +594,10 @@ export default function App() {
   // belong to at least one org) never see a nav flash/gap while this
   // resolves -- only flips false for someone with zero memberships.
   const [hasOrg, setHasOrg]               = useState(true);
+  // True once we've confirmed the signed-in user's org is suspended/
+  // cancelled (see AccountPausedScreen) -- never checked for a platform
+  // admin, who should never be blocked by a tenant's own billing state.
+  const [orgLocked, setOrgLocked]         = useState(false);
   const [drawerOpen, setDrawerOpen]       = useState(false);
   const [checking, setChecking]           = useState(true);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
@@ -606,6 +648,12 @@ export default function App() {
         setMustChangePassword(!!u.must_change_password);
         getCurrentOrganizationBusinessType().then(bt => { if (!cancelled) setBusinessType(bt); });
         fetchUserOrganizations().then(orgs => { if (!cancelled) setHasOrg(orgs.length > 0); });
+        if (!u.is_platform_admin) {
+          getCurrentOrganizationId()
+            .then(orgId => isOrgLocked(orgId))
+            .then(locked => { if (!cancelled) setOrgLocked(locked); })
+            .catch(() => {});
+        }
       } else {
         setAuthenticated(false);
       }
@@ -633,12 +681,16 @@ export default function App() {
     setAuthenticated(true);
     setChecking(false);
     setMustChangePassword(!!u.must_change_password);
+    setOrgLocked(false);
     Promise.all([getCurrentOrganizationBusinessType(), fetchUserOrganizations()]).then(([bt, orgs]) => {
       setBusinessType(bt);
       const orgMembership = orgs.length > 0;
       setHasOrg(orgMembership);
       navigate(defaultPathFor(u.role, bt, orgMembership, !!u.is_platform_admin), { replace: true });
     });
+    if (!u.is_platform_admin) {
+      getCurrentOrganizationId().then(orgId => isOrgLocked(orgId)).then(setOrgLocked).catch(() => {});
+    }
   };
 
   const handleLogout = async () => {
@@ -647,6 +699,7 @@ export default function App() {
     setAuthenticated(false);
     setBusinessType('general');
     setHasOrg(true);
+    setOrgLocked(false);
     setMustChangePassword(false);
     navigate('/login', { replace: true });
   };
@@ -687,6 +740,9 @@ export default function App() {
         onCancel={handleLogout}
       />
     );
+  }
+  if (orgLocked) {
+    return <AccountPausedScreen onSignOut={handleLogout} />;
   }
   if (new URLSearchParams(location.search).get('invite')) {
     return (

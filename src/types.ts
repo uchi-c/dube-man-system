@@ -51,6 +51,8 @@ export interface TenantBilling {
   billing_notes: string | null;
   /** Outstanding amount owed, independent of the monthly_price cycle — arrears, an opening balance, etc. */
   balance_due: number;
+  /** Free-text note of how this tenant actually pays (e.g. "MTN Mobile Money", "Bank Transfer"). */
+  payment_method: string | null;
   member_count: number;
   admin_emails: string | null;
   created_at: string;

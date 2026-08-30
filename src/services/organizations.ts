@@ -530,13 +530,16 @@ export async function listTenantsBilling(): Promise<TenantBilling[]> {
  * account needs Supabase Auth's admin API, not something a plain RPC can
  * do). The owner logs in with the email + temporary password returned
  * here and is forced to set their own password on first login, same as
- * adminInviteUserWithTempPassword.
+ * adminInviteUserWithTempPassword. The server (create_tenant_org)
+ * automatically starts a 7-day trial — next_payment_due is set 7 days out,
+ * no client input needed for that.
  */
 export async function createTenant(params: {
   orgName: string;
   businessType: BusinessType;
   monthlyPrice: number | null;
   currency: string;
+  paymentMethod?: string;
   ownerEmail: string;
   ownerName?: string;
 }): Promise<{ organizationId: string; orgName: string; email: string; tempPassword: string }> {
@@ -552,7 +555,7 @@ export async function createTenant(params: {
   };
 }
 
-/** Edits a tenant's price/currency/status/next-due-date/notes/balance. Pass only the fields changing. */
+/** Edits a tenant's price/currency/status/next-due-date/notes/balance/payment method. Pass only the fields changing. */
 export async function updateTenantBilling(
   organizationId: string,
   patch: {
@@ -562,6 +565,7 @@ export async function updateTenantBilling(
     nextPaymentDue?: string | null;
     billingNotes?: string;
     balanceDue?: number;
+    paymentMethod?: string;
   }
 ): Promise<void> {
   const { error } = await supabase.rpc('update_tenant_billing', {
@@ -573,8 +577,25 @@ export async function updateTenantBilling(
     p_billing_notes: patch.billingNotes ?? null,
     p_clear_next_payment_due: patch.nextPaymentDue === null,
     p_balance_due: patch.balanceDue ?? null,
+    p_payment_method: patch.paymentMethod ?? null,
   });
   if (error) throw error;
+}
+
+/**
+ * True if the caller belongs to organizationId and it's currently
+ * suspended/cancelled. Fails open (returns false) on error — this is only
+ * a client-side UX gate; the real enforcement is server-side (a locked
+ * org's RLS-visible rows are already empty regardless of this check).
+ */
+export async function isOrgLocked(organizationId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.rpc('is_org_locked', { p_org_id: organizationId });
+    if (error) return false;
+    return !!data;
+  } catch {
+    return false;
+  }
 }
 
 /** Logs a payment, rolls the tenant's due date forward a month, and draws down balance_due by the amount paid. */
