@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { User, UserRole, BusinessType } from './types';
 import { initializeStore } from './utils/db';
 import { getAuthenticatedUser, logoutUser, supabase } from './services/supabase';
-import { getCurrentOrganizationBusinessType } from './services/organizations';
+import { getCurrentOrganizationBusinessType, fetchUserOrganizations } from './services/organizations';
 import ErrorBoundary from './components/ErrorBoundary';
 import InstallAppButton from './components/InstallAppButton';
 
@@ -106,7 +106,14 @@ const ROLE_DEFAULT_PATH: Record<string, string> = {
 // actually reachable for this org's business type — e.g. a 'cafe'-type org
 // scoped down to printing-only no longer has '/cafe-management', so a
 // CAFE_OPERATOR there lands on Print Manager instead.
-function defaultPathFor(role: string, businessType: BusinessType): string {
+// hasOrg/isPlatformAdmin: a user with zero organization memberships (so
+// far, only a platform admin who's been deliberately taken off every
+// tenant's staff) can't reach any of the normal per-org tabs below --
+// they'd all error out fetching organization-scoped data. Route them
+// straight to Tenants instead of a tab that will just show Unauthorized.
+function defaultPathFor(role: string, businessType: BusinessType, hasOrg: boolean, isPlatformAdmin: boolean): string {
+  if (!hasOrg) return isPlatformAdmin ? '/tenants' : '/dashboard';
+
   const allowedModules = BUSINESS_TYPE_MODULES[businessType];
   const reachable = (tab: TabDef) =>
     tab.roles.includes(role as UserRole) && (!allowedModules || allowedModules.includes(tab.id));
@@ -140,8 +147,12 @@ const ROLE_BADGE: Record<string, string> = {
   CAFE_OPERATOR: 'Café Desk',
 };
 
-function RoleBadge({ role }: { role: string }) {
-  return <span className="dm-badge dm-badge-info">{ROLE_BADGE[role] ?? role}</span>;
+// A platform admin's badge reflects that cross-tenant capability instead
+// of their (often irrelevant, or absent-org) per-tenant role -- see
+// User.is_platform_admin.
+function RoleBadge({ user }: { user: User }) {
+  if (user.is_platform_admin) return <span className="dm-badge dm-badge-warning">Platform Admin</span>;
+  return <span className="dm-badge dm-badge-info">{ROLE_BADGE[user.role] ?? user.role}</span>;
 }
 
 function Avatar({ name, size = 32 }: { name: string; size?: number }) {
@@ -238,6 +249,7 @@ function SidebarSection({ group, tabs, activeTab, onSelect }: SidebarSectionProp
 interface SidebarProps {
   user: User;
   businessType: BusinessType;
+  hasOrg: boolean;
   activeTab: string;
   onSelect: (id: string) => void;
   onLogout: () => void;
@@ -245,10 +257,10 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-function Sidebar({ user, businessType, activeTab, onSelect, onLogout, mobile, onClose }: SidebarProps) {
+function Sidebar({ user, businessType, hasOrg, activeTab, onSelect, onLogout, mobile, onClose }: SidebarProps) {
   const allowedModules = BUSINESS_TYPE_MODULES[businessType];
   const visibleTabs = TABS
-    .filter(t => t.platformOnly ? !!user.is_platform_admin : t.roles.includes(user.role as UserRole))
+    .filter(t => t.platformOnly ? !!user.is_platform_admin : hasOrg && t.roles.includes(user.role as UserRole))
     .filter(t => t.platformOnly || !allowedModules || allowedModules.includes(t.id));
   const grouped = GROUP_ORDER.map(g => ({
     group: g,
@@ -307,7 +319,7 @@ function Sidebar({ user, businessType, activeTab, onSelect, onLogout, mobile, on
             <div className="dm-truncate" style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-hi)' }}>
               {user.name}
             </div>
-            <div style={{ marginTop: 2 }}><RoleBadge role={user.role} /></div>
+            <div style={{ marginTop: 2 }}><RoleBadge user={user} /></div>
           </div>
         </div>
         <button onClick={onLogout} className="dm-btn dm-btn-danger w-full" style={{ minHeight: 40 }}>
@@ -386,7 +398,7 @@ function Topbar({ user, activeTab, onMenuToggle }: TopbarProps) {
           <div className="flex flex-col leading-tight">
             <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-hi)' }}>{user.name}</span>
           </div>
-          <RoleBadge role={user.role} />
+          <RoleBadge user={user} />
         </div>
       </div>
     </header>
@@ -507,12 +519,12 @@ function renderPage(id: string, role: string, businessType: BusinessType) {
 
 // ---- Per-route frame: role guard + animation + lazy boundary ---------------
 
-function RouteFrame({ tab, user, businessType }: { tab: TabDef; user: User; businessType: BusinessType }) {
+function RouteFrame({ tab, user, businessType, hasOrg }: { tab: TabDef; user: User; businessType: BusinessType; hasOrg: boolean }) {
   const navigate = useNavigate();
   const allowedModules = BUSINESS_TYPE_MODULES[businessType];
   const allowed = tab.platformOnly
     ? !!user.is_platform_admin
-    : tab.roles.includes(user.role as UserRole) && (!allowedModules || allowedModules.includes(tab.id));
+    : hasOrg && tab.roles.includes(user.role as UserRole) && (!allowedModules || allowedModules.includes(tab.id));
 
   return (
     <motion.div
@@ -528,7 +540,7 @@ function RouteFrame({ tab, user, businessType }: { tab: TabDef; user: User; busi
           </Suspense>
         </ErrorBoundary>
       ) : (
-        <UnauthorizedScreen user={user} onBack={() => navigate(defaultPathFor(user.role, businessType))} />
+        <UnauthorizedScreen user={user} onBack={() => navigate(defaultPathFor(user.role, businessType, hasOrg, !!user.is_platform_admin))} />
       )}
     </motion.div>
   );
@@ -540,6 +552,10 @@ export default function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [user, setUser]                   = useState<User | null>(null);
   const [businessType, setBusinessType]   = useState<BusinessType>('general');
+  // Defaults true so normal users (the overwhelming majority, who always
+  // belong to at least one org) never see a nav flash/gap while this
+  // resolves -- only flips false for someone with zero memberships.
+  const [hasOrg, setHasOrg]               = useState(true);
   const [drawerOpen, setDrawerOpen]       = useState(false);
   const [checking, setChecking]           = useState(true);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
@@ -589,6 +605,7 @@ export default function App() {
         setAuthenticated(true);
         setMustChangePassword(!!u.must_change_password);
         getCurrentOrganizationBusinessType().then(bt => { if (!cancelled) setBusinessType(bt); });
+        fetchUserOrganizations().then(orgs => { if (!cancelled) setHasOrg(orgs.length > 0); });
       } else {
         setAuthenticated(false);
       }
@@ -616,9 +633,11 @@ export default function App() {
     setAuthenticated(true);
     setChecking(false);
     setMustChangePassword(!!u.must_change_password);
-    getCurrentOrganizationBusinessType().then(bt => {
+    Promise.all([getCurrentOrganizationBusinessType(), fetchUserOrganizations()]).then(([bt, orgs]) => {
       setBusinessType(bt);
-      navigate(defaultPathFor(u.role, bt), { replace: true });
+      const orgMembership = orgs.length > 0;
+      setHasOrg(orgMembership);
+      navigate(defaultPathFor(u.role, bt, orgMembership, !!u.is_platform_admin), { replace: true });
     });
   };
 
@@ -627,6 +646,7 @@ export default function App() {
     setUser(null);
     setAuthenticated(false);
     setBusinessType('general');
+    setHasOrg(true);
     setMustChangePassword(false);
     navigate('/login', { replace: true });
   };
@@ -678,7 +698,7 @@ export default function App() {
     );
   }
 
-  const homePath = defaultPathFor(user.role, businessType);
+  const homePath = defaultPathFor(user.role, businessType, hasOrg, !!user.is_platform_admin);
 
   return (
     <div className="dm-app-bg flex h-screen overflow-hidden" style={{ fontFamily: "'Inter',sans-serif" }}>
@@ -687,6 +707,7 @@ export default function App() {
         <Sidebar
           user={user}
           businessType={businessType}
+          hasOrg={hasOrg}
           activeTab={activeTab}
           onSelect={handleTabSelect}
           onLogout={handleLogout}
@@ -718,6 +739,7 @@ export default function App() {
               <Sidebar
                 user={user}
                 businessType={businessType}
+                hasOrg={hasOrg}
                 activeTab={activeTab}
                 onSelect={handleTabSelect}
                 onLogout={handleLogout}
@@ -745,7 +767,7 @@ export default function App() {
             <AnimatePresence mode="wait">
               <Routes location={location} key={location.pathname}>
                 {TABS.map(tab => (
-                  <Route key={tab.id} path={tab.path} element={<RouteFrame tab={tab} user={user} businessType={businessType} />} />
+                  <Route key={tab.id} path={tab.path} element={<RouteFrame tab={tab} user={user} businessType={businessType} hasOrg={hasOrg} />} />
                 ))}
                 {/* Legacy alias + default landings */}
                 <Route path="/users" element={<Navigate to="/logs" replace />} />

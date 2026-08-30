@@ -56,14 +56,39 @@ function formatMoney(amount: number | null, currency: string): string {
   return `${currency} ${amount.toFixed(2)}`;
 }
 
+// Days out that count as "approaching due" rather than merely upcoming.
+const DUE_SOON_DAYS = 5;
+
+function daysUntilDue(t: TenantBilling): number | null {
+  if (!t.next_payment_due) return null;
+  const ms = new Date(t.next_payment_due).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0);
+  return Math.round(ms / (24 * 60 * 60 * 1000));
+}
+
 function isOverdue(t: TenantBilling): boolean {
-  if (!t.next_payment_due) return false;
   if (t.subscription_status === 'cancelled') return false;
-  return new Date(t.next_payment_due) < new Date();
+  const days = daysUntilDue(t);
+  return days !== null && days < 0;
+}
+
+function isDueSoon(t: TenantBilling): boolean {
+  if (t.subscription_status === 'cancelled') return false;
+  const days = daysUntilDue(t);
+  return days !== null && days >= 0 && days <= DUE_SOON_DAYS;
 }
 
 function hasPendingPayment(t: TenantBilling): boolean {
-  return t.balance_due > 0 || isOverdue(t);
+  return t.balance_due > 0 || isOverdue(t) || isDueSoon(t);
+}
+
+function pendingPaymentNote(t: TenantBilling): string | null {
+  if (t.balance_due > 0) return formatMoney(t.balance_due, t.currency);
+  if (isOverdue(t)) return 'overdue';
+  if (isDueSoon(t)) {
+    const days = daysUntilDue(t)!;
+    return days === 0 ? 'due today' : `due in ${days} day${days === 1 ? '' : 's'}`;
+  }
+  return null;
 }
 
 export default function TenantsAdmin() {
@@ -317,14 +342,18 @@ export default function TenantsAdmin() {
       accessor: (t: TenantBilling) => (
         <div className="flex items-center gap-1.5">
           <span className={`dm-badge ${STATUS_BADGE[t.subscription_status as SubscriptionStatus]}`}>{statusLabel(t.subscription_status as SubscriptionStatus)}</span>
-          {isOverdue(t) && <span className="dm-badge dm-badge-danger">Overdue</span>}
+          {isOverdue(t)
+            ? <span className="dm-badge dm-badge-danger">Overdue</span>
+            : isDueSoon(t)
+              ? <span className="dm-badge dm-badge-warning">Due {daysUntilDue(t) === 0 ? 'today' : `in ${daysUntilDue(t)}d`}</span>
+              : null}
         </div>
       ),
     },
     {
       header: 'Next due',
       accessor: (t: TenantBilling) => (
-        <span className="dm-nums" style={{ color: isOverdue(t) ? 'var(--danger)' : 'var(--text-mid)' }}>
+        <span className="dm-nums" style={{ color: isOverdue(t) ? 'var(--danger)' : isDueSoon(t) ? 'var(--warning)' : 'var(--text-mid)' }}>
           {t.next_payment_due ? new Date(t.next_payment_due).toLocaleDateString() : '—'}
         </span>
       ),
@@ -381,7 +410,7 @@ export default function TenantsAdmin() {
         <div className="flex items-start gap-3 px-4 py-3 rounded-2xl" style={{ background: 'var(--warning-bg)', border: '1px solid rgba(255,176,32,0.3)' }}>
           <BellRing style={{ width: 16, height: 16, color: 'var(--warning)', flexShrink: 0, marginTop: 2 }} />
           <div style={{ fontSize: '0.8125rem', color: 'var(--text-hi)' }}>
-            <strong>{pendingTenants.length} tenant{pendingTenants.length > 1 ? 's' : ''}</strong> {pendingTenants.length > 1 ? 'have' : 'has'} a payment pending: {pendingTenants.map(t => `${t.name} (${t.balance_due > 0 ? formatMoney(t.balance_due, t.currency) : 'overdue'})`).join(', ')}.
+            <strong>{pendingTenants.length} tenant{pendingTenants.length > 1 ? 's' : ''}</strong> {pendingTenants.length > 1 ? 'need' : 'needs'} attention: {pendingTenants.map(t => `${t.name} (${pendingPaymentNote(t)})`).join(', ')}.
           </div>
         </div>
       )}
