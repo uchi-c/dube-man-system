@@ -68,6 +68,32 @@ export interface TenantPayment {
   recorded_by_name: string | null;
 }
 
+/** The platform owner's cross-tenant revenue for one billing currency — platform-admin only (see get_platform_financial_summary()). */
+export interface PlatformFinancialSummary {
+  currency: string;
+  /** Sum of monthly_price across tenants currently 'active'. */
+  mrr: number;
+  /** Sum of balance_due owed across every tenant in this currency, any status. */
+  outstanding_balance: number;
+  /** Sum of tenant_payments recorded since the start of this calendar month. */
+  collected_this_month: number;
+  /** Sum of every tenant_payments row ever recorded, this currency. */
+  collected_all_time: number;
+  tenant_count: number;
+}
+
+/** One payment against any tenant, for the platform-wide feed — platform-admin only (see list_all_tenant_payments()). */
+export interface PlatformPayment {
+  id: string;
+  org_id: string;
+  org_name: string;
+  amount: number;
+  currency: string;
+  paid_at: string;
+  note: string | null;
+  recorded_by_name: string | null;
+}
+
 /** A pending/accepted/revoked invitation for someone to join an org with a given role. */
 export interface OrganizationInvite {
   id: string;

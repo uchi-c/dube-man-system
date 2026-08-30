@@ -11,7 +11,7 @@
  */
 
 import { supabase, isSupabaseConfigured } from './supabase';
-import { Organization, BusinessType, OrganizationInvite, UserRole, TenantBilling, TenantPayment, SubscriptionStatus } from '../types';
+import { Organization, BusinessType, OrganizationInvite, UserRole, TenantBilling, TenantPayment, SubscriptionStatus, PlatformFinancialSummary, PlatformPayment } from '../types';
 
 const ORG_STORAGE_KEY = 'uruu_org_id';
 const PENDING_GOOGLE_SIGNUP_KEY = 'uruu_pending_google_signup';
@@ -625,4 +625,18 @@ export async function getPlatformPaymentInstructions(): Promise<string> {
 export async function updatePlatformPaymentInstructions(text: string): Promise<void> {
   const { error } = await supabase.rpc('update_platform_payment_instructions', { p_text: text });
   if (error) throw error;
+}
+
+/** The platform owner's cross-tenant revenue, one row per billing currency — MRR, outstanding, and collected totals. */
+export async function fetchPlatformFinancialSummary(): Promise<PlatformFinancialSummary[]> {
+  const { data, error } = await supabase.rpc('get_platform_financial_summary');
+  if (error) throw error;
+  return (data ?? []) as PlatformFinancialSummary[];
+}
+
+/** Most recent payments across every tenant, most recent first — for a platform-wide revenue feed. */
+export async function fetchAllTenantPayments(limit = 50): Promise<PlatformPayment[]> {
+  const { data, error } = await supabase.rpc('list_all_tenant_payments', { p_limit: limit });
+  if (error) throw error;
+  return (data ?? []) as PlatformPayment[];
 }
