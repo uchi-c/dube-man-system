@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Customer } from '../types';
-import { fetchCustomers, insertCustomer } from '../services/supabase';
-import { Plus, Mail, Phone, Calendar, AlertCircle, RefreshCw, Check, X } from 'lucide-react';
+import { fetchCustomers, insertCustomer, deleteCustomer } from '../services/supabase';
+import { Plus, Mail, Phone, Calendar, AlertCircle, RefreshCw, Check, X, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import DataTable from '../components/DataTable';
 
@@ -14,6 +14,7 @@ export default function Customers() {
   const [custEmail, setCustEmail] = useState('');
   const [regError, setRegError] = useState('');
   const [regSuccess, setRegSuccess] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   const loadData = async () => {
     setLoading(true);
@@ -49,6 +50,17 @@ export default function Customers() {
       }
     } catch (err: any) {
       setRegError(err?.message || "Couldn't save the customer. Try again.");
+    }
+  };
+
+  const handleDelete = async (customer: Customer) => {
+    if (!window.confirm(`Delete ${customer.name}? Their billing history is kept, but they'll disappear from Customers.`)) return;
+    setDeleteError('');
+    try {
+      await deleteCustomer(customer.id);
+      await loadData();
+    } catch (err: any) {
+      setDeleteError(err?.message || "Couldn't delete that customer.");
     }
   };
 
@@ -89,6 +101,14 @@ export default function Customers() {
         </span>
       ),
     },
+    {
+      header: '',
+      accessor: (c: Customer) => (
+        <button onClick={() => handleDelete(c)} className="dm-icon-btn" title="Delete customer" aria-label="Delete customer">
+          <Trash2 style={{ width: 14, height: 14, color: 'var(--danger)' }} />
+        </button>
+      ),
+    },
   ];
 
   return (
@@ -108,6 +128,16 @@ export default function Customers() {
           </button>
         </div>
       </div>
+
+      {deleteError && (
+        <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: 'var(--danger-bg)', border: '1px solid rgba(255,107,107,0.3)', fontSize: '0.78rem', color: 'var(--danger)' }} role="alert">
+          <AlertCircle style={{ width: 15, height: 15, flexShrink: 0 }} />
+          <span className="flex-1">{deleteError}</span>
+          <button onClick={() => setDeleteError('')} className="dm-icon-btn" aria-label="Dismiss" style={{ width: 24, height: 24 }}>
+            <X style={{ width: 13, height: 13 }} />
+          </button>
+        </div>
+      )}
 
       <DataTable
         data={customers}

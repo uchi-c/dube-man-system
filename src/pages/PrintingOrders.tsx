@@ -2,11 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { PrintingOrder, PrintingStatus, Customer } from '../types';
 import {
   fetchPrintingOrders, insertPrintingOrder,
-  advancePrintingOrderStatus, addPrintingOrderPayment, fetchCustomers
+  advancePrintingOrderStatus, addPrintingOrderPayment, fetchCustomers, deletePrintingOrder
 } from '../services/supabase';
 import {
   Printer, ArrowRight, CheckCircle2,
-  Coins, Search, Plus, RefreshCw
+  Coins, Search, Plus, RefreshCw, Trash2
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatCurrency } from '../utils/format';
@@ -44,6 +44,7 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
   const [isPaying, setIsPaying] = useState(false);
   const [paymentOrder, setPaymentOrder] = useState<PrintingOrder | null>(null);
   const [paidIncrement, setPaidIncrement] = useState<number>(100);
+  const [deleteError, setDeleteError] = useState('');
 
   const canEdit = userRole === 'ADMIN' || userRole === 'STAFF';
 
@@ -114,6 +115,15 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
     } else {
       setLoading(false);
     }
+  };
+
+  // Handle deleting an order
+  const handleDelete = async (order: PrintingOrder) => {
+    if (!window.confirm(`Delete this print ticket for ${order.customer_name}? This can't be undone.`)) return;
+    setDeleteError('');
+    const success = await deletePrintingOrder(order.id);
+    if (success) await pullOrdersFromDb();
+    else setDeleteError("Couldn't delete that order.");
   };
 
   // Submit order registrations
@@ -193,6 +203,12 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
         </div>
       </div>
 
+      {deleteError && (
+        <div className="dm-badge dm-badge-danger" style={{ width: '100%', padding: '0.6rem 0.75rem', fontSize: '0.6875rem', lineHeight: 1.5, whiteSpace: 'normal', textAlign: 'left' }}>
+          <span>{deleteError}</span>
+        </div>
+      )}
+
       {/* Control Search & Filtering tabs */}
       <div className="dm-card p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
         {/* Search */}
@@ -247,9 +263,19 @@ export default function PrintingOrders({ userRole }: PrintingOrdersProps) {
                     <span className="dm-card-inset" style={{ fontSize: '0.625rem', fontFamily: 'monospace', fontWeight: 700, color: 'var(--text-low)', textTransform: 'uppercase', padding: '0.15rem 0.5rem', borderRadius: 6 }}>
                       Work ID: {order.id.slice(0, 13)}...
                     </span>
-                    <span className={`dm-badge ${STATUS_BADGE[order.status]}`}>
-                      {order.status}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`dm-badge ${STATUS_BADGE[order.status]}`}>
+                        {order.status}
+                      </span>
+                      {canEdit && (
+                        <button
+                          onClick={() => handleDelete(order)}
+                          className="dm-icon-btn" style={{ width: 28, height: 28 }} title="Delete order"
+                        >
+                          <Trash2 style={{ width: 13, height: 13, color: 'var(--danger)' }} />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Core description */}
