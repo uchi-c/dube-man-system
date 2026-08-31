@@ -109,7 +109,8 @@ async function fetchProfileForAuthUser(authUser: any): Promise<User | null> {
       await completeOrganizationSignup(
         pendingOrgName,
         authUser.user_metadata?.owner_name || pendingGoogleSignup?.ownerName || undefined,
-        authUser.user_metadata?.business_type || pendingGoogleSignup?.businessType || undefined
+        authUser.user_metadata?.business_type || pendingGoogleSignup?.businessType || undefined,
+        authUser.user_metadata?.billing_cycle || pendingGoogleSignup?.billingCycle || undefined
       );
       const { data: created } = await supabase.from('users').select('*').eq('id', authUser.id).maybeSingle();
       if (created) return mapProfileToUser(created);

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Check, Pill, ShoppingBag, Printer } from 'lucide-react';
+import { BusinessType, BillingCycle } from '../types';
 
-type Cycle = 'monthly' | 'quarterly' | 'yearly';
+type Cycle = BillingCycle;
 
 const CYCLE_OPTIONS: { value: Cycle; label: string; months: number; discount: number }[] = [
   { value: 'monthly',   label: 'Monthly',   months: 1,  discount: 0 },
@@ -17,6 +18,10 @@ interface Plan {
   blurb: string;
   features: string[];
   highlighted?: boolean;
+  /** Which business_type this plan card signs someone up as -- there's no
+   *  separate "plan" column, business_type IS the tier (see migration
+   *  020's signup_new_organization, which prices off it server-side). */
+  businessType: BusinessType;
 }
 
 // Starting prices, in Kwacha. Retail & General's 150 is DUBE MAN GENERAL
@@ -31,6 +36,7 @@ const PLANS: Plan[] = [
     monthlyPrice: 150,
     blurb: 'For shops and general dealers.',
     features: ['Point of sale & sales tracking', 'Inventory with low-stock alerts', 'Customer records', 'Team accounts'],
+    businessType: 'general',
   },
   {
     id: 'cafe',
@@ -40,6 +46,7 @@ const PLANS: Plan[] = [
     blurb: 'For internet cafés and print & branding shops.',
     features: ['Everything in Retail & General', 'Café & WiFi session management', 'Printing & branding order tracking', 'Print Manager'],
     highlighted: true,
+    businessType: 'cafe',
   },
   {
     id: 'pharmacy',
@@ -48,6 +55,7 @@ const PLANS: Plan[] = [
     monthlyPrice: 350,
     blurb: 'For pharmacies and dispensaries.',
     features: ['Everything in Retail & General', 'Pharmacy dispensing & prescriptions', 'Batch & expiry tracking', 'Controlled-substance flags'],
+    businessType: 'pharmacy',
   },
 ];
 
@@ -55,7 +63,11 @@ function formatZMW(n: number): string {
   return `K${n.toLocaleString(undefined, { minimumFractionDigits: n % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 })}`;
 }
 
-export default function PricingSection({ onGetStarted }: { onGetStarted: () => void }) {
+interface PricingSectionProps {
+  onGetStarted: (preset?: { businessType: BusinessType; billingCycle: BillingCycle }) => void;
+}
+
+export default function PricingSection({ onGetStarted }: PricingSectionProps) {
   const [cycle, setCycle] = useState<Cycle>('monthly');
   const active = CYCLE_OPTIONS.find(c => c.value === cycle)!;
 
@@ -144,7 +156,7 @@ export default function PricingSection({ onGetStarted }: { onGetStarted: () => v
                 ))}
               </div>
 
-              <button onClick={onGetStarted} className={`dm-btn ${plan.highlighted ? 'dm-btn-primary' : 'dm-btn-ghost'} w-full`}>
+              <button onClick={() => onGetStarted({ businessType: plan.businessType, billingCycle: cycle })} className={`dm-btn ${plan.highlighted ? 'dm-btn-primary' : 'dm-btn-ghost'} w-full`}>
                 Start free trial
               </button>
             </div>

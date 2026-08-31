@@ -3,10 +3,11 @@ import { motion } from 'motion/react';
 import InstallAppButton from '../components/InstallAppButton';
 import ProductPreview from '../components/ProductPreview';
 import PricingSection from '../components/PricingSection';
+import { BusinessType, BillingCycle } from '../types';
 
 interface LandingPageProps {
   onSignIn: () => void;
-  onGetStarted: () => void;
+  onGetStarted: (preset?: { businessType: BusinessType; billingCycle: BillingCycle }) => void;
 }
 
 /**
@@ -47,7 +48,7 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
         </p>
 
         <div className="dm-card-glass p-6 space-y-3">
-          <button onClick={onGetStarted} className="dm-btn dm-btn-primary w-full">
+          <button onClick={() => onGetStarted()} className="dm-btn dm-btn-primary w-full">
             Get started <ArrowRight style={{ width: 16, height: 16 }} />
           </button>
           <button onClick={onSignIn} className="dm-btn dm-btn-ghost w-full">

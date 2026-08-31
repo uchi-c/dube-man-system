@@ -11,7 +11,7 @@
  */
 
 import { supabase, isSupabaseConfigured } from './supabase';
-import { Organization, BusinessType, OrganizationInvite, UserRole, TenantBilling, TenantPayment, SubscriptionStatus, PlatformFinancialSummary, PlatformPayment } from '../types';
+import { Organization, BusinessType, OrganizationInvite, UserRole, TenantBilling, TenantPayment, SubscriptionStatus, PlatformFinancialSummary, PlatformPayment, BillingCycle, OrgBilling } from '../types';
 
 const ORG_STORAGE_KEY = 'uruu_org_id';
 const PENDING_GOOGLE_SIGNUP_KEY = 'uruu_pending_google_signup';
@@ -145,12 +145,14 @@ export async function fetchUserOrganizations(): Promise<Organization[]> {
 export async function completeOrganizationSignup(
   orgName: string,
   ownerName?: string,
-  businessType?: BusinessType
+  businessType?: BusinessType,
+  billingCycle?: BillingCycle
 ): Promise<{ organizationId: string; role: string }> {
   const { data, error } = await supabase.rpc('signup_new_organization', {
     org_name: orgName,
     owner_name: ownerName || null,
     business_type: businessType || 'general',
+    billing_cycle: billingCycle || 'monthly',
   });
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
@@ -173,13 +175,17 @@ export async function signUpNewOrganization(
   password: string,
   orgName: string,
   ownerName?: string,
-  businessType?: BusinessType
+  businessType?: BusinessType,
+  billingCycle?: BillingCycle
 ): Promise<{ needsEmailConfirmation: boolean; organizationId?: string }> {
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { org_name: orgName, owner_name: ownerName || null, business_type: businessType || 'general' },
+      data: {
+        org_name: orgName, owner_name: ownerName || null, business_type: businessType || 'general',
+        billing_cycle: billingCycle || 'monthly',
+      },
     },
   });
   if (authError) throw authError;
@@ -192,7 +198,7 @@ export async function signUpNewOrganization(
     return { needsEmailConfirmation: true };
   }
 
-  const { organizationId } = await completeOrganizationSignup(orgName, ownerName, businessType);
+  const { organizationId } = await completeOrganizationSignup(orgName, ownerName, businessType, billingCycle);
   return { needsEmailConfirmation: false, organizationId };
 }
 
@@ -407,6 +413,7 @@ export function stashPendingGoogleSignup(details: {
   orgName: string;
   ownerName?: string;
   businessType?: BusinessType;
+  billingCycle?: BillingCycle;
 }): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem(PENDING_GOOGLE_SIGNUP_KEY, JSON.stringify({ ...details, ts: Date.now() }));
@@ -416,6 +423,7 @@ export function takePendingGoogleSignup(): {
   orgName: string;
   ownerName?: string;
   businessType?: BusinessType;
+  billingCycle?: BillingCycle;
 } | null {
   if (typeof window === 'undefined') return null;
   const raw = localStorage.getItem(PENDING_GOOGLE_SIGNUP_KEY);
@@ -540,6 +548,7 @@ export async function createTenant(params: {
   monthlyPrice: number | null;
   currency: string;
   paymentMethod?: string;
+  billingCycle?: BillingCycle;
   ownerEmail: string;
   ownerName?: string;
 }): Promise<{ organizationId: string; orgName: string; email: string; tempPassword: string }> {
@@ -566,6 +575,7 @@ export async function updateTenantBilling(
     billingNotes?: string;
     balanceDue?: number;
     paymentMethod?: string;
+    billingCycle?: BillingCycle;
   }
 ): Promise<void> {
   const { error } = await supabase.rpc('update_tenant_billing', {
@@ -578,8 +588,17 @@ export async function updateTenantBilling(
     p_clear_next_payment_due: patch.nextPaymentDue === null,
     p_balance_due: patch.balanceDue ?? null,
     p_payment_method: patch.paymentMethod ?? null,
+    p_billing_cycle: patch.billingCycle ?? null,
   });
   if (error) throw error;
+}
+
+/** The caller's own org's plan/billing snapshot — any org member can call this, not just a platform admin. */
+export async function fetchMyOrganizationBilling(organizationId?: string): Promise<OrgBilling | null> {
+  const { data, error } = await supabase.rpc('get_my_organization_billing', { p_org_id: organizationId ?? null });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  return (row as OrgBilling) ?? null;
 }
 
 /**
