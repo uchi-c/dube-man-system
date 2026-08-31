@@ -53,6 +53,8 @@ export interface TenantBilling {
   balance_due: number;
   /** Free-text note of how this tenant actually pays (e.g. "MTN Mobile Money", "Bank Transfer"). */
   payment_method: string | null;
+  /** How this tenant was created — 'admin' (platform admin's Add tenant) or 'self_service' (public /signup form). */
+  signup_source: 'admin' | 'self_service';
   member_count: number;
   admin_emails: string | null;
   created_at: string;
