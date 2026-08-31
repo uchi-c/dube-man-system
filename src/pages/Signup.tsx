@@ -7,6 +7,7 @@ import {
   signUpNewOrganization, getInviteInfo, acceptInviteSignup,
   stashPendingGoogleSignup, stashPendingInviteToken,
 } from '../services/organizations';
+import TurnstileWidget, { isTurnstileEnabled } from '../components/TurnstileWidget';
 import { User, BusinessType, UserRole, BillingCycle } from '../types';
 
 const ROLE_LABEL: Record<UserRole, string> = { ADMIN: 'Admin', STAFF: 'Staff', CAFE_OPERATOR: 'Café Operator' };
@@ -119,6 +120,8 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin, initialBusine
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState('');
   const [confirmationSent, setConfirmationSent] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
 
   // Invite-mode: a ?invite= token in the URL switches this page from
   // "create a new organization" to "join an existing one with the role its
@@ -153,16 +156,17 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin, initialBusine
     if (!email.trim() || !password) { setError('Enter your email and a password.'); return; }
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
     if (password !== confirmPassword) { setError("Passwords don't match."); return; }
+    if (isTurnstileEnabled && !captchaToken) { setError('Please complete the verification challenge below.'); return; }
 
     setLoading(true);
     try {
       const result = isInviteMode
         ? await withTimeout(
-            acceptInviteSignup(email.trim(), password, inviteToken, ownerName.trim() || undefined),
+            acceptInviteSignup(email.trim(), password, inviteToken, ownerName.trim() || undefined, captchaToken || undefined),
             SIGNUP_TIMEOUT_MS,
           )
         : await withTimeout(
-            signUpNewOrganization(email.trim(), password, orgName.trim(), ownerName.trim() || undefined, businessType, billingCycle),
+            signUpNewOrganization(email.trim(), password, orgName.trim(), ownerName.trim() || undefined, businessType, billingCycle, captchaToken || undefined),
             SIGNUP_TIMEOUT_MS,
           );
       if (result.needsEmailConfirmation) {
@@ -177,6 +181,9 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin, initialBusine
       }
     } catch (err: any) {
       setError(err?.message || 'Sign-up failed. Check your connection and try again.');
+      // Turnstile tokens are single-use -- force a fresh widget/token before the next attempt.
+      setCaptchaToken(null);
+      setCaptchaResetKey(k => k + 1);
     } finally {
       setLoading(false);
     }
@@ -473,6 +480,8 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin, initialBusine
                     </div>
                   </div>
 
+                  <TurnstileWidget onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} resetKey={captchaResetKey} />
+
                   {error && (
                     <motion.div
                       initial={{ opacity: 0, y: -4 }}
@@ -486,7 +495,7 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin, initialBusine
                     </motion.div>
                   )}
 
-                  <button type="submit" disabled={loading || googleLoading} className="dm-btn dm-btn-primary w-full">
+                  <button type="submit" disabled={loading || googleLoading || (isTurnstileEnabled && !captchaToken)} className="dm-btn dm-btn-primary w-full">
                     {loading ? <Loader2 style={{ width: 16, height: 16 }} className="dm-spin" /> : <ArrowRight style={{ width: 16, height: 16 }} />}
                     {loading ? 'Creating your account…' : isInviteMode ? 'Join workspace' : 'Create workspace'}
                   </button>
