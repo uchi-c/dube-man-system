@@ -176,7 +176,8 @@ export async function signUpNewOrganization(
   orgName: string,
   ownerName?: string,
   businessType?: BusinessType,
-  billingCycle?: BillingCycle
+  billingCycle?: BillingCycle,
+  captchaToken?: string
 ): Promise<{ needsEmailConfirmation: boolean; organizationId?: string }> {
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
@@ -186,6 +187,7 @@ export async function signUpNewOrganization(
         org_name: orgName, owner_name: ownerName || null, business_type: businessType || 'general',
         billing_cycle: billingCycle || 'monthly',
       },
+      captchaToken,
     },
   });
   if (authError) throw authError;
@@ -469,13 +471,15 @@ export async function acceptInviteSignup(
   email: string,
   password: string,
   token: string,
-  name?: string
+  name?: string,
+  captchaToken?: string
 ): Promise<{ needsEmailConfirmation: boolean; organizationId?: string }> {
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: { invite_token: token, owner_name: name || null },
+      captchaToken,
     },
   });
   if (authError) throw authError;
