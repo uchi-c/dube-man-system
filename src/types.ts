@@ -87,6 +87,15 @@ export interface TenantPayment {
   recorded_by_name: string | null;
 }
 
+/** One recorded payment against the caller's own org — from get_my_organization_payments(), any org member. */
+export interface OrgPayment {
+  id: string;
+  amount: number;
+  currency: string;
+  paid_at: string;
+  note: string | null;
+}
+
 /** The platform owner's cross-tenant revenue for one billing currency — platform-admin only (see get_platform_financial_summary()). */
 export interface PlatformFinancialSummary {
   currency: string;

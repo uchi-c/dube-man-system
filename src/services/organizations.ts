@@ -11,7 +11,7 @@
  */
 
 import { supabase, isSupabaseConfigured } from './supabase';
-import { Organization, BusinessType, OrganizationInvite, UserRole, TenantBilling, TenantPayment, SubscriptionStatus, PlatformFinancialSummary, PlatformPayment, BillingCycle, OrgBilling } from '../types';
+import { Organization, BusinessType, OrganizationInvite, UserRole, TenantBilling, TenantPayment, SubscriptionStatus, PlatformFinancialSummary, PlatformPayment, BillingCycle, OrgBilling, OrgPayment } from '../types';
 
 const ORG_STORAGE_KEY = 'uruu_org_id';
 const PENDING_GOOGLE_SIGNUP_KEY = 'uruu_pending_google_signup';
@@ -614,6 +614,13 @@ export async function fetchMyOrganizationBilling(organizationId?: string): Promi
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
   return (row as OrgBilling) ?? null;
+}
+
+/** The caller's own org's payment history — any org member can call this, not just a platform admin. */
+export async function fetchMyOrganizationPayments(organizationId?: string, limit = 50): Promise<OrgPayment[]> {
+  const { data, error } = await supabase.rpc('get_my_organization_payments', { p_org_id: organizationId ?? null, p_limit: limit });
+  if (error) throw error;
+  return (data ?? []) as OrgPayment[];
 }
 
 /**

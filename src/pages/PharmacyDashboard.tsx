@@ -8,6 +8,8 @@ import { fetchMedicines, fetchExpiringBatches, fetchPrescriptions, fetchDispensi
 import { Medicine, MedicineBatch, Prescription, DispensingRecord, Customer } from '../types';
 import DashboardCard from '../components/DashboardCard';
 import CurrentPlanCard from '../components/CurrentPlanCard';
+import BillingNotificationBanner from '../components/BillingNotificationBanner';
+import BillingHistory from '../components/BillingHistory';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -196,7 +198,9 @@ export default function PharmacyDashboard() {
         </div>
       </div>
 
+      <BillingNotificationBanner />
       <CurrentPlanCard />
+      <BillingHistory />
 
       {range === 'custom' && (
         <div className="dm-card p-4 flex flex-wrap items-end gap-3">
