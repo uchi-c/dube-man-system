@@ -593,6 +593,17 @@ export async function updateTenantBilling(
   if (error) throw error;
 }
 
+/**
+ * Soft-deletes a tenant (platform admin only): locks it out immediately
+ * (subscription_status -> 'cancelled') and hides it from listTenantsBilling.
+ * Does not touch the tenant's underlying data (products, sales, etc.) — see
+ * database/migrations/021_delete_tenant.sql for why this isn't a hard delete.
+ */
+export async function deleteTenant(organizationId: string): Promise<void> {
+  const { error } = await supabase.rpc('delete_tenant_org', { p_org_id: organizationId });
+  if (error) throw error;
+}
+
 /** The caller's own org's plan/billing snapshot — any org member can call this, not just a platform admin. */
 export async function fetchMyOrganizationBilling(organizationId?: string): Promise<OrgBilling | null> {
   const { data, error } = await supabase.rpc('get_my_organization_billing', { p_org_id: organizationId ?? null });
