@@ -82,6 +82,15 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
       <div className="relative z-10 flex justify-center" style={{ marginBottom: '2rem' }}>
         <InstallAppButton />
       </div>
+
+      <footer className="relative z-10 flex flex-col items-center gap-2" style={{ marginTop: 'auto', paddingTop: '1rem', paddingBottom: '0.5rem' }}>
+        <div className="flex items-center gap-4" style={{ fontSize: '0.75rem' }}>
+          <a href="/#/privacy" style={{ color: 'var(--text-low)' }}>Privacy Policy</a>
+          <span style={{ color: 'var(--panel-line)' }}>·</span>
+          <a href="/#/terms" style={{ color: 'var(--text-low)' }}>Terms of Service</a>
+        </div>
+        <p style={{ color: 'var(--text-low)', fontSize: '0.72rem' }}>&copy; {new Date().getFullYear()} Shadow Root Security Technologies</p>
+      </footer>
     </div>
   );
 }
