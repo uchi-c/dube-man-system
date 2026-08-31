@@ -256,7 +256,6 @@ export default function TenantsAdmin() {
   const [managing, setManaging] = useState<TenantBilling | null>(null);
   const [editForm, setEditForm] = useState({ monthlyPrice: '', currency: 'USD', subscriptionStatus: 'trialing' as SubscriptionStatus, nextPaymentDue: '', billingNotes: '', balanceDue: '0', paymentMethod: '', billingCycle: 'monthly' as BillingCycle });
   const [lockSaving, setLockSaving] = useState(false);
-  const [deleteSaving, setDeleteSaving] = useState(false);
   const [editError, setEditError] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -351,18 +350,25 @@ export default function TenantsAdmin() {
     }
   };
 
-  const handleDeleteTenant = async () => {
-    if (!managing) return;
-    if (!window.confirm(`Delete ${managing.name}? Every member loses access immediately and it disappears from this list. Their past sales, inventory, and financial records are kept, not erased — contact support to restore access if this was a mistake.`)) return;
-    setDeleteSaving(true);
+  // Tracks which row's delete is in flight (rather than a single boolean)
+  // so the row-level icon button and the Manage panel's Danger-zone button
+  // -- two entry points to the same action -- can each show their own
+  // pending state independently.
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDeleteTenant = async (t: TenantBilling) => {
+    if (!window.confirm(`Delete ${t.name}? Every member loses access immediately and it disappears from this list. Their past sales, inventory, and financial records are kept, not erased — contact support to restore access if this was a mistake.`)) return;
+    setDeletingId(t.organization_id);
     try {
-      await deleteTenant(managing.organization_id);
-      setManaging(null);
+      await deleteTenant(t.organization_id);
+      if (managing?.organization_id === t.organization_id) setManaging(null);
       await load();
     } catch (err: any) {
-      setEditError(err?.message || "Couldn't delete that tenant.");
+      const message = err?.message || "Couldn't delete that tenant.";
+      if (managing?.organization_id === t.organization_id) setEditError(message);
+      else window.alert(message);
     } finally {
-      setDeleteSaving(false);
+      setDeletingId(null);
     }
   };
 
@@ -469,9 +475,21 @@ export default function TenantsAdmin() {
     {
       header: '',
       accessor: (t: TenantBilling) => (
-        <button onClick={() => openManage(t)} className="dm-btn dm-btn-ghost" style={{ minHeight: 32, padding: '0.3rem 0.7rem', fontSize: '0.75rem' }}>
-          Manage
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button onClick={() => openManage(t)} className="dm-btn dm-btn-ghost" style={{ minHeight: 32, padding: '0.3rem 0.7rem', fontSize: '0.75rem' }}>
+            Manage
+          </button>
+          <button
+            onClick={() => handleDeleteTenant(t)}
+            disabled={deletingId === t.organization_id}
+            className="dm-icon-btn"
+            title="Delete tenant"
+            aria-label={`Delete ${t.name}`}
+            style={{ color: 'var(--danger)' }}
+          >
+            <Trash2 style={{ width: 14, height: 14 }} />
+          </button>
+        </div>
       ),
     },
   ];
@@ -834,8 +852,8 @@ export default function TenantsAdmin() {
                 <div className="pt-2 space-y-2" style={{ borderTop: '1px solid var(--panel-line)' }}>
                   <h4 style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--danger)', marginTop: '0.75rem' }}>Danger zone</h4>
                   <p style={{ fontSize: '0.72rem', color: 'var(--text-low)' }}>Removes this tenant from your list and cuts off access for everyone in it. Their records are kept, not erased.</p>
-                  <button type="button" onClick={handleDeleteTenant} disabled={deleteSaving} className="dm-btn dm-btn-danger w-full">
-                    <Trash2 style={{ width: 14, height: 14 }} /> {deleteSaving ? 'Deleting…' : 'Delete tenant'}
+                  <button type="button" onClick={() => handleDeleteTenant(managing)} disabled={deletingId === managing.organization_id} className="dm-btn dm-btn-danger w-full">
+                    <Trash2 style={{ width: 14, height: 14 }} /> {deletingId === managing.organization_id ? 'Deleting…' : 'Delete tenant'}
                   </button>
                 </div>
               </div>
