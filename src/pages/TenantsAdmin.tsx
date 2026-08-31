@@ -2,13 +2,13 @@ import React, { useEffect, useState } from 'react';
 import {
   Building2, RefreshCw, Plus, X, Check, Copy, AlertCircle,
   KeyRound, Wallet, History as HistoryIcon, Users as UsersIcon,
-  BellRing, Phone, Pencil, CircleCheck, Lock, LockOpen,
+  BellRing, Phone, Pencil, CircleCheck, Lock, LockOpen, Trash2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import DataTable from '../components/DataTable';
 import DashboardCard from '../components/DashboardCard';
 import {
-  listTenantsBilling, createTenant, updateTenantBilling,
+  listTenantsBilling, createTenant, updateTenantBilling, deleteTenant,
   recordTenantPayment, listTenantPayments,
   getPlatformPaymentInstructions, updatePlatformPaymentInstructions,
 } from '../services/organizations';
@@ -256,6 +256,7 @@ export default function TenantsAdmin() {
   const [managing, setManaging] = useState<TenantBilling | null>(null);
   const [editForm, setEditForm] = useState({ monthlyPrice: '', currency: 'USD', subscriptionStatus: 'trialing' as SubscriptionStatus, nextPaymentDue: '', billingNotes: '', balanceDue: '0', paymentMethod: '', billingCycle: 'monthly' as BillingCycle });
   const [lockSaving, setLockSaving] = useState(false);
+  const [deleteSaving, setDeleteSaving] = useState(false);
   const [editError, setEditError] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState('');
@@ -347,6 +348,21 @@ export default function TenantsAdmin() {
       setEditError(err?.message || "Couldn't change access.");
     } finally {
       setLockSaving(false);
+    }
+  };
+
+  const handleDeleteTenant = async () => {
+    if (!managing) return;
+    if (!window.confirm(`Delete ${managing.name}? Every member loses access immediately and it disappears from this list. Their past sales, inventory, and financial records are kept, not erased — contact support to restore access if this was a mistake.`)) return;
+    setDeleteSaving(true);
+    try {
+      await deleteTenant(managing.organization_id);
+      setManaging(null);
+      await load();
+    } catch (err: any) {
+      setEditError(err?.message || "Couldn't delete that tenant.");
+    } finally {
+      setDeleteSaving(false);
     }
   };
 
@@ -813,6 +829,15 @@ export default function TenantsAdmin() {
 
                   <button type="submit" disabled={editSaving} className="dm-btn dm-btn-primary w-full">{editSaving ? 'Saving…' : 'Save billing details'}</button>
                 </form>
+
+                {/* Danger zone */}
+                <div className="pt-2 space-y-2" style={{ borderTop: '1px solid var(--panel-line)' }}>
+                  <h4 style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--danger)', marginTop: '0.75rem' }}>Danger zone</h4>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-low)' }}>Removes this tenant from your list and cuts off access for everyone in it. Their records are kept, not erased.</p>
+                  <button type="button" onClick={handleDeleteTenant} disabled={deleteSaving} className="dm-btn dm-btn-danger w-full">
+                    <Trash2 style={{ width: 14, height: 14 }} /> {deleteSaving ? 'Deleting…' : 'Delete tenant'}
+                  </button>
+                </div>
               </div>
             </motion.div>
           </>
