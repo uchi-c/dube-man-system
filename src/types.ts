@@ -38,6 +38,8 @@ export interface User {
 
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'suspended' | 'cancelled';
 
+export type BillingCycle = 'monthly' | 'quarterly' | 'yearly';
+
 /** One tenant's billing summary — platform-admin only (see list_tenants_billing()). */
 export interface TenantBilling {
   organization_id: string;
@@ -55,9 +57,24 @@ export interface TenantBilling {
   payment_method: string | null;
   /** How this tenant was created — 'admin' (platform admin's Add tenant) or 'self_service' (public /signup form). */
   signup_source: 'admin' | 'self_service';
+  /** Which billing cadence this tenant is on — informational; payments are still recorded manually regardless of cycle. */
+  billing_cycle: BillingCycle;
   member_count: number;
   admin_emails: string | null;
   created_at: string;
+}
+
+/** A tenant's own view of their plan — any org member can fetch this for their own org (see get_my_organization_billing()). */
+export interface OrgBilling {
+  organization_id: string;
+  name: string;
+  business_type: BusinessType;
+  monthly_price: number | null;
+  currency: string;
+  subscription_status: SubscriptionStatus;
+  next_payment_due: string | null;
+  balance_due: number;
+  billing_cycle: BillingCycle;
 }
 
 /** One recorded payment against a tenant — platform-admin only. */

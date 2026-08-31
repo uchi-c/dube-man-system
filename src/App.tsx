@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { User, UserRole, BusinessType } from './types';
+import { User, UserRole, BusinessType, BillingCycle } from './types';
 import { initializeStore } from './utils/db';
 import { getAuthenticatedUser, logoutUser, supabase } from './services/supabase';
 import { getCurrentOrganizationBusinessType, fetchUserOrganizations, getCurrentOrganizationId, isOrgLocked, getPlatformPaymentInstructions } from './services/organizations';
@@ -618,16 +618,20 @@ export default function App() {
   // opened) fixes the common case; the effect below also catches an invite
   // link reached via in-app hash navigation without a full reload.
   //
-  // 'landing' is the default for everyone else -- this system is internal
-  // only, with no public self-service signup, so the bare domain shows a
-  // front page instead of dropping straight into a login form. 'signup'
-  // stays reachable ONLY via a token-bearing invite link, never as a
-  // general destination anyone can navigate to.
+  // 'landing' is the default for everyone else -- it pitches the product
+  // and shows a scrollable preview + pricing before "Get started" leads
+  // into self-service signup (see LandingPage.tsx / Signup.tsx).
   const [authView, setAuthView] = useState<'landing' | 'login' | 'signup'>(() =>
     location.pathname === '/signup' || new URLSearchParams(location.search).get('invite')
       ? 'signup'
       : 'landing'
   );
+  // Which plan/cycle "Get started" was clicked from on the pricing page, if
+  // any -- prefills Signup.tsx so a visitor who picked, say, Pharmacy +
+  // Yearly doesn't have to re-select it on the next screen. Cleared to
+  // undefined (not reset) when the generic hero "Get started" button is
+  // used instead, which passes no preset.
+  const [signupPreset, setSignupPreset] = useState<{ businessType: BusinessType; billingCycle: BillingCycle } | undefined>(undefined);
   useEffect(() => {
     if (!authenticated && new URLSearchParams(location.search).get('invite')) {
       setAuthView('signup');
@@ -728,12 +732,24 @@ export default function App() {
   if (checking) return <LoadingScreen />;
   if (!authenticated || !user) {
     if (authView === 'signup') {
-      return <Signup onSignupSuccess={handleLogin} onSwitchToLogin={() => setAuthView('login')} />;
+      return (
+        <Signup
+          onSignupSuccess={handleLogin}
+          onSwitchToLogin={() => setAuthView('login')}
+          initialBusinessType={signupPreset?.businessType}
+          initialBillingCycle={signupPreset?.billingCycle}
+        />
+      );
     }
     if (authView === 'login') {
       return <Login onLoginSuccess={handleLogin} />;
     }
-    return <LandingPage onSignIn={() => setAuthView('login')} onGetStarted={() => setAuthView('signup')} />;
+    return (
+      <LandingPage
+        onSignIn={() => setAuthView('login')}
+        onGetStarted={preset => { setSignupPreset(preset); setAuthView('signup'); }}
+      />
+    );
   }
   if (mustChangePassword) {
     return (

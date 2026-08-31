@@ -7,6 +7,7 @@ import { fetchCustomers } from '../services/supabase';
 import { fetchMedicines, fetchExpiringBatches, fetchPrescriptions, fetchDispensingRecords } from '../services/pharmacy';
 import { Medicine, MedicineBatch, Prescription, DispensingRecord, Customer } from '../types';
 import DashboardCard from '../components/DashboardCard';
+import CurrentPlanCard from '../components/CurrentPlanCard';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -194,6 +195,8 @@ export default function PharmacyDashboard() {
           <button onClick={load} className="dm-icon-btn" aria-label="Refresh" style={{ flexShrink: 0 }}><RefreshCw style={{ width: 16, height: 16 }} /></button>
         </div>
       </div>
+
+      <CurrentPlanCard />
 
       {range === 'custom' && (
         <div className="dm-card p-4 flex flex-wrap items-end gap-3">

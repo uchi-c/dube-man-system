@@ -7,7 +7,7 @@ import {
   signUpNewOrganization, getInviteInfo, acceptInviteSignup,
   stashPendingGoogleSignup, stashPendingInviteToken,
 } from '../services/organizations';
-import { User, BusinessType, UserRole } from '../types';
+import { User, BusinessType, UserRole, BillingCycle } from '../types';
 
 const ROLE_LABEL: Record<UserRole, string> = { ADMIN: 'Admin', STAFF: 'Staff', CAFE_OPERATOR: 'Café Operator' };
 
@@ -36,7 +36,17 @@ const BUSINESS_TYPES: { value: BusinessType; label: string; icon: React.ElementT
 interface SignupProps {
   onSignupSuccess: (user: User) => void;
   onSwitchToLogin: () => void;
+  /** Prefilled from which pricing card "Start free trial" was clicked on the
+   *  landing page (see PricingSection.tsx / App.tsx's signupPreset), if any. */
+  initialBusinessType?: BusinessType;
+  initialBillingCycle?: BillingCycle;
 }
+
+const CYCLE_OPTIONS: { value: BillingCycle; label: string }[] = [
+  { value: 'monthly',   label: 'Monthly' },
+  { value: 'quarterly', label: 'Quarterly' },
+  { value: 'yearly',    label: 'Yearly' },
+];
 
 // Sign-up must never hang on a dead connection — cap it and recover.
 const SIGNUP_TIMEOUT_MS = 15000;
@@ -94,13 +104,14 @@ function NewBusinessIllustration() {
 
 // ---- Main component ---------------------------------------------------------
 
-export default function Signup({ onSignupSuccess, onSwitchToLogin }: SignupProps) {
+export default function Signup({ onSignupSuccess, onSwitchToLogin, initialBusinessType, initialBillingCycle }: SignupProps) {
   const [searchParams] = useSearchParams();
   const inviteToken = searchParams.get('invite') || '';
 
   const [orgName, setOrgName] = useState('');
   const [ownerName, setOwnerName] = useState('');
-  const [businessType, setBusinessType] = useState<BusinessType>('general');
+  const [businessType, setBusinessType] = useState<BusinessType>(initialBusinessType || 'general');
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>(initialBillingCycle || 'monthly');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -151,7 +162,7 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin }: SignupProps
             SIGNUP_TIMEOUT_MS,
           )
         : await withTimeout(
-            signUpNewOrganization(email.trim(), password, orgName.trim(), ownerName.trim() || undefined, businessType),
+            signUpNewOrganization(email.trim(), password, orgName.trim(), ownerName.trim() || undefined, businessType, billingCycle),
             SIGNUP_TIMEOUT_MS,
           );
       if (result.needsEmailConfirmation) {
@@ -182,7 +193,7 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin }: SignupProps
       stashPendingInviteToken(inviteToken);
     } else {
       if (!orgName.trim()) { setError('Enter your business or organization name before continuing with Google.'); return; }
-      stashPendingGoogleSignup({ orgName: orgName.trim(), ownerName: ownerName.trim() || undefined, businessType });
+      stashPendingGoogleSignup({ orgName: orgName.trim(), ownerName: ownerName.trim() || undefined, businessType, billingCycle });
     }
     setGoogleLoading(true);
     try {
@@ -380,6 +391,25 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin }: SignupProps
                             </button>
                           );
                         })}
+                      </div>
+                    </div>
+                  )}
+
+                  {!isInviteMode && (
+                    <div className="space-y-1.5">
+                      <label className="dm-label" style={{ display: 'block', letterSpacing: '0.06em' }}>Billing cycle</label>
+                      <div className="dm-seg" style={{ width: '100%' }}>
+                        {CYCLE_OPTIONS.map(o => (
+                          <button
+                            key={o.value}
+                            type="button"
+                            onClick={() => setBillingCycle(o.value)}
+                            className={`dm-seg-item ${billingCycle === o.value ? 'active' : ''}`}
+                            style={{ flex: 1 }}
+                          >
+                            {o.label}
+                          </button>
+                        ))}
                       </div>
                     </div>
                   )}

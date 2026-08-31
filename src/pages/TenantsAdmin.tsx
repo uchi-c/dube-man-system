@@ -12,7 +12,7 @@ import {
   recordTenantPayment, listTenantPayments,
   getPlatformPaymentInstructions, updatePlatformPaymentInstructions,
 } from '../services/organizations';
-import { BusinessType, SubscriptionStatus, TenantBilling, TenantPayment } from '../types';
+import { BusinessType, SubscriptionStatus, TenantBilling, TenantPayment, BillingCycle } from '../types';
 
 // Suggested starting prices per business type — a flat monthly fee, edited
 // freely per tenant either here or in the Add-tenant form. Not a plans
@@ -52,6 +52,13 @@ const STATUS_BADGE: Record<SubscriptionStatus, string> = {
   suspended: 'dm-badge-danger',
   cancelled: 'dm-badge-neutral',
 };
+
+const CYCLE_OPTIONS: { value: BillingCycle; label: string }[] = [
+  { value: 'monthly',   label: 'Monthly' },
+  { value: 'quarterly', label: 'Quarterly' },
+  { value: 'yearly',    label: 'Yearly' },
+];
+const cycleLabel = (c: BillingCycle) => CYCLE_OPTIONS.find(o => o.value === c)?.label ?? c;
 
 const statusLabel = (s: SubscriptionStatus) => STATUS_OPTIONS.find(o => o.value === s)?.label ?? s;
 
@@ -178,7 +185,7 @@ export default function TenantsAdmin() {
   const [isAdding, setIsAdding] = useState(false);
   const [addForm, setAddForm] = useState({
     orgName: '', businessType: 'general' as BusinessType, monthlyPrice: String(SUGGESTED_PRICE.general),
-    currency: 'ZMW', paymentMethod: '', ownerEmail: '', ownerName: '',
+    currency: 'ZMW', paymentMethod: '', billingCycle: 'monthly' as BillingCycle, ownerEmail: '', ownerName: '',
   });
   const [addError, setAddError] = useState('');
   const [addSubmitting, setAddSubmitting] = useState(false);
@@ -186,7 +193,7 @@ export default function TenantsAdmin() {
   const [copiedPassword, setCopiedPassword] = useState(false);
 
   const openAddForm = () => {
-    setAddForm({ orgName: '', businessType: 'general', monthlyPrice: String(SUGGESTED_PRICE.general), currency: 'ZMW', paymentMethod: '', ownerEmail: '', ownerName: '' });
+    setAddForm({ orgName: '', businessType: 'general', monthlyPrice: String(SUGGESTED_PRICE.general), currency: 'ZMW', paymentMethod: '', billingCycle: 'monthly', ownerEmail: '', ownerName: '' });
     setAddError(''); setAddResult(null); setCopiedPassword(false);
     setIsAdding(true);
   };
@@ -221,6 +228,7 @@ export default function TenantsAdmin() {
         monthlyPrice: price,
         currency: addForm.currency.trim() || 'USD',
         paymentMethod: addForm.paymentMethod.trim() || undefined,
+        billingCycle: addForm.billingCycle,
         ownerEmail: addForm.ownerEmail.trim(),
         ownerName: addForm.ownerName.trim() || undefined,
       });
@@ -246,7 +254,7 @@ export default function TenantsAdmin() {
 
   // ---- Manage tenant (billing edit + record payment + history) ----
   const [managing, setManaging] = useState<TenantBilling | null>(null);
-  const [editForm, setEditForm] = useState({ monthlyPrice: '', currency: 'USD', subscriptionStatus: 'trialing' as SubscriptionStatus, nextPaymentDue: '', billingNotes: '', balanceDue: '0', paymentMethod: '' });
+  const [editForm, setEditForm] = useState({ monthlyPrice: '', currency: 'USD', subscriptionStatus: 'trialing' as SubscriptionStatus, nextPaymentDue: '', billingNotes: '', balanceDue: '0', paymentMethod: '', billingCycle: 'monthly' as BillingCycle });
   const [lockSaving, setLockSaving] = useState(false);
   const [editError, setEditError] = useState('');
   const [editSaving, setEditSaving] = useState(false);
@@ -267,6 +275,7 @@ export default function TenantsAdmin() {
       billingNotes: t.billing_notes || '',
       balanceDue: String(t.balance_due),
       paymentMethod: t.payment_method || '',
+      billingCycle: t.billing_cycle,
     });
     setEditError(''); setPaymentError('');
     setPaymentAmount(t.balance_due > 0 ? String(t.balance_due) : t.monthly_price !== null ? String(t.monthly_price) : '');
@@ -305,6 +314,7 @@ export default function TenantsAdmin() {
         billingNotes: editForm.billingNotes,
         balanceDue: balance,
         paymentMethod: editForm.paymentMethod.trim() || undefined,
+        billingCycle: editForm.billingCycle,
       });
       await load();
       setManaging(null);
@@ -387,7 +397,12 @@ export default function TenantsAdmin() {
     },
     {
       header: 'Price',
-      accessor: (t: TenantBilling) => <span className="dm-nums">{formatMoney(t.monthly_price, t.currency)}/mo</span>,
+      accessor: (t: TenantBilling) => (
+        <div>
+          <span className="dm-nums">{formatMoney(t.monthly_price, t.currency)}/mo</span>
+          {t.billing_cycle !== 'monthly' && <div style={{ fontSize: '0.68rem', color: 'var(--text-low)' }}>{cycleLabel(t.billing_cycle)}</div>}
+        </div>
+      ),
     },
     {
       header: 'Balance owed',
@@ -610,6 +625,13 @@ export default function TenantsAdmin() {
                   </div>
 
                   <div className="space-y-1.5">
+                    <label className="dm-label" style={{ padding: 0 }}>Billing cycle</label>
+                    <select className="dm-select" value={addForm.billingCycle} onChange={e => setAddForm(f => ({ ...f, billingCycle: e.target.value as BillingCycle }))}>
+                      {CYCLE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
                     <label className="dm-label" style={{ padding: 0 }}>Owner's email</label>
                     <input type="email" required className="dm-input" placeholder="owner@business.com" value={addForm.ownerEmail} onChange={e => setAddForm(f => ({ ...f, ownerEmail: e.target.value }))} />
                   </div>
@@ -756,6 +778,13 @@ export default function TenantsAdmin() {
                   <div className="space-y-1.5">
                     <label className="dm-label" style={{ padding: 0 }}>Payment method</label>
                     <input type="text" className="dm-input" placeholder="e.g. MTN Mobile Money" value={editForm.paymentMethod} onChange={e => setEditForm(f => ({ ...f, paymentMethod: e.target.value }))} />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="dm-label" style={{ padding: 0 }}>Billing cycle</label>
+                    <select className="dm-select" value={editForm.billingCycle} onChange={e => setEditForm(f => ({ ...f, billingCycle: e.target.value as BillingCycle }))}>
+                      {CYCLE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
                   </div>
 
                   <div className="space-y-1.5">

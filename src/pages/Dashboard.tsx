@@ -12,6 +12,7 @@ import {
 import { fetchDispensingRecords } from '../services/pharmacy';
 import { Product, Sale, PrintingOrder, CafeSession, Customer, DispensingRecord } from '../types';
 import DashboardCard from '../components/DashboardCard';
+import CurrentPlanCard from '../components/CurrentPlanCard';
 import {
   AreaChart, Area, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
@@ -238,6 +239,8 @@ export default function Dashboard() {
           <button onClick={load} className="dm-icon-btn" aria-label="Refresh" style={{ flexShrink: 0 }}><RefreshCw style={{ width: 16, height: 16 }} /></button>
         </div>
       </div>
+
+      <CurrentPlanCard />
 
       {/* Custom range inputs */}
       {range === 'custom' && (
