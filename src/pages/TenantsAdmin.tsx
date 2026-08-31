@@ -312,7 +312,10 @@ export default function TenantsAdmin() {
     }
   };
 
-  const isLocked = (t: TenantBilling) => t.subscription_status === 'suspended' || t.subscription_status === 'cancelled';
+  // A trial past its due date is locked automatically server-side (see
+  // current_org_ids()/is_org_locked() in migration 019) -- mirrored here so
+  // the badge/button reflect the real state without a round trip.
+  const isLocked = (t: TenantBilling) => t.subscription_status === 'suspended' || t.subscription_status === 'cancelled' || (t.subscription_status === 'trialing' && isOverdue(t));
 
   const handleToggleLock = async () => {
     if (!managing) return;
@@ -372,8 +375,9 @@ export default function TenantsAdmin() {
       accessor: (t: TenantBilling) => (
         <div>
           <strong style={{ color: 'var(--text-hi)', fontWeight: 600 }}>{t.name}</strong>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-low)' }}>
+          <div className="flex items-center gap-1.5" style={{ fontSize: '0.72rem', color: 'var(--text-low)' }}>
             {BUSINESS_TYPE_OPTIONS.find(o => o.value === t.business_type)?.label ?? t.business_type}
+            {t.signup_source === 'self_service' && <span className="dm-badge dm-badge-neutral" style={{ fontSize: '0.6rem', padding: '0.05rem 0.35rem' }}>Self-serve</span>}
           </div>
         </div>
       ),
