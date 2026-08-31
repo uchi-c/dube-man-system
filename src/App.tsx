@@ -32,6 +32,12 @@ const Team           = lazy(() => import('./pages/Team'));
 const TenantsAdmin   = lazy(() => import('./pages/TenantsAdmin'));
 const PlatformFinance = lazy(() => import('./pages/PlatformFinance'));
 
+// Legal pages -- pre-auth but not needed for first paint in the common case
+// (only reached via a direct /privacy or /terms link, or the landing-page
+// footer), so lazy rather than eager alongside LandingPage/Login/Signup.
+const PrivacyPolicy  = lazy(() => import('./pages/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('./pages/TermsOfService'));
+
 import {
   LayoutDashboard, Package, ShoppingCart, Printer, Monitor,
   Wifi, History, Users, Shield, LogOut, Menu, X,
@@ -621,23 +627,31 @@ export default function App() {
   // 'landing' is the default for everyone else -- it pitches the product
   // and shows a scrollable preview + pricing before "Get started" leads
   // into self-service signup (see LandingPage.tsx / Signup.tsx).
-  const [authView, setAuthView] = useState<'landing' | 'login' | 'signup'>(() =>
-    location.pathname === '/signup' || new URLSearchParams(location.search).get('invite')
+  const [authView, setAuthView] = useState<'landing' | 'login' | 'signup' | 'privacy' | 'terms'>(() => {
+    if (location.pathname === '/privacy') return 'privacy';
+    if (location.pathname === '/terms') return 'terms';
+    return location.pathname === '/signup' || new URLSearchParams(location.search).get('invite')
       ? 'signup'
-      : 'landing'
-  );
+      : 'landing';
+  });
   // Which plan/cycle "Get started" was clicked from on the pricing page, if
   // any -- prefills Signup.tsx so a visitor who picked, say, Pharmacy +
   // Yearly doesn't have to re-select it on the next screen. Cleared to
   // undefined (not reset) when the generic hero "Get started" button is
   // used instead, which passes no preset.
   const [signupPreset, setSignupPreset] = useState<{ businessType: BusinessType; billingCycle: BillingCycle } | undefined>(undefined);
+  // Only ever moves authView *toward* what the URL says (never resets it
+  // back to 'landing' on its own) -- e.g. clicking a legal page's "Back"
+  // button is a plain setAuthView('landing') with no navigate() call, and
+  // this must not immediately flip it back to 'privacy'/'terms' just
+  // because the pathname hasn't changed.
   useEffect(() => {
-    if (!authenticated && new URLSearchParams(location.search).get('invite')) {
-      setAuthView('signup');
-    }
+    if (authenticated) return;
+    if (location.pathname === '/privacy') { setAuthView('privacy'); return; }
+    if (location.pathname === '/terms') { setAuthView('terms'); return; }
+    if (new URLSearchParams(location.search).get('invite')) setAuthView('signup');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authenticated, location.search]);
+  }, [authenticated, location.pathname, location.search]);
 
   // The URL is the source of truth; derive the active tab from the path.
   const activeTab = PATH_TO_TAB[location.pathname] ?? '';
@@ -731,6 +745,20 @@ export default function App() {
   }
   if (checking) return <LoadingScreen />;
   if (!authenticated || !user) {
+    if (authView === 'privacy') {
+      return (
+        <Suspense fallback={<PageFallback />}>
+          <PrivacyPolicy onBack={() => setAuthView('landing')} />
+        </Suspense>
+      );
+    }
+    if (authView === 'terms') {
+      return (
+        <Suspense fallback={<PageFallback />}>
+          <TermsOfService onBack={() => setAuthView('landing')} />
+        </Suspense>
+      );
+    }
     if (authView === 'signup') {
       return (
         <Signup
