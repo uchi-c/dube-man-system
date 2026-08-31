@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 
-const SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
+// Turnstile site keys are meant to be public (same trust model as a Stripe
+// publishable key or a domain-restricted Google Maps key) -- the actual
+// protection is the domain allowlist on the Cloudflare side plus the secret
+// key's server-side verification (Supabase Dashboard > Authentication >
+// Attack Protection), neither of which this value can bypass on its own.
+// VITE_TURNSTILE_SITE_KEY still overrides it if the widget is ever rotated.
+const DEFAULT_SITE_KEY = '0x4AAAAAAEjJomp9hdgTpz87';
+const SITE_KEY = (import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined) || DEFAULT_SITE_KEY;
 const SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
 
 declare global {
