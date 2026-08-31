@@ -2,6 +2,7 @@ import { ArrowRight, ShieldCheck, MessageCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import InstallAppButton from '../components/InstallAppButton';
 import ProductPreview from '../components/ProductPreview';
+import PricingSection from '../components/PricingSection';
 
 interface LandingPageProps {
   onSignIn: () => void;
@@ -69,8 +70,12 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
         </a>
       </motion.div>
 
-      <div className="relative z-10 w-full" style={{ maxWidth: 1040, marginTop: '5rem', marginBottom: '3rem' }}>
+      <div className="relative z-10 w-full" style={{ maxWidth: 1040, marginTop: '5rem', marginBottom: '4rem' }}>
         <ProductPreview />
+      </div>
+
+      <div className="relative z-10 w-full" style={{ maxWidth: 1040, marginBottom: '3rem' }}>
+        <PricingSection onGetStarted={onGetStarted} />
       </div>
 
       <div className="relative z-10 flex justify-center" style={{ marginBottom: '2rem' }}>
