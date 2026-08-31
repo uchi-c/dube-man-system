@@ -18,12 +18,15 @@ import { BusinessType, SubscriptionStatus, TenantBilling, TenantPayment } from '
 // freely per tenant either here or in the Add-tenant form. Not a plans
 // catalog, just a sensible default so the platform admin isn't starting
 // from a blank field every time.
+// In Kwacha -- general's 150 is DUBE MAN GENERAL DEALERS' actual
+// monthly_price (a real paying tenant), with café/printing and pharmacy
+// scaled off it by the same ratio the public pricing page uses.
 const SUGGESTED_PRICE: Record<BusinessType, number> = {
-  general: 15,
-  retail: 15,
-  cafe: 20,
-  printing: 20,
-  pharmacy: 35,
+  general: 150,
+  retail: 150,
+  cafe: 200,
+  printing: 200,
+  pharmacy: 350,
 };
 
 const BUSINESS_TYPE_OPTIONS: { value: BusinessType; label: string }[] = [
@@ -175,7 +178,7 @@ export default function TenantsAdmin() {
   const [isAdding, setIsAdding] = useState(false);
   const [addForm, setAddForm] = useState({
     orgName: '', businessType: 'general' as BusinessType, monthlyPrice: String(SUGGESTED_PRICE.general),
-    currency: 'USD', paymentMethod: '', ownerEmail: '', ownerName: '',
+    currency: 'ZMW', paymentMethod: '', ownerEmail: '', ownerName: '',
   });
   const [addError, setAddError] = useState('');
   const [addSubmitting, setAddSubmitting] = useState(false);
@@ -183,7 +186,7 @@ export default function TenantsAdmin() {
   const [copiedPassword, setCopiedPassword] = useState(false);
 
   const openAddForm = () => {
-    setAddForm({ orgName: '', businessType: 'general', monthlyPrice: String(SUGGESTED_PRICE.general), currency: 'USD', paymentMethod: '', ownerEmail: '', ownerName: '' });
+    setAddForm({ orgName: '', businessType: 'general', monthlyPrice: String(SUGGESTED_PRICE.general), currency: 'ZMW', paymentMethod: '', ownerEmail: '', ownerName: '' });
     setAddError(''); setAddResult(null); setCopiedPassword(false);
     setIsAdding(true);
   };
