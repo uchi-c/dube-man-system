@@ -13,6 +13,8 @@ import { fetchDispensingRecords } from '../services/pharmacy';
 import { Product, Sale, PrintingOrder, CafeSession, Customer, DispensingRecord } from '../types';
 import DashboardCard from '../components/DashboardCard';
 import CurrentPlanCard from '../components/CurrentPlanCard';
+import BillingNotificationBanner from '../components/BillingNotificationBanner';
+import BillingHistory from '../components/BillingHistory';
 import {
   AreaChart, Area, BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
@@ -240,7 +242,9 @@ export default function Dashboard() {
         </div>
       </div>
 
+      <BillingNotificationBanner />
       <CurrentPlanCard />
+      <BillingHistory />
 
       {/* Custom range inputs */}
       {range === 'custom' && (
