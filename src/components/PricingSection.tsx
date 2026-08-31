@@ -19,17 +19,16 @@ interface Plan {
   highlighted?: boolean;
 }
 
-// Same starting prices the platform admin sees as suggestions when adding a
-// tenant (see SUGGESTED_PRICE in TenantsAdmin.tsx) -- one source of truth
-// for "what this actually costs", just grouped into the three price points
-// that already exist there (general/retail share one, café/printing share
-// another) instead of five near-duplicate cards.
+// Starting prices, in Kwacha. Retail & General's 150 is DUBE MAN GENERAL
+// DEALERS' actual monthly_price -- a real paying tenant, not a guess --
+// and Café/Printing (200) and Pharmacy (350) scale off it by the same
+// ratio SUGGESTED_PRICE (TenantsAdmin.tsx) already uses (15:20:35).
 const PLANS: Plan[] = [
   {
     id: 'retail',
     name: 'Retail & General',
     icon: ShoppingBag,
-    monthlyPrice: 15,
+    monthlyPrice: 150,
     blurb: 'For shops and general dealers.',
     features: ['Point of sale & sales tracking', 'Inventory with low-stock alerts', 'Customer records', 'Team accounts'],
   },
@@ -37,7 +36,7 @@ const PLANS: Plan[] = [
     id: 'cafe',
     name: 'Café & Printing',
     icon: Printer,
-    monthlyPrice: 20,
+    monthlyPrice: 200,
     blurb: 'For internet cafés and print & branding shops.',
     features: ['Everything in Retail & General', 'Café & WiFi session management', 'Printing & branding order tracking', 'Print Manager'],
     highlighted: true,
@@ -46,14 +45,14 @@ const PLANS: Plan[] = [
     id: 'pharmacy',
     name: 'Pharmacy',
     icon: Pill,
-    monthlyPrice: 35,
+    monthlyPrice: 350,
     blurb: 'For pharmacies and dispensaries.',
     features: ['Everything in Retail & General', 'Pharmacy dispensing & prescriptions', 'Batch & expiry tracking', 'Controlled-substance flags'],
   },
 ];
 
-function formatUSD(n: number): string {
-  return `$${n.toLocaleString(undefined, { minimumFractionDigits: n % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 })}`;
+function formatZMW(n: number): string {
+  return `K${n.toLocaleString(undefined, { minimumFractionDigits: n % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 })}`;
 }
 
 export default function PricingSection({ onGetStarted }: { onGetStarted: () => void }) {
@@ -129,11 +128,11 @@ export default function PricingSection({ onGetStarted }: { onGetStarted: () => v
               <p style={{ fontSize: '0.75rem', color: 'var(--text-low)', marginBottom: 14 }}>{plan.blurb}</p>
 
               <div className="flex items-end gap-1.5" style={{ marginBottom: 2 }}>
-                <span className="dm-nums" style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--text-hi)' }}>{formatUSD(Math.round(perMonth * 100) / 100)}</span>
+                <span className="dm-nums" style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--text-hi)' }}>{formatZMW(Math.round(perMonth * 100) / 100)}</span>
                 <span style={{ fontSize: '0.78rem', color: 'var(--text-low)', paddingBottom: 4 }}>/mo</span>
               </div>
               <p className="dm-nums" style={{ fontSize: '0.7rem', color: 'var(--text-low)', marginBottom: 16 }}>
-                {cycle === 'monthly' ? 'Billed monthly' : `Billed ${formatUSD(Math.round(billedTotal * 100) / 100)} ${cycle}`}
+                {cycle === 'monthly' ? 'Billed monthly' : `Billed ${formatZMW(Math.round(billedTotal * 100) / 100)} ${cycle}`}
               </p>
 
               <div className="space-y-2" style={{ marginBottom: 18 }}>
@@ -154,7 +153,7 @@ export default function PricingSection({ onGetStarted }: { onGetStarted: () => v
       </div>
 
       <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-low)', marginTop: 20 }}>
-        Prices in USD. Need a custom plan or a different currency? WhatsApp 0979 501 830.
+        Prices in Zambian Kwacha. Need a custom plan or a different currency? WhatsApp 0979 501 830.
       </p>
     </div>
   );
