@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /sales
+Disallow: /inventory
+Disallow: /customers
+Disallow: /pharmacy
+Disallow: /print-manager
+Disallow: /printing-orders
+Disallow: /cafe-management
+Disallow: /wifi
+Disallow: /pc-agent
+Disallow: /logs
+Disallow: /team
+Disallow: /tenants
+Disallow: /finance
+
+Sitemap: https://uruu.enterprises/sitemap.xml
