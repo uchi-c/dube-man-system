@@ -733,7 +733,7 @@ export default function App() {
     if (authView === 'login') {
       return <Login onLoginSuccess={handleLogin} />;
     }
-    return <LandingPage onSignIn={() => setAuthView('login')} />;
+    return <LandingPage onSignIn={() => setAuthView('login')} onGetStarted={() => setAuthView('signup')} />;
   }
   if (mustChangePassword) {
     return (
