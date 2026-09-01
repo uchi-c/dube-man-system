@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Monitor, RefreshCw, ShieldAlert, UserPlus, X, Check, Copy } from 'lucide-react';
+import { Monitor, RefreshCw, ShieldAlert, UserPlus, X, Check, Copy, FileDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { fetchComputers, fetchRunningCafeSessions, sendComputerCommand } from '../services/supabase';
 import { createPcProvisioningCode, getMyOrgAgentSecret } from '../services/organizations';
@@ -16,6 +16,11 @@ interface PCAgentConsoleProps {
 const CAN_SEND_COMMANDS = (role: string) => role === 'ADMIN' || role === 'CAFE_OPERATOR';
 
 const REMOTE_INSTALL_URL = 'https://raw.githubusercontent.com/uchi-c/dube-man-system/main/pc-agent/remote-install.ps1';
+
+// Served as a static file from public/ -- no auth needed to open it, so an
+// admin can hand this link to whoever's at the new PC even though they
+// never sign into Uruu OS themselves.
+const AGENT_GUIDE_URL = '/uruu-agent-guide.pdf';
 
 function remoteInstallCommand(code: string): string {
   return `$env:URUU_CODE = "${code}"; irm ${REMOTE_INSTALL_URL} | iex`;
@@ -116,6 +121,10 @@ export default function PCAgentConsole({ userRole }: PCAgentConsoleProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <a href={AGENT_GUIDE_URL} target="_blank" rel="noopener noreferrer" className="dm-btn dm-btn-ghost" title="Step-by-step install & use guide (PDF)">
+            <FileDown style={{ width: 14, height: 14 }} />
+            <span>Guide (PDF)</span>
+          </a>
           {isAdmin && (
             <button onClick={openSecretReveal} className="dm-btn dm-btn-ghost" title="Only needed for a manual install -- remote-install.ps1 fetches this automatically">
               <span>Agent secret</span>
@@ -245,6 +254,10 @@ export default function PCAgentConsole({ userRole }: PCAgentConsoleProps) {
                       They'll be prompted for this if they just run the plain install command without the code baked in.
                     </p>
                   </div>
+
+                  <a href={AGENT_GUIDE_URL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5" style={{ fontSize: '0.72rem', color: 'var(--blue-400)' }}>
+                    <FileDown style={{ width: 12, height: 12 }} /> Also send them the step-by-step guide (PDF) — no login needed to open it
+                  </a>
 
                   <div className="flex gap-2 pt-2">
                     <button type="button" onClick={openProvisionForm} className="dm-btn dm-btn-ghost flex-1">Add another</button>
