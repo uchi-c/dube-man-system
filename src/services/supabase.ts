@@ -173,12 +173,13 @@ export async function getAuthenticatedUser(): Promise<User | null> {
   }
 }
 
-export async function loginUser(email: string, password: string): Promise<User | null> {
+export async function loginUser(email: string, password: string, captchaToken?: string): Promise<User | null> {
   if (isSupabaseConfigured) {
     try {
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
-        password
+        password,
+        options: { captchaToken },
       });
 
       if (authError) throw authError;
