@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { isSupabaseConfigured, loginUser, supabase, signInWithGoogle } from '../services/supabase';
 import { User } from '../types';
 import InstallAppButton from '../components/InstallAppButton';
+import TurnstileWidget, { isTurnstileEnabled } from '../components/TurnstileWidget';
 
 interface LoginProps {
   onLoginSuccess: (user: User) => void;
@@ -121,6 +122,8 @@ export default function Login({ onLoginSuccess }: LoginProps) {
   const [resendState, setResendState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [forgotState, setForgotState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [forgotMessage, setForgotMessage] = useState('');
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,11 +131,15 @@ export default function Login({ onLoginSuccess }: LoginProps) {
       setError('Enter your email and password to sign in.');
       return;
     }
+    if (isTurnstileEnabled && !captchaToken) {
+      setError('Please complete the verification challenge below.');
+      return;
+    }
     setLoading(true);
     setError('');
     setResendState('idle');
     try {
-      const user = await withTimeout(loginUser(email.trim(), password), LOGIN_TIMEOUT_MS);
+      const user = await withTimeout(loginUser(email.trim(), password, captchaToken || undefined), LOGIN_TIMEOUT_MS);
       if (user) {
         onLoginSuccess(user);
       } else {
@@ -145,6 +152,9 @@ export default function Login({ onLoginSuccess }: LoginProps) {
       // case (someone signed up but the confirmation email never arrived
       // or was missed) without falsely claiming that's definitely the cause.
       setError(err?.message || 'Sign-in failed. Check your connection and try again.');
+      // Turnstile tokens are single-use -- force a fresh widget/token before the next attempt.
+      setCaptchaToken(null);
+      setCaptchaResetKey(k => k + 1);
     } finally {
       setLoading(false);
     }
@@ -395,8 +405,10 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                 </motion.div>
               )}
 
+              <TurnstileWidget onVerify={setCaptchaToken} onExpire={() => setCaptchaToken(null)} resetKey={captchaResetKey} />
+
               {/* Sign in button — disabled while pending */}
-              <button type="submit" disabled={loading || googleLoading} className="dm-btn dm-btn-primary w-full">
+              <button type="submit" disabled={loading || googleLoading || (isTurnstileEnabled && !captchaToken)} className="dm-btn dm-btn-primary w-full">
                 {loading
                   ? <Loader2 style={{ width: 16, height: 16 }} className="dm-spin" />
                   : <ArrowRight style={{ width: 16, height: 16 }} />}
