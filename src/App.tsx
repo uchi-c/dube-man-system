@@ -747,6 +747,22 @@ export default function App() {
     }
   };
 
+  // Platform-only tabs are lazy-loaded like every other page, so a platform
+  // admin's *first* visit to one (right after it ships, before their browser
+  // has ever fetched that chunk) briefly shows the outgoing page still
+  // finishing its exit transition while the new chunk downloads -- reported
+  // live as "brings old module then stabilize" right after Platform Admins
+  // shipped. Prefetching these three chunks as soon as we know the signed-in
+  // user is a platform admin means the chunk is already cached by the time
+  // they click the nav item, so the transition is instant regardless of
+  // connection speed.
+  useEffect(() => {
+    if (!user?.is_platform_admin) return;
+    import('./pages/TenantsAdmin');
+    import('./pages/PlatformFinance');
+    import('./pages/PlatformAdmins');
+  }, [user?.is_platform_admin]);
+
   const handleLogout = async () => {
     await logoutUser();
     setUser(null);
