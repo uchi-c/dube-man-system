@@ -848,3 +848,25 @@ export async function fetchMyImpersonationStatus(): Promise<ImpersonationStatus 
   if (!row) return null;
   return { orgId: row.org_id, orgName: row.org_name, expiresAt: row.expires_at };
 }
+
+/**
+ * A platform admin's own role (public.users.role) is unrelated to what they
+ * should see while impersonating a tenant — "View as tenant" promises full
+ * admin-equivalent access regardless of the admin's own role (which might
+ * be e.g. CAFE_OPERATOR, left over from however their own account was set
+ * up — reported live as an incorrect "Access restricted" screen). While an
+ * active grant exists, App.tsx needs to treat them as ADMIN for nav/route
+ * gating, matching what current_user_role() already does server-side for
+ * RLS/RPC checks during impersonation (migration 034). Call this right
+ * after resolving the signed-in user, before using their role for anything.
+ */
+export async function resolveEffectiveUser<T extends { is_platform_admin?: boolean; role: string }>(u: T): Promise<T> {
+  if (!u.is_platform_admin) return u;
+  try {
+    const status = await fetchMyImpersonationStatus();
+    if (status) return { ...u, role: 'ADMIN' };
+  } catch {
+    // Non-critical — worst case they briefly see their own role's nav.
+  }
+  return u;
+}

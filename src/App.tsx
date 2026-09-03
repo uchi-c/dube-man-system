@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { User, UserRole, BusinessType, BillingCycle } from './types';
 import { initializeStore } from './utils/db';
 import { getAuthenticatedUser, logoutUser, supabase } from './services/supabase';
-import { getCurrentOrganizationBusinessType, getCurrentOrganizationExtraModules, fetchUserOrganizations, getCurrentOrganizationId, isOrgLocked, getPlatformPaymentInstructions } from './services/organizations';
+import { getCurrentOrganizationBusinessType, getCurrentOrganizationExtraModules, fetchUserOrganizations, getCurrentOrganizationId, isOrgLocked, getPlatformPaymentInstructions, resolveEffectiveUser } from './services/organizations';
 import ErrorBoundary from './components/ErrorBoundary';
 import InstallAppButton from './components/InstallAppButton';
 import ImpersonationBanner from './components/ImpersonationBanner';
@@ -693,7 +693,9 @@ export default function App() {
     let cancelled = false;
     (async () => {
       initializeStore();
-      const u = await getAuthenticatedUser();
+      const rawUser = await getAuthenticatedUser();
+      if (cancelled) return;
+      const u = rawUser ? await resolveEffectiveUser(rawUser) : rawUser;
       if (cancelled) return;
       if (u) {
         setUser(u);
@@ -729,7 +731,8 @@ export default function App() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  const handleLogin = (u: User) => {
+  const handleLogin = async (rawUser: User) => {
+    const u = await resolveEffectiveUser(rawUser);
     localStorage.setItem('dubeman_current_user', JSON.stringify(u));
     setUser(u);
     setAuthenticated(true);
