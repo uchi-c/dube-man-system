@@ -11,7 +11,7 @@
  */
 
 import { supabase, isSupabaseConfigured } from './supabase';
-import { Organization, BusinessType, OrganizationInvite, UserRole, TenantBilling, TenantPayment, SubscriptionStatus, PlatformFinancialSummary, PlatformPayment, BillingCycle, OrgBilling, OrgPayment, PlatformRevenuePoint, PlatformSignupCohort, PlatformAuditLogEntry } from '../types';
+import { Organization, BusinessType, OrganizationInvite, UserRole, TenantBilling, TenantPayment, SubscriptionStatus, PlatformFinancialSummary, PlatformPayment, BillingCycle, OrgBilling, OrgPayment, PlatformRevenuePoint, PlatformSignupCohort, PlatformAuditLogEntry, ImpersonationStatus } from '../types';
 
 const ORG_STORAGE_KEY = 'uruu_org_id';
 const PENDING_GOOGLE_SIGNUP_KEY = 'uruu_pending_google_signup';
@@ -814,4 +814,37 @@ export async function sendPlatformAnnouncement(subject: string, message: string)
   if (error) throw new Error(await resolveEdgeFunctionError(error, "Couldn't send the announcement."));
   if (data?.error) throw new Error(data.error);
   return { sent: data?.sent ?? 0, errors: data?.errors ?? [] };
+}
+
+// ---------------------------------------------------------------------------
+// Tenant impersonation ("view as tenant", migration 033) — a platform admin
+// temporarily seeing exactly what a tenant sees, for support/debugging.
+// Reuses the app's normal multi-org membership machinery (see
+// setActiveOrganizationId/clearOrganizationCache above): starting/ending a
+// grant just switches which org this browser session is pointed at, so a
+// full reload is the simplest way to get every already-existing piece of
+// UI state (business type, extra modules, nav, lock screen) to reflect it
+// correctly, the same as a genuine sign-in already does.
+// ---------------------------------------------------------------------------
+
+/** Grants the caller temporary access to a tenant's org. Platform-admin only. Returns the grant's expiry. */
+export async function startTenantImpersonation(orgId: string, minutes = 20): Promise<string> {
+  const { data, error } = await supabase.rpc('start_tenant_impersonation', { p_org_id: orgId, p_minutes: minutes });
+  if (error) throw error;
+  return data as string;
+}
+
+/** Ends the caller's own impersonation grant for an org, if any. Safe to call even if it already expired. */
+export async function endTenantImpersonation(orgId: string): Promise<void> {
+  const { error } = await supabase.rpc('end_tenant_impersonation', { p_org_id: orgId });
+  if (error) throw error;
+}
+
+/** The caller's current active impersonation grant, if any — drives the app-wide banner. */
+export async function fetchMyImpersonationStatus(): Promise<ImpersonationStatus | null> {
+  const { data, error } = await supabase.rpc('get_my_impersonation_status');
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return null;
+  return { orgId: row.org_id, orgName: row.org_name, expiresAt: row.expires_at };
 }

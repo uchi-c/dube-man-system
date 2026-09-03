@@ -150,6 +150,13 @@ export interface PlatformAuditLogEntry {
   created_at: string;
 }
 
+/** A platform admin's active "view as tenant" grant, if any (see get_my_impersonation_status()). */
+export interface ImpersonationStatus {
+  orgId: string;
+  orgName: string;
+  expiresAt: string;
+}
+
 /** A pending/accepted/revoked invitation for someone to join an org with a given role. */
 export interface OrganizationInvite {
   id: string;

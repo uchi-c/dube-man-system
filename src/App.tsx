@@ -6,6 +6,7 @@ import { getAuthenticatedUser, logoutUser, supabase } from './services/supabase'
 import { getCurrentOrganizationBusinessType, getCurrentOrganizationExtraModules, fetchUserOrganizations, getCurrentOrganizationId, isOrgLocked, getPlatformPaymentInstructions } from './services/organizations';
 import ErrorBoundary from './components/ErrorBoundary';
 import InstallAppButton from './components/InstallAppButton';
+import ImpersonationBanner from './components/ImpersonationBanner';
 
 // LandingPage, Login, Signup and ResetPassword are needed for first paint
 // (pre-auth), so keep them eager.
@@ -908,6 +909,7 @@ export default function App() {
 
       {/* ---- Main content area ---- */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        {user.is_platform_admin && <ImpersonationBanner isPlatformAdmin />}
         <Topbar
           user={user}
           activeTab={activeTab}
