@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react';
 import {
   ShieldCheck, UserPlus, X, Check, Copy, KeyRound, Trash2, Search, RefreshCw, AlertTriangle,
-  Megaphone, History, Send,
+  Megaphone, History, Send, TrendingUp,
 } from 'lucide-react';
 import {
   fetchPlatformAdmins, findUserByEmail, setPlatformAdmin, inviteNewPlatformAdmin, PlatformAdmin,
-  fetchPlatformAuditLog, sendPlatformAnnouncement,
+  fetchPlatformAuditLog, sendPlatformAnnouncement, fetchPlatformFinancialSummary,
 } from '../services/organizations';
-import { PlatformAuditLogEntry } from '../types';
+import { PlatformAuditLogEntry, PlatformFinancialSummary } from '../types';
 import DataTable from '../components/DataTable';
+import DashboardCard from '../components/DashboardCard';
+
+function formatMoney(amount: number, currency: string): string {
+  return `${currency} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
 
 const TABS: { id: 'admins' | 'announce' | 'audit-log'; label: string; icon: React.ElementType }[] = [
   { id: 'admins', label: 'Platform Admins', icon: ShieldCheck },
@@ -23,6 +28,8 @@ const ACTION_LABEL: Record<string, string> = {
   'tenant.modules_updated': 'Updated tenant modules',
   'tenant.deleted': 'Deleted tenant',
   'announcement.sent': 'Sent announcement',
+  'tenant.impersonation_started': 'Started viewing tenant',
+  'tenant.impersonation_ended': 'Stopped viewing tenant',
 };
 
 function auditDetailLine(entry: PlatformAuditLogEntry): string {
@@ -39,6 +46,8 @@ function auditDetailLine(entry: PlatformAuditLogEntry): string {
       const parts = Object.entries(d).map(([k, v]) => `${k}: ${v}`);
       return parts.length ? parts.join(', ') : 'no fields changed';
     }
+    case 'tenant.impersonation_started':
+      return `${d.duration_minutes ?? '?'} min grant`;
     default:
       return '';
   }
@@ -57,6 +66,7 @@ export default function PlatformAdmins() {
   const [admins, setAdmins] = useState<PlatformAdmin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [mrrSummary, setMrrSummary] = useState<PlatformFinancialSummary[]>([]);
 
   const load = async () => {
     setLoading(true);
@@ -69,7 +79,10 @@ export default function PlatformAdmins() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    fetchPlatformFinancialSummary().then(setMrrSummary).catch(() => {});
+  }, []);
 
   // ---- Promote an existing user by email ----
   const [lookupEmail, setLookupEmail] = useState('');
@@ -262,6 +275,22 @@ export default function PlatformAdmins() {
           </button>
         )}
       </div>
+
+      {mrrSummary.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {mrrSummary.map(s => (
+            <DashboardCard
+              key={s.currency}
+              title={mrrSummary.length > 1 ? `Monthly recurring (${s.currency})` : 'Monthly recurring'}
+              value={formatMoney(s.mrr, s.currency)}
+              subValue={`${s.tenant_count} tenant${s.tenant_count === 1 ? '' : 's'} in ${s.currency} — full breakdown on Finance`}
+              icon={TrendingUp}
+              colorScheme="emerald"
+              trend="neutral"
+            />
+          ))}
+        </div>
+      )}
 
       <div className="dm-seg" style={{ width: 'fit-content' }}>
         {TABS.map(t => (
