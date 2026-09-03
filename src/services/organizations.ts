@@ -570,6 +570,24 @@ export async function listTenantsBilling(): Promise<TenantBilling[]> {
 }
 
 /**
+ * Most recent login across each org's members, keyed by organization_id --
+ * the one churn signal billing status alone can't show (a tenant can be
+ * fully paid up and still have gone dark). Platform-admin only. Fetched
+ * separately from listTenantsBilling() rather than folded into it, since
+ * that RPC's RETURNS TABLE shape has already had to be regenerated (and
+ * once briefly regressed) each time a field was added to it.
+ */
+export async function fetchTenantLastActive(): Promise<Record<string, string | null>> {
+  const { data, error } = await supabase.rpc('get_tenant_last_active');
+  if (error) throw error;
+  const map: Record<string, string | null> = {};
+  for (const row of (data ?? []) as { organization_id: string; last_active_at: string | null }[]) {
+    map[row.organization_id] = row.last_active_at;
+  }
+  return map;
+}
+
+/**
  * Creates a brand-new tenant plus its owner's account in one call (via the
  * admin-create-tenant Edge Function — creating a password-based auth
  * account needs Supabase Auth's admin API, not something a plain RPC can
