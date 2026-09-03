@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { User, UserRole, BusinessType, BillingCycle } from './types';
 import { initializeStore } from './utils/db';
 import { getAuthenticatedUser, logoutUser, supabase } from './services/supabase';
-import { getCurrentOrganizationBusinessType, fetchUserOrganizations, getCurrentOrganizationId, isOrgLocked, getPlatformPaymentInstructions } from './services/organizations';
+import { getCurrentOrganizationBusinessType, getCurrentOrganizationExtraModules, fetchUserOrganizations, getCurrentOrganizationId, isOrgLocked, getPlatformPaymentInstructions } from './services/organizations';
 import ErrorBoundary from './components/ErrorBoundary';
 import InstallAppButton from './components/InstallAppButton';
 
@@ -93,18 +93,41 @@ PATH_TO_TAB['/users'] = 'logs'; // legacy alias
 
 const GROUP_ORDER = ['Home','Operations','Printing','Connectivity','System','Platform'];
 
-// Which nav modules each business type sees. 'general' shows everything
-// except Pharmacy — a general dealer has no use for prescription/dispensing
-// tracking, so it stays out of that nav by default the same way niche types
-// hide modules irrelevant to them. Computed from TABS (rather than hardcoded)
-// so any tab added later is included for 'general' automatically.
+// Which nav modules each business type sees by default. 'general' shows
+// everything except Pharmacy and the three opt-in-only modules below — a
+// general dealer has no use for prescription/dispensing tracking, and
+// most general dealers don't run a café or need remote PC monitoring
+// either, so those stay out of the default nav the same way niche types
+// hide modules irrelevant to them. Computed from TABS (rather than
+// hardcoded) so any tab added later is included for 'general' automatically.
+//
+// 'wifi', 'pc-agent', and 'cafe' (internet café management) are
+// deliberately excluded from every business type's default list here —
+// they only ever show for a tenant that specifically asked for one, via
+// organizations.extra_modules (migration 027) and OPT_IN_MODULES below,
+// unioned in by reachableModules() rather than baked into a business
+// type. A café-type tenant still needs a platform admin to switch it on
+// for them, same as any other type — the business type alone no longer
+// implies it.
+const OPT_IN_MODULES = ['wifi', 'pc-agent', 'cafe'];
+
 const BUSINESS_TYPE_MODULES: Record<BusinessType, string[] | null> = {
-  general:  TABS.map(t => t.id).filter(id => id !== 'pharmacy'),
-  pharmacy: ['dashboard', 'pos', 'inventory', 'customers', 'pharmacy', 'team', 'smart-invoice'],
-  cafe:     ['dashboard', 'print-manager', 'printing', 'team', 'smart-invoice'],
-  printing: ['dashboard', 'print-manager', 'printing', 'team', 'smart-invoice'],
-  retail:   ['dashboard', 'pos', 'inventory', 'customers', 'team', 'smart-invoice'],
+  general:    TABS.map(t => t.id).filter(id => id !== 'pharmacy' && !OPT_IN_MODULES.includes(id)),
+  pharmacy:   ['dashboard', 'pos', 'inventory', 'customers', 'pharmacy', 'team', 'smart-invoice'],
+  cafe:       ['dashboard', 'print-manager', 'printing', 'team', 'smart-invoice'],
+  printing:   ['dashboard', 'print-manager', 'printing', 'team', 'smart-invoice'],
+  retail:     ['dashboard', 'pos', 'inventory', 'customers', 'team', 'smart-invoice'],
+  clothing:   ['dashboard', 'pos', 'inventory', 'customers', 'team', 'smart-invoice'],
+  mechanics:  ['dashboard', 'pos', 'inventory', 'customers', 'team', 'smart-invoice'],
 };
+
+/** A business type's default modules, unioned with whatever opt-in extras (migration 027) this specific tenant has been given. */
+function reachableModules(businessType: BusinessType, extraModules: string[]): string[] | null {
+  const base = BUSINESS_TYPE_MODULES[businessType];
+  if (!base) return null;
+  const extras = extraModules.filter(m => OPT_IN_MODULES.includes(m));
+  return extras.length ? Array.from(new Set([...base, ...extras])) : base;
+}
 
 // Role-based landing paths.
 const ROLE_DEFAULT_PATH: Record<string, string> = {
@@ -121,10 +144,10 @@ const ROLE_DEFAULT_PATH: Record<string, string> = {
 // tenant's staff) can't reach any of the normal per-org tabs below --
 // they'd all error out fetching organization-scoped data. Route them
 // straight to Tenants instead of a tab that will just show Unauthorized.
-function defaultPathFor(role: string, businessType: BusinessType, hasOrg: boolean, isPlatformAdmin: boolean): string {
+function defaultPathFor(role: string, businessType: BusinessType, hasOrg: boolean, isPlatformAdmin: boolean, extraModules: string[] = []): string {
   if (!hasOrg) return isPlatformAdmin ? '/tenants' : '/dashboard';
 
-  const allowedModules = BUSINESS_TYPE_MODULES[businessType];
+  const allowedModules = reachableModules(businessType, extraModules);
   const reachable = (tab: TabDef) =>
     tab.roles.includes(role as UserRole) && (!allowedModules || allowedModules.includes(tab.id));
 
@@ -259,6 +282,7 @@ function SidebarSection({ group, tabs, activeTab, onSelect }: SidebarSectionProp
 interface SidebarProps {
   user: User;
   businessType: BusinessType;
+  extraModules: string[];
   hasOrg: boolean;
   activeTab: string;
   onSelect: (id: string) => void;
@@ -267,8 +291,8 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-function Sidebar({ user, businessType, hasOrg, activeTab, onSelect, onLogout, mobile, onClose }: SidebarProps) {
-  const allowedModules = BUSINESS_TYPE_MODULES[businessType];
+function Sidebar({ user, businessType, extraModules, hasOrg, activeTab, onSelect, onLogout, mobile, onClose }: SidebarProps) {
+  const allowedModules = reachableModules(businessType, extraModules);
   const visibleTabs = TABS
     .filter(t => t.platformOnly ? !!user.is_platform_admin : hasOrg && t.roles.includes(user.role as UserRole))
     .filter(t => t.platformOnly || !allowedModules || allowedModules.includes(t.id));
@@ -569,9 +593,9 @@ function renderPage(id: string, role: string, businessType: BusinessType) {
 
 // ---- Per-route frame: role guard + animation + lazy boundary ---------------
 
-function RouteFrame({ tab, user, businessType, hasOrg }: { tab: TabDef; user: User; businessType: BusinessType; hasOrg: boolean }) {
+function RouteFrame({ tab, user, businessType, hasOrg, extraModules }: { tab: TabDef; user: User; businessType: BusinessType; hasOrg: boolean; extraModules: string[] }) {
   const navigate = useNavigate();
-  const allowedModules = BUSINESS_TYPE_MODULES[businessType];
+  const allowedModules = reachableModules(businessType, extraModules);
   const allowed = tab.platformOnly
     ? !!user.is_platform_admin
     : hasOrg && tab.roles.includes(user.role as UserRole) && (!allowedModules || allowedModules.includes(tab.id));
@@ -590,7 +614,7 @@ function RouteFrame({ tab, user, businessType, hasOrg }: { tab: TabDef; user: Us
           </Suspense>
         </ErrorBoundary>
       ) : (
-        <UnauthorizedScreen user={user} onBack={() => navigate(defaultPathFor(user.role, businessType, hasOrg, !!user.is_platform_admin))} />
+        <UnauthorizedScreen user={user} onBack={() => navigate(defaultPathFor(user.role, businessType, hasOrg, !!user.is_platform_admin, extraModules))} />
       )}
     </motion.div>
   );
@@ -602,6 +626,7 @@ export default function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [user, setUser]                   = useState<User | null>(null);
   const [businessType, setBusinessType]   = useState<BusinessType>('general');
+  const [extraModules, setExtraModules]   = useState<string[]>([]);
   // Defaults true so normal users (the overwhelming majority, who always
   // belong to at least one org) never see a nav flash/gap while this
   // resolves -- only flips false for someone with zero memberships.
@@ -671,6 +696,7 @@ export default function App() {
         setAuthenticated(true);
         setMustChangePassword(!!u.must_change_password);
         getCurrentOrganizationBusinessType().then(bt => { if (!cancelled) setBusinessType(bt); });
+        getCurrentOrganizationExtraModules().then(mods => { if (!cancelled) setExtraModules(mods); });
         fetchUserOrganizations().then(orgs => { if (!cancelled) setHasOrg(orgs.length > 0); });
         if (!u.is_platform_admin) {
           getCurrentOrganizationId()
@@ -706,11 +732,12 @@ export default function App() {
     setChecking(false);
     setMustChangePassword(!!u.must_change_password);
     setOrgLocked(false);
-    Promise.all([getCurrentOrganizationBusinessType(), fetchUserOrganizations()]).then(([bt, orgs]) => {
+    Promise.all([getCurrentOrganizationBusinessType(), getCurrentOrganizationExtraModules(), fetchUserOrganizations()]).then(([bt, mods, orgs]) => {
       setBusinessType(bt);
+      setExtraModules(mods);
       const orgMembership = orgs.length > 0;
       setHasOrg(orgMembership);
-      navigate(defaultPathFor(u.role, bt, orgMembership, !!u.is_platform_admin), { replace: true });
+      navigate(defaultPathFor(u.role, bt, orgMembership, !!u.is_platform_admin, mods), { replace: true });
     });
     if (!u.is_platform_admin) {
       getCurrentOrganizationId().then(orgId => isOrgLocked(orgId)).then(setOrgLocked).catch(() => {});
@@ -722,6 +749,7 @@ export default function App() {
     setUser(null);
     setAuthenticated(false);
     setBusinessType('general');
+    setExtraModules([]);
     setHasOrg(true);
     setOrgLocked(false);
     setMustChangePassword(false);
@@ -804,7 +832,7 @@ export default function App() {
     );
   }
 
-  const homePath = defaultPathFor(user.role, businessType, hasOrg, !!user.is_platform_admin);
+  const homePath = defaultPathFor(user.role, businessType, hasOrg, !!user.is_platform_admin, extraModules);
 
   return (
     <div className="dm-app-bg flex h-screen overflow-hidden" style={{ fontFamily: "'Inter',sans-serif" }}>
@@ -813,6 +841,7 @@ export default function App() {
         <Sidebar
           user={user}
           businessType={businessType}
+          extraModules={extraModules}
           hasOrg={hasOrg}
           activeTab={activeTab}
           onSelect={handleTabSelect}
@@ -845,6 +874,7 @@ export default function App() {
               <Sidebar
                 user={user}
                 businessType={businessType}
+                extraModules={extraModules}
                 hasOrg={hasOrg}
                 activeTab={activeTab}
                 onSelect={handleTabSelect}
@@ -873,7 +903,7 @@ export default function App() {
             <AnimatePresence mode="wait">
               <Routes location={location} key={location.pathname}>
                 {TABS.map(tab => (
-                  <Route key={tab.id} path={tab.path} element={<RouteFrame tab={tab} user={user} businessType={businessType} hasOrg={hasOrg} />} />
+                  <Route key={tab.id} path={tab.path} element={<RouteFrame tab={tab} user={user} businessType={businessType} hasOrg={hasOrg} extraModules={extraModules} />} />
                 ))}
                 {/* Legacy alias + default landings */}
                 <Route path="/users" element={<Navigate to="/logs" replace />} />
