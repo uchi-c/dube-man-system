@@ -11,7 +11,7 @@
  */
 
 import { supabase, isSupabaseConfigured } from './supabase';
-import { Organization, BusinessType, OrganizationInvite, UserRole, TenantBilling, TenantPayment, SubscriptionStatus, PlatformFinancialSummary, PlatformPayment, BillingCycle, OrgBilling, OrgPayment, PlatformRevenuePoint, PlatformSignupCohort } from '../types';
+import { Organization, BusinessType, OrganizationInvite, UserRole, TenantBilling, TenantPayment, SubscriptionStatus, PlatformFinancialSummary, PlatformPayment, BillingCycle, OrgBilling, OrgPayment, PlatformRevenuePoint, PlatformSignupCohort, PlatformAuditLogEntry } from '../types';
 
 const ORG_STORAGE_KEY = 'uruu_org_id';
 const PENDING_GOOGLE_SIGNUP_KEY = 'uruu_pending_google_signup';
@@ -794,4 +794,24 @@ export async function inviteNewPlatformAdmin(email: string, name?: string): Prom
   if (data?.error) throw new Error(data.error);
   if (!data?.tempPassword) throw new Error('Account creation did not return a temporary password.');
   return { email: data.email, tempPassword: data.tempPassword };
+}
+
+// ---------------------------------------------------------------------------
+// Platform audit log + bulk announcements (migration 032) — who did what
+// across every tenant, and emailing every tenant owner at once.
+// ---------------------------------------------------------------------------
+
+/** Most recent consequential platform-admin actions, across every tenant. Platform-admin only. */
+export async function fetchPlatformAuditLog(limit = 100): Promise<PlatformAuditLogEntry[]> {
+  const { data, error } = await supabase.rpc('list_platform_admin_audit_log', { p_limit: limit });
+  if (error) throw error;
+  return (data ?? []) as PlatformAuditLogEntry[];
+}
+
+/** Emails every tenant owner at once (e.g. "Smart Invoice is now available"). Platform-admin only. */
+export async function sendPlatformAnnouncement(subject: string, message: string): Promise<{ sent: number; errors: string[] }> {
+  const { data, error } = await supabase.functions.invoke('send-platform-announcement', { body: { subject, message } });
+  if (error) throw new Error(await resolveEdgeFunctionError(error, "Couldn't send the announcement."));
+  if (data?.error) throw new Error(data.error);
+  return { sent: data?.sent ?? 0, errors: data?.errors ?? [] };
 }
