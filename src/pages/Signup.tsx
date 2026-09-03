@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Building2, User as UserIcon, Mail, Lock, ArrowRight, Loader2, AlertCircle, MailCheck, Pill, Coffee, Printer, ShoppingBag, LayoutGrid, UsersRound, ShieldCheck } from 'lucide-react';
+import { Building2, User as UserIcon, Mail, Lock, ArrowRight, Loader2, AlertCircle, MailCheck, Pill, Coffee, Printer, ShoppingBag, LayoutGrid, UsersRound, ShieldCheck, Shirt, Wrench } from 'lucide-react';
 import { motion } from 'motion/react';
 import { isSupabaseConfigured, getAuthenticatedUser, signInWithGoogle } from '../services/supabase';
 import {
@@ -27,11 +27,13 @@ function GoogleIcon() {
 }
 
 const BUSINESS_TYPES: { value: BusinessType; label: string; icon: React.ElementType }[] = [
-  { value: 'general',  label: 'General / Multi-service', icon: LayoutGrid },
-  { value: 'pharmacy', label: 'Pharmacy',                 icon: Pill },
-  { value: 'cafe',     label: 'Internet Café',             icon: Coffee },
-  { value: 'printing', label: 'Printing & Branding',       icon: Printer },
-  { value: 'retail',   label: 'Retail',                    icon: ShoppingBag },
+  { value: 'general',    label: 'General / Multi-service', icon: LayoutGrid },
+  { value: 'pharmacy',   label: 'Pharmacy',                 icon: Pill },
+  { value: 'cafe',       label: 'Internet Café',             icon: Coffee },
+  { value: 'printing',   label: 'Printing & Branding',       icon: Printer },
+  { value: 'retail',     label: 'Retail',                    icon: ShoppingBag },
+  { value: 'clothing',   label: 'Clothing Store',             icon: Shirt },
+  { value: 'mechanics',  label: 'Mechanics / Auto Repair',    icon: Wrench },
 ];
 
 interface SignupProps {

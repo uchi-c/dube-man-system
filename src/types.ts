@@ -9,7 +9,7 @@ export type UserRole = 'ADMIN' | 'STAFF' | 'CAFE_OPERATOR';
 // ============================================================
 
 /** What kind of business a tenant runs — drives which nav modules show. */
-export type BusinessType = 'general' | 'pharmacy' | 'cafe' | 'printing' | 'retail';
+export type BusinessType = 'general' | 'pharmacy' | 'cafe' | 'printing' | 'retail' | 'clothing' | 'mechanics';
 
 /** A tenant workspace. Every business record is scoped to one of these. */
 export interface Organization {
@@ -59,6 +59,8 @@ export interface TenantBilling {
   signup_source: 'admin' | 'self_service';
   /** Which billing cadence this tenant is on — informational; payments are still recorded manually regardless of cycle. */
   billing_cycle: BillingCycle;
+  /** Opt-in nav modules beyond this tenant's business_type default — currently 'wifi' | 'pc-agent' | 'cafe'. */
+  extra_modules: string[];
   member_count: number;
   admin_emails: string | null;
   created_at: string;

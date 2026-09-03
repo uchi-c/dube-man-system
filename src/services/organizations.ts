@@ -114,6 +114,28 @@ export async function getCurrentOrganizationBusinessType(): Promise<BusinessType
   }
 }
 
+/**
+ * Opt-in nav modules (currently 'wifi' | 'pc-agent' | 'cafe') this org has
+ * beyond its business_type's default set — see migration 027. Defaults to
+ * [] on any failure so a resolution hiccup only ever hides an opt-in
+ * extra, never breaks the rest of the nav.
+ */
+export async function getCurrentOrganizationExtraModules(): Promise<string[]> {
+  if (!isSupabaseConfigured) return [];
+  try {
+    const orgId = await getCurrentOrganizationId();
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('extra_modules')
+      .eq('id', orgId)
+      .maybeSingle();
+    if (error || !data) return [];
+    return (data.extra_modules as string[] | null) ?? [];
+  } catch {
+    return [];
+  }
+}
+
 /** Every organization the signed-in user belongs to (for an org switcher UI). */
 export async function fetchUserOrganizations(): Promise<Organization[]> {
   if (!isSupabaseConfigured) return [];
@@ -604,6 +626,15 @@ export async function updateTenantBilling(
     p_balance_due: patch.balanceDue ?? null,
     p_payment_method: patch.paymentMethod ?? null,
     p_billing_cycle: patch.billingCycle ?? null,
+  });
+  if (error) throw error;
+}
+
+/** Platform-admin only: sets which opt-in modules ('wifi' | 'pc-agent' | 'cafe') a tenant sees beyond its business_type default — see migration 027. */
+export async function updateTenantExtraModules(organizationId: string, extraModules: string[]): Promise<void> {
+  const { error } = await supabase.rpc('update_tenant_extra_modules', {
+    p_org_id: organizationId,
+    p_extra_modules: extraModules,
   });
   if (error) throw error;
 }

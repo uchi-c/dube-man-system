@@ -6,6 +6,8 @@ import { OrgBilling, BusinessType, BillingCycle } from '../types';
 const PLAN_NAME: Record<BusinessType, string> = {
   general: 'Retail & General',
   retail: 'Retail & General',
+  clothing: 'Retail & General',
+  mechanics: 'Retail & General',
   cafe: 'Café & Printing',
   printing: 'Café & Printing',
   pharmacy: 'Pharmacy',

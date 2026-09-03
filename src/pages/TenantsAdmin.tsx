@@ -3,6 +3,7 @@ import {
   Building2, RefreshCw, Plus, X, Check, Copy, AlertCircle,
   KeyRound, Wallet, History as HistoryIcon, Users as UsersIcon,
   BellRing, Phone, Pencil, CircleCheck, Lock, LockOpen, Trash2,
+  Wifi, Shield, Monitor,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import DataTable from '../components/DataTable';
@@ -11,6 +12,7 @@ import {
   listTenantsBilling, createTenant, updateTenantBilling, deleteTenant,
   recordTenantPayment, listTenantPayments,
   getPlatformPaymentInstructions, updatePlatformPaymentInstructions,
+  updateTenantExtraModules,
 } from '../services/organizations';
 import { BusinessType, SubscriptionStatus, TenantBilling, TenantPayment, BillingCycle } from '../types';
 
@@ -24,17 +26,21 @@ import { BusinessType, SubscriptionStatus, TenantBilling, TenantPayment, Billing
 const SUGGESTED_PRICE: Record<BusinessType, number> = {
   general: 150,
   retail: 150,
+  clothing: 150,
+  mechanics: 200,
   cafe: 200,
   printing: 200,
   pharmacy: 350,
 };
 
 const BUSINESS_TYPE_OPTIONS: { value: BusinessType; label: string }[] = [
-  { value: 'general',  label: 'General dealer' },
-  { value: 'pharmacy', label: 'Pharmacy' },
-  { value: 'cafe',     label: 'Internet café' },
-  { value: 'printing', label: 'Printing' },
-  { value: 'retail',   label: 'Retail' },
+  { value: 'general',   label: 'General dealer' },
+  { value: 'pharmacy',  label: 'Pharmacy' },
+  { value: 'cafe',      label: 'Internet café' },
+  { value: 'printing',  label: 'Printing' },
+  { value: 'retail',    label: 'Retail' },
+  { value: 'clothing',  label: 'Clothing store' },
+  { value: 'mechanics', label: 'Mechanics / auto repair' },
 ];
 
 const STATUS_OPTIONS: { value: SubscriptionStatus; label: string }[] = [
@@ -264,6 +270,9 @@ export default function TenantsAdmin() {
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [history, setHistory] = useState<TenantPayment[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [extraModulesDraft, setExtraModulesDraft] = useState<string[]>([]);
+  const [modulesSaving, setModulesSaving] = useState(false);
+  const [modulesError, setModulesError] = useState('');
 
   const openManage = async (t: TenantBilling) => {
     setManaging(t);
@@ -277,6 +286,8 @@ export default function TenantsAdmin() {
       paymentMethod: t.payment_method || '',
       billingCycle: t.billing_cycle,
     });
+    setExtraModulesDraft(t.extra_modules || []);
+    setModulesError('');
     setEditError(''); setPaymentError('');
     setPaymentAmount(t.balance_due > 0 ? String(t.balance_due) : t.monthly_price !== null ? String(t.monthly_price) : '');
     setPaymentNote('');
@@ -322,6 +333,27 @@ export default function TenantsAdmin() {
       setEditError(err?.message || "Couldn't save billing changes.");
     } finally {
       setEditSaving(false);
+    }
+  };
+
+  const toggleExtraModule = (id: string) => {
+    setExtraModulesDraft(prev => prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]);
+  };
+
+  const handleSaveModules = async () => {
+    if (!managing) return;
+    setModulesError('');
+    setModulesSaving(true);
+    try {
+      await updateTenantExtraModules(managing.organization_id, extraModulesDraft);
+      const freshTenants = await listTenantsBilling();
+      setTenants(freshTenants);
+      const updated = freshTenants.find(t => t.organization_id === managing.organization_id);
+      if (updated) setManaging(updated);
+    } catch (err: any) {
+      setModulesError(err?.message || "Couldn't save enabled modules.");
+    } finally {
+      setModulesSaving(false);
     }
   };
 
@@ -743,6 +775,33 @@ export default function TenantsAdmin() {
               </div>
 
               <div className="space-y-6">
+                {/* Enabled modules — opt-in extras beyond the business type default */}
+                <div className="dm-card-inset p-4 space-y-3">
+                  <h4 className="flex items-center gap-1.5" style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-hi)' }}>
+                    <CircleCheck style={{ width: 14, height: 14 }} /> Enabled modules
+                  </h4>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-low)' }}>
+                    These don't show by default for {managing.business_type} — only turn them on if this tenant specifically asked for one.
+                  </p>
+                  <div className="space-y-1.5">
+                    {[
+                      { id: 'wifi', label: 'WiFi Management', icon: Wifi },
+                      { id: 'pc-agent', label: 'PC Agent Hub', icon: Shield },
+                      { id: 'cafe', label: 'Internet Café management', icon: Monitor },
+                    ].map(mod => (
+                      <label key={mod.id} className="flex items-center gap-2" style={{ fontSize: '0.78rem', color: 'var(--text-hi)', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={extraModulesDraft.includes(mod.id)} onChange={() => toggleExtraModule(mod.id)} />
+                        <mod.icon style={{ width: 13, height: 13, color: 'var(--text-low)' }} />
+                        {mod.label}
+                      </label>
+                    ))}
+                  </div>
+                  {modulesError && <p style={{ fontSize: '0.75rem', color: 'var(--danger)' }}>{modulesError}</p>}
+                  <button type="button" onClick={handleSaveModules} disabled={modulesSaving} className="dm-btn dm-btn-ghost" style={{ fontSize: '0.75rem' }}>
+                    {modulesSaving ? 'Saving…' : 'Save modules'}
+                  </button>
+                </div>
+
                 {/* Record a payment */}
                 <div className="dm-card-inset p-4 space-y-3">
                   <h4 className="flex items-center gap-1.5" style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-hi)' }}>
