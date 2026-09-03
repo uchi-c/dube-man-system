@@ -3,7 +3,7 @@ import {
   Building2, RefreshCw, Plus, X, Check, Copy, AlertCircle,
   KeyRound, Wallet, History as HistoryIcon, Users as UsersIcon,
   BellRing, Phone, Pencil, CircleCheck, Lock, LockOpen, Trash2,
-  Wifi, Shield, Monitor,
+  Wifi, Shield, Monitor, UserCog,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import DataTable from '../components/DataTable';
@@ -13,6 +13,7 @@ import {
   recordTenantPayment, listTenantPayments,
   getPlatformPaymentInstructions, updatePlatformPaymentInstructions,
   updateTenantExtraModules, fetchTenantLastActive,
+  startTenantImpersonation, setActiveOrganizationId,
 } from '../services/organizations';
 import { BusinessType, SubscriptionStatus, TenantBilling, TenantPayment, BillingCycle } from '../types';
 
@@ -425,6 +426,25 @@ export default function TenantsAdmin() {
       else window.alert(message);
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  // ---- View as tenant (impersonation) ----
+  const [impersonating, setImpersonating] = useState(false);
+  const [impersonateError, setImpersonateError] = useState('');
+
+  const handleViewAsTenant = async (t: TenantBilling) => {
+    if (!window.confirm(`View ${t.name} as though you were signed in there? This is logged, and ends automatically after 20 minutes.`)) return;
+    setImpersonateError('');
+    setImpersonating(true);
+    try {
+      await startTenantImpersonation(t.organization_id, 20);
+      setActiveOrganizationId(t.organization_id);
+      window.location.href = '/';
+      window.location.reload();
+    } catch (err: any) {
+      setImpersonateError(err?.message || "Couldn't start viewing that tenant.");
+      setImpersonating(false);
     }
   };
 
@@ -961,6 +981,23 @@ export default function TenantsAdmin() {
 
                   <button type="submit" disabled={editSaving} className="dm-btn dm-btn-primary w-full">{editSaving ? 'Saving…' : 'Save billing details'}</button>
                 </form>
+
+                {/* View as tenant */}
+                <div className="pt-2 space-y-2" style={{ borderTop: '1px solid var(--panel-line)' }}>
+                  <h4 style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-hi)', marginTop: '0.75rem' }}>View as tenant</h4>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-low)' }}>
+                    See exactly what {managing.name}'s dashboard, POS, and inventory look like — for support/debugging. Logged, and ends automatically after 20 minutes.
+                  </p>
+                  {impersonateError && (
+                    <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: 'var(--danger-bg)', border: '1px solid rgba(255,107,107,0.3)', fontSize: '0.78rem', color: 'var(--danger)' }} role="alert">
+                      <AlertCircle style={{ width: 15, height: 15, flexShrink: 0 }} />
+                      <span>{impersonateError}</span>
+                    </div>
+                  )}
+                  <button type="button" onClick={() => handleViewAsTenant(managing)} disabled={impersonating} className="dm-btn dm-btn-ghost w-full">
+                    <UserCog style={{ width: 14, height: 14 }} /> {impersonating ? 'Starting…' : 'View as tenant'}
+                  </button>
+                </div>
 
                 {/* Danger zone */}
                 <div className="pt-2 space-y-2" style={{ borderTop: '1px solid var(--panel-line)' }}>
