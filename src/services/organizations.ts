@@ -11,7 +11,7 @@
  */
 
 import { supabase, isSupabaseConfigured } from './supabase';
-import { Organization, BusinessType, OrganizationInvite, UserRole, TenantBilling, TenantPayment, SubscriptionStatus, PlatformFinancialSummary, PlatformPayment, BillingCycle, OrgBilling, OrgPayment } from '../types';
+import { Organization, BusinessType, OrganizationInvite, UserRole, TenantBilling, TenantPayment, SubscriptionStatus, PlatformFinancialSummary, PlatformPayment, BillingCycle, OrgBilling, OrgPayment, PlatformRevenuePoint, PlatformSignupCohort } from '../types';
 
 const ORG_STORAGE_KEY = 'uruu_org_id';
 const PENDING_GOOGLE_SIGNUP_KEY = 'uruu_pending_google_signup';
@@ -722,6 +722,20 @@ export async function fetchAllTenantPayments(limit = 50): Promise<PlatformPaymen
   const { data, error } = await supabase.rpc('list_all_tenant_payments', { p_limit: limit });
   if (error) throw error;
   return (data ?? []) as PlatformPayment[];
+}
+
+/** Monthly collected revenue per currency for the last `months` months — platform-admin only. */
+export async function fetchPlatformRevenueTrend(months = 6): Promise<PlatformRevenuePoint[]> {
+  const { data, error } = await supabase.rpc('get_platform_revenue_trend', { p_months: months });
+  if (error) throw error;
+  return (data ?? []) as PlatformRevenuePoint[];
+}
+
+/** Tenants grouped by signup month for the last `months` months, with how many are still active and their current MRR — platform-admin only. */
+export async function fetchPlatformSignupCohorts(months = 6): Promise<PlatformSignupCohort[]> {
+  const { data, error } = await supabase.rpc('get_platform_signup_cohorts', { p_months: months });
+  if (error) throw error;
+  return (data ?? []) as PlatformSignupCohort[];
 }
 
 // ---------------------------------------------------------------------------
