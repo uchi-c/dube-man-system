@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Product, Customer, Sale } from '../types';
+import { Product, Customer, Sale, OutstandingDebt, DebtPayment } from '../types';
 import {
   fetchProducts, fetchCustomers, insertCustomer,
-  insertSale, fetchSales
+  insertSale, fetchSales, fetchOutstandingDebts, recordDebtPayment, fetchDebtPayments
 } from '../services/supabase';
 import {
   ShoppingCart, Search, Plus, Minus, Trash2,
   CreditCard, Check, UserPlus, X,
   AlertCircle, RefreshCw, FileText, Package, Printer,
+  HandCoins, History, Wallet,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import DataTable from '../components/DataTable';
@@ -28,10 +29,11 @@ interface CartItem {
 type CheckoutPhase = 'idle' | 'processing' | 'done';
 
 export default function Sales({ userRole }: SalesPageProps) {
-  const [activeTab, setActiveTab] = useState<'pos' | 'ledger'>('pos');
+  const [activeTab, setActiveTab] = useState<'pos' | 'ledger' | 'debts'>('pos');
   const [products, setProducts] = useState<Product[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [salesLedger, setSalesLedger] = useState<Sale[]>([]);
+  const [outstandingDebts, setOutstandingDebts] = useState<OutstandingDebt[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,7 +41,7 @@ export default function Sales({ userRole }: SalesPageProps) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [flashId, setFlashId] = useState<string | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Mobile Money' | 'Bank'>('Cash');
+  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Mobile Money' | 'Bank' | 'Credit'>('Cash');
   const [errorText, setErrorText] = useState('');
   const [successText, setSuccessText] = useState('');
   const [phase, setPhase] = useState<CheckoutPhase>('idle');
@@ -52,17 +54,30 @@ export default function Sales({ userRole }: SalesPageProps) {
   const [regError, setRegError] = useState('');
   const [printingSale, setPrintingSale] = useState<Sale | null>(null);
 
+  // Debt repayment
+  const [payingSale, setPayingSale] = useState<Sale | null>(null);
+  const [payAmount, setPayAmount] = useState('');
+  const [payMethod, setPayMethod] = useState<'Cash' | 'Mobile Money' | 'Bank'>('Cash');
+  const [payNote, setPayNote] = useState('');
+  const [payError, setPayError] = useState('');
+  const [payBusy, setPayBusy] = useState(false);
+  const [historySale, setHistorySale] = useState<Sale | null>(null);
+  const [historyPayments, setHistoryPayments] = useState<DebtPayment[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
   const syncSalesDeskData = async () => {
     setLoading(true);
     try {
-      const [prods, custs, ledger] = await Promise.all([
+      const [prods, custs, ledger, debts] = await Promise.all([
         fetchProducts(),
         fetchCustomers(),
         fetchSales(),
+        fetchOutstandingDebts(),
       ]);
       setProducts(prods);
       setCustomers(custs);
       setSalesLedger(ledger);
+      setOutstandingDebts(debts);
     } catch (err) {
       console.error('Failed syncing sales module databases:', err);
     } finally {
@@ -71,6 +86,57 @@ export default function Sales({ userRole }: SalesPageProps) {
   };
 
   useEffect(() => { syncSalesDeskData(); }, []);
+
+  const openSaleCredits = useMemo(
+    () => salesLedger.filter(s => s.payment_method === 'Credit' && s.payment_status !== 'paid'),
+    [salesLedger],
+  );
+
+  const openPaymentModal = (sale: Sale) => {
+    setPayingSale(sale);
+    setPayAmount((sale.total_amount - sale.amount_paid).toFixed(2));
+    setPayMethod('Cash');
+    setPayNote('');
+    setPayError('');
+  };
+
+  const submitDebtPayment = async () => {
+    if (!payingSale) return;
+    const amount = parseFloat(payAmount);
+    const balance = payingSale.total_amount - payingSale.amount_paid;
+    if (!amount || amount <= 0) {
+      setPayError('Enter an amount greater than zero.');
+      return;
+    }
+    if (amount > balance + 0.005) {
+      setPayError(`That's more than the outstanding balance of ${formatCurrency(balance)}.`);
+      return;
+    }
+    setPayBusy(true);
+    setPayError('');
+    try {
+      await recordDebtPayment(payingSale.id, amount, payMethod, payNote.trim() || undefined);
+      setPayingSale(null);
+      await syncSalesDeskData();
+    } catch (err: any) {
+      setPayError(err?.message || 'Could not record that payment. Try again.');
+    } finally {
+      setPayBusy(false);
+    }
+  };
+
+  const openPaymentHistory = async (sale: Sale) => {
+    setHistorySale(sale);
+    setHistoryLoading(true);
+    try {
+      setHistoryPayments(await fetchDebtPayments(sale.id));
+    } catch (err) {
+      console.error('Failed loading payment history:', err);
+      setHistoryPayments([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
 
   // Category chips derived from the sellable catalog
   const categories = useMemo(() => {
@@ -96,7 +162,8 @@ export default function Sales({ userRole }: SalesPageProps) {
   }, [cart]);
 
   const cartCount = cart.reduce((s, c) => s + c.quantity, 0);
-  const canCheckout = cart.length > 0 && totalAmount > 0 && phase !== 'processing';
+  const needsCustomerForCredit = paymentMethod === 'Credit' && !selectedCustomerId;
+  const canCheckout = cart.length > 0 && totalAmount > 0 && phase !== 'processing' && !needsCustomerForCredit;
 
   const addToCart = (product: Product) => {
     setErrorText('');
@@ -228,13 +295,28 @@ export default function Sales({ userRole }: SalesPageProps) {
       header: 'Method',
       accessor: (sale: Sale) => {
         const cls = sale.payment_method === 'Cash' ? 'dm-badge-warning'
-          : sale.payment_method === 'Bank' ? 'dm-badge-info' : 'dm-badge-success';
+          : sale.payment_method === 'Bank' ? 'dm-badge-info'
+          : sale.payment_method === 'Credit' ? 'dm-badge-danger' : 'dm-badge-success';
         return <span className={`dm-badge ${cls}`}>{sale.payment_method}</span>;
       },
     },
     {
       header: 'Amount',
       accessor: (sale: Sale) => <strong className="dm-nums" style={{ color: 'var(--blue-400)' }}>{formatCurrency(sale.total_amount)}</strong>,
+    },
+    {
+      header: 'Balance',
+      accessor: (sale: Sale) => {
+        if (sale.payment_method !== 'Credit') return <span style={{ color: 'var(--text-low)' }}>—</span>;
+        const balance = sale.total_amount - sale.amount_paid;
+        const cls = sale.payment_status === 'paid' ? 'dm-badge-success' : sale.payment_status === 'partial' ? 'dm-badge-warning' : 'dm-badge-danger';
+        return (
+          <div className="flex items-center gap-1.5">
+            <span className="dm-nums" style={{ fontWeight: 600, color: balance > 0 ? 'var(--danger)' : 'var(--text-low)' }}>{formatCurrency(balance)}</span>
+            <span className={`dm-badge ${cls}`} style={{ fontSize: 10 }}>{sale.payment_status}</span>
+          </div>
+        );
+      },
     },
     {
       header: 'Items',
@@ -247,10 +329,45 @@ export default function Sales({ userRole }: SalesPageProps) {
     {
       header: '',
       accessor: (sale: Sale) => (
-        <button onClick={() => setPrintingSale(sale)} className="dm-icon-btn" title="Print receipt" aria-label="Print receipt">
-          <Printer style={{ width: 14, height: 14 }} />
-        </button>
+        <div className="flex items-center gap-1">
+          {sale.payment_method === 'Credit' && sale.payment_status !== 'paid' && (
+            <button onClick={() => openPaymentModal(sale)} className="dm-icon-btn" title="Record payment" aria-label="Record payment">
+              <HandCoins style={{ width: 14, height: 14, color: 'var(--blue-400)' }} />
+            </button>
+          )}
+          {sale.payment_method === 'Credit' && (
+            <button onClick={() => openPaymentHistory(sale)} className="dm-icon-btn" title="Payment history" aria-label="Payment history">
+              <History style={{ width: 14, height: 14 }} />
+            </button>
+          )}
+          <button onClick={() => setPrintingSale(sale)} className="dm-icon-btn" title="Print receipt" aria-label="Print receipt">
+            <Printer style={{ width: 14, height: 14 }} />
+          </button>
+        </div>
       ),
+    },
+  ];
+
+  const debtsColumns = [
+    {
+      header: 'Customer',
+      accessor: (d: OutstandingDebt) => <strong style={{ color: 'var(--text-hi)', fontWeight: 600 }}>{d.customer_name}</strong>,
+    },
+    {
+      header: 'Phone',
+      accessor: (d: OutstandingDebt) => <span className="dm-nums" style={{ color: 'var(--text-mid)' }}>{d.customer_phone || '—'}</span>,
+    },
+    {
+      header: 'Open sales',
+      accessor: (d: OutstandingDebt) => <span className="dm-nums" style={{ color: 'var(--text-mid)' }}>{d.open_sale_count}</span>,
+    },
+    {
+      header: 'Owing since',
+      accessor: (d: OutstandingDebt) => <span className="dm-nums" style={{ fontSize: 11, color: 'var(--text-low)' }}>{new Date(d.oldest_sale_at).toLocaleDateString()}</span>,
+    },
+    {
+      header: 'Total owed',
+      accessor: (d: OutstandingDebt) => <strong className="dm-nums" style={{ color: 'var(--danger)' }}>{formatCurrency(d.total_owed)}</strong>,
     },
   ];
 
@@ -263,6 +380,12 @@ export default function Sales({ userRole }: SalesPageProps) {
         </button>
         <button onClick={() => setActiveTab('ledger')} className={`dm-seg-item ${activeTab === 'ledger' ? 'active' : ''}`}>
           <FileText style={{ width: 15, height: 15 }} /> Receipts
+        </button>
+        <button onClick={() => setActiveTab('debts')} className={`dm-seg-item ${activeTab === 'debts' ? 'active' : ''}`}>
+          <Wallet style={{ width: 15, height: 15 }} /> Debts
+          {outstandingDebts.length > 0 && (
+            <span className="dm-badge dm-badge-danger" style={{ fontSize: 10, padding: '1px 6px' }}>{outstandingDebts.length}</span>
+          )}
         </button>
       </div>
 
@@ -447,18 +570,21 @@ export default function Sales({ userRole }: SalesPageProps) {
                 <div className="space-y-1.5">
                   <label className="dm-label" style={{ padding: 0 }}>Payment method</label>
                   <div className="dm-seg" style={{ width: '100%' }}>
-                    {(['Cash', 'Mobile Money', 'Bank'] as const).map(mode => (
+                    {(['Cash', 'Mobile Money', 'Bank', 'Credit'] as const).map(mode => (
                       <button
                         key={mode}
                         type="button"
                         onClick={() => setPaymentMethod(mode)}
                         className={`dm-seg-item ${paymentMethod === mode ? 'active' : ''}`}
-                        style={{ flex: 1, padding: '0 0.5rem', fontSize: '0.75rem' }}
+                        style={{ flex: 1, padding: '0 0.4rem', fontSize: '0.72rem' }}
                       >
                         {mode}
                       </button>
                     ))}
                   </div>
+                  {needsCustomerForCredit && (
+                    <p style={{ fontSize: '0.72rem', color: 'var(--danger)' }}>Select a customer above to sell on credit — there's no way to collect from a walk-in later.</p>
+                  )}
                 </div>
 
                 {/* Totals */}
@@ -500,7 +626,7 @@ export default function Sales({ userRole }: SalesPageProps) {
             </div>
           </div>
         </div>
-      ) : (
+      ) : activeTab === 'ledger' ? (
         <div id="ledger-view" className="space-y-4">
           <div className="flex justify-between items-center gap-4">
             <div>
@@ -519,6 +645,8 @@ export default function Sales({ userRole }: SalesPageProps) {
                   { header: 'Items', key: 'item_count', width: 10 },
                   { header: 'Payment', key: 'payment_method', width: 14 },
                   { header: 'Total', key: 'total_amount', width: 14 },
+                  { header: 'Balance', key: 'balance', width: 14 },
+                  { header: 'Status', key: 'payment_status', width: 12 },
                 ]}
                 rows={salesLedger.map(s => ({
                   id: s.id.slice(0, 8),
@@ -527,6 +655,8 @@ export default function Sales({ userRole }: SalesPageProps) {
                   item_count: s.items?.length ?? 0,
                   payment_method: s.payment_method,
                   total_amount: s.total_amount,
+                  balance: s.payment_method === 'Credit' ? s.total_amount - s.amount_paid : 0,
+                  payment_status: s.payment_status,
                 }))}
               />
               <button onClick={syncSalesDeskData} className="dm-btn dm-btn-ghost">
@@ -547,6 +677,69 @@ export default function Sales({ userRole }: SalesPageProps) {
             emptyMessage="No sales recorded yet. Complete a checkout to see it here."
             loading={loading}
           />
+        </div>
+      ) : (
+        <div id="debts-view" className="space-y-4">
+          <div className="flex justify-between items-center gap-4">
+            <div>
+              <h1 className="dm-h1">Debts</h1>
+              <p style={{ color: 'var(--text-mid)', fontSize: '0.8rem', marginTop: 2 }}>Outstanding balances from sales made on credit.</p>
+            </div>
+            <button onClick={syncSalesDeskData} className="dm-btn dm-btn-ghost">
+              <RefreshCw style={{ width: 15, height: 15 }} className={loading ? 'dm-spin' : ''} /> Reload
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="dm-card p-4 flex items-center gap-3">
+              <div className="flex items-center justify-center" style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--danger-bg)', color: 'var(--danger)' }}>
+                <Wallet style={{ width: 18, height: 18 }} />
+              </div>
+              <div>
+                <div className="dm-nums" style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '1.3rem', color: 'var(--text-hi)' }}>
+                  {formatCurrency(outstandingDebts.reduce((sum, d) => sum + d.total_owed, 0))}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-low)' }}>Total outstanding</div>
+              </div>
+            </div>
+            <div className="dm-card p-4 flex items-center gap-3">
+              <div className="flex items-center justify-center" style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--blue-bg)', color: 'var(--blue-400)' }}>
+                <UserPlus style={{ width: 18, height: 18 }} />
+              </div>
+              <div>
+                <div className="dm-nums" style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '1.3rem', color: 'var(--text-hi)' }}>
+                  {outstandingDebts.length}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-low)' }}>Customers owing</div>
+              </div>
+            </div>
+          </div>
+
+          <DataTable
+            data={outstandingDebts}
+            columns={debtsColumns}
+            searchPlaceholder="Search customers…"
+            filterFunction={(d, q) => d.customer_name.toLowerCase().includes(q.toLowerCase()) || (d.customer_phone || '').toLowerCase().includes(q.toLowerCase())}
+            emptyMessage="No outstanding debt — every credit sale is paid off."
+            loading={loading}
+          />
+
+          {openSaleCredits.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="dm-h2" style={{ fontSize: '0.9rem' }}>Open credit sales</h3>
+              <DataTable
+                data={openSaleCredits}
+                columns={ledgerColumns.filter(c => c.header !== 'Method')}
+                searchPlaceholder="Search receipts or customers…"
+                filterFunction={(sale, q) =>
+                  sale.id.toLowerCase().includes(q.toLowerCase()) ||
+                  (sale.customer_name || 'Walk-in').toLowerCase().includes(q.toLowerCase())
+                }
+                emptyMessage="No open credit sales."
+                loading={loading}
+              />
+            </div>
+          )}
         </div>
       )}
 
@@ -610,6 +803,156 @@ export default function Sales({ userRole }: SalesPageProps) {
       </AnimatePresence>
 
       {printingSale && <ReceiptPrint sale={printingSale} onClose={() => setPrintingSale(null)} />}
+
+      {/* ---- Record debt payment modal ---- */}
+      <AnimatePresence>
+        {payingSale && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(7,11,36,0.6)', backdropFilter: 'blur(4px)' }}
+            onClick={() => !payBusy && setPayingSale(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.18 }}
+              className="dm-card p-5 space-y-4 w-full"
+              onClick={e => e.stopPropagation()}
+              style={{ maxWidth: 380, background: 'var(--bg-1)', boxShadow: 'var(--shadow-modal)' }}
+              role="dialog" aria-label="Record debt payment"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="dm-h2">Record payment</h3>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-mid)', marginTop: 2 }}>
+                    {payingSale.customer_name || 'Customer'} · receipt {payingSale.id.slice(0, 8)}
+                  </p>
+                </div>
+                <button onClick={() => setPayingSale(null)} className="dm-icon-btn" aria-label="Close">
+                  <X style={{ width: 16, height: 16 }} />
+                </button>
+              </div>
+
+              <div className="dm-card-inset p-3 flex justify-between items-baseline">
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-mid)' }}>Outstanding balance</span>
+                <strong className="dm-nums" style={{ color: 'var(--danger)', fontSize: '1.05rem' }}>
+                  {formatCurrency(payingSale.total_amount - payingSale.amount_paid)}
+                </strong>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="dm-label" style={{ padding: 0 }}>Amount received</label>
+                <input
+                  type="number" min="0" step="0.01" className="dm-input"
+                  value={payAmount} onChange={e => setPayAmount(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="dm-label" style={{ padding: 0 }}>Payment method</label>
+                <div className="dm-seg" style={{ width: '100%' }}>
+                  {(['Cash', 'Mobile Money', 'Bank'] as const).map(mode => (
+                    <button
+                      key={mode} type="button"
+                      onClick={() => setPayMethod(mode)}
+                      className={`dm-seg-item ${payMethod === mode ? 'active' : ''}`}
+                      style={{ flex: 1, padding: '0 0.5rem', fontSize: '0.75rem' }}
+                    >
+                      {mode}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="dm-label" style={{ padding: 0 }}>Note (optional)</label>
+                <input type="text" className="dm-input" placeholder="e.g. Paid part at pickup" value={payNote} onChange={e => setPayNote(e.target.value)} />
+              </div>
+
+              {payError && (
+                <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: 'var(--danger-bg)', border: '1px solid rgba(255,107,107,0.3)', fontSize: '0.78rem', color: 'var(--danger)' }} role="alert">
+                  <AlertCircle style={{ width: 15, height: 15, flexShrink: 0 }} />
+                  <span>{payError}</span>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <button type="button" onClick={() => setPayingSale(null)} className="dm-btn dm-btn-ghost flex-1" disabled={payBusy}>Cancel</button>
+                <button type="button" onClick={submitDebtPayment} className="dm-btn dm-btn-primary flex-1" disabled={payBusy}>
+                  {payBusy ? <RefreshCw style={{ width: 15, height: 15 }} className="dm-spin" /> : <HandCoins style={{ width: 15, height: 15 }} />}
+                  <span>Record payment</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ---- Payment history slide-over ---- */}
+      <AnimatePresence>
+        {historySale && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={() => setHistorySale(null)}
+              className="fixed inset-0 z-40"
+              style={{ background: 'rgba(7,11,36,0.6)', backdropFilter: 'blur(4px)' }}
+            />
+            <motion.div
+              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+              transition={{ duration: 0.24, ease: [0.4, 0, 0.2, 1] }}
+              className="fixed top-0 right-0 bottom-0 z-50 w-full max-w-sm p-6 overflow-y-auto"
+              style={{ background: 'var(--bg-1)', borderLeft: '1px solid var(--panel-line)', boxShadow: 'var(--shadow-modal)' }}
+              role="dialog" aria-label="Payment history"
+            >
+              <div className="flex items-start justify-between mb-5">
+                <div>
+                  <h3 className="dm-h2">Payment history</h3>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-mid)', marginTop: 2 }}>
+                    {historySale.customer_name || 'Customer'} · receipt {historySale.id.slice(0, 8)}
+                  </p>
+                </div>
+                <button onClick={() => setHistorySale(null)} className="dm-icon-btn" aria-label="Close">
+                  <X style={{ width: 16, height: 16 }} />
+                </button>
+              </div>
+
+              <div className="dm-card-inset p-3 flex justify-between items-baseline mb-4">
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-mid)' }}>Paid / Total</span>
+                <strong className="dm-nums" style={{ color: 'var(--text-hi)' }}>
+                  {formatCurrency(historySale.amount_paid)} / {formatCurrency(historySale.total_amount)}
+                </strong>
+              </div>
+
+              {historyLoading ? (
+                <div className="space-y-2">
+                  {[0, 1, 2].map(i => <div key={i} className="dm-skeleton" style={{ height: 52 }} />)}
+                </div>
+              ) : historyPayments.length > 0 ? (
+                <div className="space-y-2">
+                  {historyPayments.map(p => (
+                    <div key={p.id} className="dm-card-inset p-3 space-y-1">
+                      <div className="flex justify-between items-baseline">
+                        <span className="dm-nums" style={{ fontWeight: 700, color: 'var(--success)' }}>{formatCurrency(p.amount)}</span>
+                        <span className={`dm-badge ${p.payment_method === 'Cash' ? 'dm-badge-warning' : p.payment_method === 'Bank' ? 'dm-badge-info' : 'dm-badge-success'}`}>{p.payment_method}</span>
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-low)' }}>
+                        {new Date(p.created_at).toLocaleString()}{p.created_by_name ? ` · ${p.created_by_name}` : ''}
+                      </div>
+                      {p.note && <div style={{ fontSize: '0.75rem', color: 'var(--text-mid)' }}>{p.note}</div>}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center text-center py-10" style={{ color: 'var(--text-low)' }}>
+                  <History style={{ width: 24, height: 24, marginBottom: 8 }} />
+                  <span style={{ fontSize: '0.85rem' }}>No repayments recorded yet.</span>
+                </div>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

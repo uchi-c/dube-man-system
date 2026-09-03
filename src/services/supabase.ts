@@ -6,7 +6,7 @@ import {
   PrintingOrder, Computer, CafeSession, ActivityLog,
   WifiSessionRecord, UserRole, PrintingStatus, ComputerStatus,
   CafeSessionStatus, WifiCustomer, WifiPackage, WifiSession,
-  WifiUsageLog, RouterSetting
+  WifiUsageLog, RouterSetting, DebtPayment, OutstandingDebt
 } from '../types';
 
 // getCurrentOrganizationId lives in services/organizations.ts, which itself
@@ -610,6 +610,8 @@ export async function fetchSales(): Promise<Sale[]> {
             customer_name: s.customers?.name || 'Walk-in Customer',
             total_amount: Number(s.total_amount),
             payment_method: s.payment_method,
+            amount_paid: Number(s.amount_paid),
+            payment_status: s.payment_status,
             created_by: s.created_by || '',
             created_at: s.created_at,
             items: itemsFiltered
@@ -626,9 +628,13 @@ export async function fetchSales(): Promise<Sale[]> {
 export async function insertSale(
   customerId: string | null,
   items: { product_id: string; quantity: number; unit_price: number }[],
-  paymentMethod: 'Cash' | 'Mobile Money' | 'Bank'
+  paymentMethod: 'Cash' | 'Mobile Money' | 'Bank' | 'Credit'
 ): Promise<Sale | string> {
   const currentUser = localDb.getCurrentUser();
+
+  if (paymentMethod === 'Credit' && !customerId) {
+    return 'Select a customer to sell on credit — there\'s no way to collect from a walk-in later.';
+  }
 
   if (isSupabaseConfigured) {
     try {
@@ -701,6 +707,8 @@ export async function insertSale(
         customer_name: customerName,
         total_amount: totalAmount,
         payment_method: saleRow.payment_method,
+        amount_paid: Number(saleRow.amount_paid),
+        payment_status: saleRow.payment_status,
         created_by: currentUser.id,
         created_at: saleRow.created_at,
         items: (insertedItems || []).map((si: any) => ({
@@ -720,6 +728,59 @@ export async function insertSale(
   }
 
   return localDb.createSale(customerId, items, paymentMethod);
+}
+
+/**
+ * Debt/credit sales -- the repayment side of a 'Credit' sale from
+ * insertSale() above. All three go through record_debt_payment /
+ * list_debt_payments / list_outstanding_debts (migration 028), which are
+ * RPC-only (no direct table policy on debt_payments), the same lockdown
+ * shape as tenant_payments -- so there's no localStorage-fallback path
+ * here, matching how the other RPC-only features in this codebase
+ * (Smart Invoice, platform admin management) skip the offline demo mode.
+ */
+export async function recordDebtPayment(
+  saleId: string,
+  amount: number,
+  paymentMethod: 'Cash' | 'Mobile Money' | 'Bank',
+  note?: string
+): Promise<{ amount_paid: number; total_amount: number; payment_status: string }> {
+  const { data, error } = await supabase.rpc('record_debt_payment', {
+    p_sale_id: saleId,
+    p_amount: amount,
+    p_payment_method: paymentMethod,
+    p_note: note || null,
+  });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) throw new Error('Recording the payment did not return a result.');
+  return { amount_paid: Number(row.amount_paid), total_amount: Number(row.total_amount), payment_status: row.payment_status };
+}
+
+export async function fetchDebtPayments(saleId: string): Promise<DebtPayment[]> {
+  const { data, error } = await supabase.rpc('list_debt_payments', { p_sale_id: saleId });
+  if (error) throw error;
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    amount: Number(row.amount),
+    payment_method: row.payment_method,
+    note: row.note,
+    created_by_name: row.created_by_name,
+    created_at: row.created_at,
+  }));
+}
+
+export async function fetchOutstandingDebts(): Promise<OutstandingDebt[]> {
+  const { data, error } = await supabase.rpc('list_outstanding_debts');
+  if (error) throw error;
+  return (data ?? []).map((row: any) => ({
+    customer_id: row.customer_id,
+    customer_name: row.customer_name,
+    customer_phone: row.customer_phone,
+    total_owed: Number(row.total_owed),
+    open_sale_count: Number(row.open_sale_count),
+    oldest_sale_at: row.oldest_sale_at,
+  }));
 }
 
 
