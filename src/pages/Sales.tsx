@@ -7,12 +7,14 @@ import {
 import {
   ShoppingCart, Search, Plus, Minus, Trash2,
   CreditCard, Check, UserPlus, X,
-  AlertCircle, RefreshCw, FileText, Package,
+  AlertCircle, RefreshCw, FileText, Package, Printer,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import DataTable from '../components/DataTable';
 import { formatCurrency } from '../utils/format';
 import { cartTotal } from '../utils/billing';
+import ExportButtons from '../components/ExportButtons';
+import ReceiptPrint from '../components/ReceiptPrint';
 
 interface SalesPageProps {
   userRole: string;
@@ -48,6 +50,7 @@ export default function Sales({ userRole }: SalesPageProps) {
   const [newCustPhone, setNewCustPhone] = useState('');
   const [newCustEmail, setNewCustEmail] = useState('');
   const [regError, setRegError] = useState('');
+  const [printingSale, setPrintingSale] = useState<Sale | null>(null);
 
   const syncSalesDeskData = async () => {
     setLoading(true);
@@ -193,6 +196,7 @@ export default function Sales({ userRole }: SalesPageProps) {
 
     setPhase('done');
     setSuccessText(`Checked out — receipt ${result.id.slice(0, 8)} saved.`);
+    setPrintingSale(result);
     setCart([]);
     setSelectedCustomerId('');
     setPaymentMethod('Cash');
@@ -238,6 +242,14 @@ export default function Sales({ userRole }: SalesPageProps) {
         <span className="dm-truncate" style={{ display: 'block', maxWidth: '18rem', fontSize: 11, color: 'var(--text-low)' }}>
           {sale.items?.map(it => `${it.product_name || 'Item'} (${it.quantity})`).join(', ') || 'General'}
         </span>
+      ),
+    },
+    {
+      header: '',
+      accessor: (sale: Sale) => (
+        <button onClick={() => setPrintingSale(sale)} className="dm-icon-btn" title="Print receipt" aria-label="Print receipt">
+          <Printer style={{ width: 14, height: 14 }} />
+        </button>
       ),
     },
   ];
@@ -495,9 +507,32 @@ export default function Sales({ userRole }: SalesPageProps) {
               <h1 className="dm-h1">Receipts ledger</h1>
               <p style={{ color: 'var(--text-mid)', fontSize: '0.8rem', marginTop: 2 }}>Every recorded transaction, newest first.</p>
             </div>
-            <button onClick={syncSalesDeskData} className="dm-btn dm-btn-ghost">
-              <RefreshCw style={{ width: 15, height: 15 }} className={loading ? 'dm-spin' : ''} /> Reload
-            </button>
+            <div className="flex items-center gap-2">
+              <ExportButtons
+                filename="sales"
+                title="Receipts Ledger"
+                subtitle={`${salesLedger.length} sale${salesLedger.length === 1 ? '' : 's'}`}
+                columns={[
+                  { header: 'Receipt', key: 'id', width: 22 },
+                  { header: 'Date', key: 'created_at', width: 18 },
+                  { header: 'Customer', key: 'customer_name', width: 22 },
+                  { header: 'Items', key: 'item_count', width: 10 },
+                  { header: 'Payment', key: 'payment_method', width: 14 },
+                  { header: 'Total', key: 'total_amount', width: 14 },
+                ]}
+                rows={salesLedger.map(s => ({
+                  id: s.id.slice(0, 8),
+                  created_at: new Date(s.created_at).toLocaleString(),
+                  customer_name: s.customer_name || 'Walk-in',
+                  item_count: s.items?.length ?? 0,
+                  payment_method: s.payment_method,
+                  total_amount: s.total_amount,
+                }))}
+              />
+              <button onClick={syncSalesDeskData} className="dm-btn dm-btn-ghost">
+                <RefreshCw style={{ width: 15, height: 15 }} className={loading ? 'dm-spin' : ''} /> Reload
+              </button>
+            </div>
           </div>
 
           <DataTable
@@ -573,6 +608,8 @@ export default function Sales({ userRole }: SalesPageProps) {
           </>
         )}
       </AnimatePresence>
+
+      {printingSale && <ReceiptPrint sale={printingSale} onClose={() => setPrintingSale(null)} />}
     </div>
   );
 }

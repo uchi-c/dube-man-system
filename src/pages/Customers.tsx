@@ -4,6 +4,7 @@ import { fetchCustomers, insertCustomer, deleteCustomer } from '../services/supa
 import { Plus, Mail, Phone, Calendar, AlertCircle, RefreshCw, Check, X, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import DataTable from '../components/DataTable';
+import ExportButtons from '../components/ExportButtons';
 
 export default function Customers() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -120,6 +121,21 @@ export default function Customers() {
           <p style={{ color: 'var(--text-mid)', fontSize: '0.875rem', marginTop: 4 }}>Contact records and billing history for your clients.</p>
         </div>
         <div className="flex items-center gap-2">
+          <ExportButtons
+            filename="customers"
+            title="Customers"
+            subtitle={`${customers.length} customer${customers.length === 1 ? '' : 's'}`}
+            columns={[
+              { header: 'Name', key: 'name', width: 26 },
+              { header: 'Phone', key: 'phone', width: 18 },
+              { header: 'Email', key: 'email', width: 26 },
+              { header: 'Registered', key: 'created_at', width: 16 },
+            ]}
+            rows={customers.map(c => ({
+              name: c.name, phone: c.phone, email: c.email,
+              created_at: new Date(c.created_at).toLocaleDateString(),
+            }))}
+          />
           <button onClick={loadData} className="dm-icon-btn" title="Reload">
             <RefreshCw style={{ width: 16, height: 16 }} className={loading ? 'dm-spin' : ''} />
           </button>
