@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { User, UserRole, OrganizationInvite } from '../types';
 import { fetchAllUsers, updateUserRole, removeStaffMember } from '../services/supabase';
-import { adminInviteUserWithTempPassword, fetchInvites, revokeInvite } from '../services/organizations';
+import { adminInviteUserWithTempPassword, fetchInvites, revokeInvite, getCurrentOrganizationCurrency, updateOrganizationCurrency } from '../services/organizations';
+import { setCurrency as setActiveCurrency } from '../utils/format';
 import {
   UserPlus, Mail, Calendar, AlertCircle, RefreshCw, Check, X,
-  Copy, Ban, Clock, ShieldCheck, Users as UsersIcon, KeyRound, Trash2,
+  Copy, Ban, Clock, ShieldCheck, Users as UsersIcon, KeyRound, Trash2, Coins,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import DataTable from '../components/DataTable';
@@ -40,13 +41,17 @@ export default function Team() {
   const [submitting, setSubmitting] = useState(false);
   const [roleError, setRoleError] = useState('');
   const [removeError, setRemoveError] = useState('');
+  const [currency, setCurrency] = useState('ZMW');
+  const [savingCurrency, setSavingCurrency] = useState(false);
+  const [currencyError, setCurrencyError] = useState('');
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [users, pendingInvites] = await Promise.all([fetchAllUsers(), fetchInvites()]);
+      const [users, pendingInvites, cur] = await Promise.all([fetchAllUsers(), fetchInvites(), getCurrentOrganizationCurrency()]);
       setMembers(users);
       setInvites(pendingInvites);
+      setCurrency(cur);
     } catch (err) {
       console.error('Error loading team:', err);
     } finally {
@@ -55,6 +60,23 @@ export default function Team() {
   };
 
   useEffect(() => { loadData(); }, []);
+
+  const handleCurrencyChange = async (next: 'ZMW' | 'USD') => {
+    if (next === currency) return;
+    setCurrencyError('');
+    setSavingCurrency(true);
+    const previous = currency;
+    setCurrency(next);
+    try {
+      await updateOrganizationCurrency(next);
+      setActiveCurrency(next);
+    } catch (err: any) {
+      setCurrency(previous);
+      setCurrencyError(err?.message || "Couldn't update currency.");
+    } finally {
+      setSavingCurrency(false);
+    }
+  };
 
   const openInviteForm = () => {
     setInviteEmail(''); setInviteRole('STAFF'); setInviteError(''); setInviteResult(null); setCopied(false);
@@ -187,6 +209,39 @@ export default function Team() {
             <UserPlus style={{ width: 16, height: 16 }} /> Invite teammate
           </button>
         </div>
+      </div>
+
+      {/* Currency */}
+      <div className="dm-card p-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-2.5">
+            <Coins style={{ width: 18, height: 18, color: 'var(--text-mid)' }} />
+            <div>
+              <h3 className="dm-h2" style={{ marginBottom: 2 }}>Currency</h3>
+              <p style={{ color: 'var(--text-mid)', fontSize: '0.78rem' }}>
+                Used across sales, receipts, exports and your plan — doesn't convert past amounts.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {(['ZMW', 'USD'] as const).map(c => (
+              <button
+                key={c}
+                onClick={() => handleCurrencyChange(c)}
+                disabled={savingCurrency}
+                className={currency === c ? 'dm-btn dm-btn-primary' : 'dm-btn'}
+                style={{ minWidth: 72 }}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+        {currencyError && (
+          <p className="flex items-center gap-1.5" style={{ color: 'var(--danger)', fontSize: '0.78rem', marginTop: 10 }}>
+            <AlertCircle style={{ width: 13, height: 13 }} /> {currencyError}
+          </p>
+        )}
       </div>
 
       {roleError && (

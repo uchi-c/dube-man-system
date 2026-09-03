@@ -23,6 +23,7 @@ const LOCAL_DEMO_ORG_ID = 'local-demo-org';
 
 let cachedOrgId: string | null = null;
 let cachedBusinessType: BusinessType | null = null;
+let cachedCurrency: string | null = null;
 
 /**
  * The organization the current session should write to. Resolution order:
@@ -86,6 +87,7 @@ export function setActiveOrganizationId(orgId: string): void {
 export function clearOrganizationCache(): void {
   cachedOrgId = null;
   cachedBusinessType = null;
+  cachedCurrency = null;
   if (typeof window !== 'undefined') localStorage.removeItem(ORG_STORAGE_KEY);
 }
 
@@ -134,6 +136,47 @@ export async function getCurrentOrganizationExtraModules(): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+/**
+ * The active organization's own currency ('ZMW' | 'USD') — drives
+ * formatCurrency() across Sales/Inventory/receipts/exports (see
+ * utils/format.ts's setCurrency) and is also what CurrentPlanCard/
+ * PlatformFinance show as this tenant's billing currency. Defaults to
+ * 'ZMW' for local demo mode and on any lookup failure.
+ */
+export async function getCurrentOrganizationCurrency(): Promise<string> {
+  if (cachedCurrency) return cachedCurrency;
+  if (!isSupabaseConfigured) return 'ZMW';
+
+  try {
+    const orgId = await getCurrentOrganizationId();
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('currency')
+      .eq('id', orgId)
+      .maybeSingle();
+    if (error || !data?.currency) return 'ZMW';
+    cachedCurrency = data.currency as string;
+    return cachedCurrency;
+  } catch {
+    return 'ZMW';
+  }
+}
+
+/**
+ * Org-admin self-service: change this org's own currency. Relies on the
+ * existing "Admins manage organizations" RLS policy (an ADMIN can update
+ * their own org row) rather than a new RPC. Only relabels how amounts are
+ * displayed everywhere in the app — it does not convert or retroactively
+ * reprice the tenant's existing monthly_price; the platform admin handles
+ * that separately if the plan itself needs repricing in the new currency.
+ */
+export async function updateOrganizationCurrency(currency: 'ZMW' | 'USD'): Promise<void> {
+  const orgId = await getCurrentOrganizationId();
+  const { error } = await supabase.from('organizations').update({ currency }).eq('id', orgId);
+  if (error) throw new Error(error.message || "Couldn't update currency.");
+  cachedCurrency = currency;
 }
 
 /** Every organization the signed-in user belongs to (for an org switcher UI). */
