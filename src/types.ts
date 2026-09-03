@@ -140,6 +140,16 @@ export interface PlatformPayment {
   recorded_by_name: string | null;
 }
 
+/** One row from platform_audit_log — a consequential platform-admin action, across every tenant. Platform-admin only (see list_platform_admin_audit_log()). */
+export interface PlatformAuditLogEntry {
+  id: string;
+  actor_email: string | null;
+  action: string;
+  target_org_name: string | null;
+  details: Record<string, unknown>;
+  created_at: string;
+}
+
 /** A pending/accepted/revoked invitation for someone to join an org with a given role. */
 export interface OrganizationInvite {
   id: string;

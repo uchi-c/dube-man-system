@@ -1,16 +1,59 @@
 import { useEffect, useState } from 'react';
-import { ShieldCheck, UserPlus, X, Check, Copy, KeyRound, Trash2, Search, RefreshCw, AlertTriangle } from 'lucide-react';
+import {
+  ShieldCheck, UserPlus, X, Check, Copy, KeyRound, Trash2, Search, RefreshCw, AlertTriangle,
+  Megaphone, History, Send,
+} from 'lucide-react';
 import {
   fetchPlatformAdmins, findUserByEmail, setPlatformAdmin, inviteNewPlatformAdmin, PlatformAdmin,
+  fetchPlatformAuditLog, sendPlatformAnnouncement,
 } from '../services/organizations';
+import { PlatformAuditLogEntry } from '../types';
+import DataTable from '../components/DataTable';
+
+const TABS: { id: 'admins' | 'announce' | 'audit-log'; label: string; icon: React.ElementType }[] = [
+  { id: 'admins', label: 'Platform Admins', icon: ShieldCheck },
+  { id: 'announce', label: 'Announcements', icon: Megaphone },
+  { id: 'audit-log', label: 'Audit Log', icon: History },
+];
+
+const ACTION_LABEL: Record<string, string> = {
+  'platform_admin.granted': 'Granted platform admin',
+  'platform_admin.revoked': 'Revoked platform admin',
+  'tenant.billing_updated': 'Updated tenant billing',
+  'tenant.modules_updated': 'Updated tenant modules',
+  'tenant.deleted': 'Deleted tenant',
+  'announcement.sent': 'Sent announcement',
+};
+
+function auditDetailLine(entry: PlatformAuditLogEntry): string {
+  const d = entry.details || {};
+  switch (entry.action) {
+    case 'platform_admin.granted':
+    case 'platform_admin.revoked':
+      return (d.target_email as string) || '';
+    case 'tenant.modules_updated':
+      return Array.isArray(d.extra_modules) && d.extra_modules.length ? `modules: ${(d.extra_modules as string[]).join(', ')}` : 'no extra modules';
+    case 'announcement.sent':
+      return `"${d.subject || ''}" · ${d.recipient_count ?? 0} recipient${d.recipient_count === 1 ? '' : 's'}`;
+    case 'tenant.billing_updated': {
+      const parts = Object.entries(d).map(([k, v]) => `${k}: ${v}`);
+      return parts.length ? parts.join(', ') : 'no fields changed';
+    }
+    default:
+      return '';
+  }
+}
 
 /**
  * Platform Admins — who has cross-tenant access (every RPC/tenant billing
- * screen, not just their own org). Every action here is server-guarded by
- * is_platform_admin()/set_platform_admin() (migration 026); this page only
+ * screen, not just their own org), plus two related platform-operations
+ * tools: emailing every tenant owner at once, and an audit trail of
+ * consequential platform-admin actions (migration 032). Every action here
+ * is server-guarded (is_platform_admin() and friends); this page only
  * hides the UI for non-admins, it doesn't decide authorization on its own.
  */
 export default function PlatformAdmins() {
+  const [activeTab, setActiveTab] = useState<'admins' | 'announce' | 'audit-log'>('admins');
   const [admins, setAdmins] = useState<PlatformAdmin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -125,6 +168,81 @@ export default function PlatformAdmins() {
     }
   };
 
+  // ---- Announcements ----
+  const [announceSubject, setAnnounceSubject] = useState('');
+  const [announceMessage, setAnnounceMessage] = useState('');
+  const [announceSending, setAnnounceSending] = useState(false);
+  const [announceError, setAnnounceError] = useState('');
+  const [announceResult, setAnnounceResult] = useState<{ sent: number; errors: string[] } | null>(null);
+
+  const handleSendAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAnnounceError('');
+    setAnnounceResult(null);
+    if (!announceSubject.trim() || !announceMessage.trim()) {
+      setAnnounceError('Subject and message are both required.');
+      return;
+    }
+    if (!confirm(`Send this to every tenant owner? This can't be undone.`)) return;
+    setAnnounceSending(true);
+    try {
+      const result = await sendPlatformAnnouncement(announceSubject.trim(), announceMessage.trim());
+      setAnnounceResult(result);
+      if (result.errors.length === 0) {
+        setAnnounceSubject('');
+        setAnnounceMessage('');
+      }
+    } catch (err: any) {
+      setAnnounceError(err?.message || "Couldn't send the announcement.");
+    }
+    setAnnounceSending(false);
+  };
+
+  // ---- Audit log ----
+  const [auditLog, setAuditLog] = useState<PlatformAuditLogEntry[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditError, setAuditError] = useState('');
+  const [auditLoaded, setAuditLoaded] = useState(false);
+
+  const loadAuditLog = async () => {
+    setAuditLoading(true);
+    setAuditError('');
+    try {
+      setAuditLog(await fetchPlatformAuditLog(150));
+      setAuditLoaded(true);
+    } catch (err: any) {
+      setAuditError(err?.message || "Couldn't load the audit log.");
+    }
+    setAuditLoading(false);
+  };
+
+  useEffect(() => {
+    if (activeTab === 'audit-log' && !auditLoaded) loadAuditLog();
+  }, [activeTab, auditLoaded]);
+
+  const auditColumns = [
+    {
+      header: 'When',
+      accessor: (e: PlatformAuditLogEntry) => <span className="dm-nums" style={{ fontSize: 11, color: 'var(--text-low)' }}>{new Date(e.created_at).toLocaleString()}</span>,
+    },
+    {
+      header: 'Actor',
+      accessor: (e: PlatformAuditLogEntry) => <span style={{ color: 'var(--text-mid)' }}>{e.actor_email || '—'}</span>,
+    },
+    {
+      header: 'Action',
+      accessor: (e: PlatformAuditLogEntry) => <span className="dm-badge dm-badge-info">{ACTION_LABEL[e.action] || e.action}</span>,
+    },
+    {
+      header: 'Tenant',
+      accessor: (e: PlatformAuditLogEntry) => <span style={{ color: e.target_org_name ? 'var(--text-hi)' : 'var(--text-low)', fontWeight: e.target_org_name ? 600 : 400 }}>{e.target_org_name || '—'}</span>,
+    },
+    {
+      header: 'Details',
+      accessor: (e: PlatformAuditLogEntry) => <span className="dm-truncate" style={{ display: 'block', maxWidth: '20rem', fontSize: 11, color: 'var(--text-low)' }}>{auditDetailLine(e)}</span>,
+    },
+  ];
+
   return (
     <div className="p-6 space-y-6" id="platform-admins">
       <div className="flex items-center justify-between">
@@ -134,16 +252,27 @@ export default function PlatformAdmins() {
             <span>Platform Admins</span>
           </h2>
           <p style={{ fontSize: '0.8rem', color: 'var(--text-mid)', marginTop: 2 }}>
-            Cross-tenant access — every tenant's billing, finance, and the ability to create/manage tenants. Grant this
-            sparingly.
+            Cross-tenant access, tenant-wide announcements, and an audit trail of consequential platform-admin actions.
           </p>
         </div>
-        <button onClick={openInviteForm} className="dm-btn dm-btn-primary">
-          <UserPlus style={{ width: 14, height: 14 }} />
-          <span>Invite new person</span>
-        </button>
+        {activeTab === 'admins' && (
+          <button onClick={openInviteForm} className="dm-btn dm-btn-primary">
+            <UserPlus style={{ width: 14, height: 14 }} />
+            <span>Invite new person</span>
+          </button>
+        )}
       </div>
 
+      <div className="dm-seg" style={{ width: 'fit-content' }}>
+        {TABS.map(t => (
+          <button key={t.id} onClick={() => setActiveTab(t.id)} className={`dm-seg-item ${activeTab === t.id ? 'active' : ''}`}>
+            <t.icon style={{ width: 15, height: 15 }} /> {t.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'admins' && (
+      <>
       {/* Promote existing user */}
       <div className="dm-card p-5 space-y-3">
         <h3 className="dm-h3">Promote an existing Uruu OS user</h3>
@@ -226,6 +355,87 @@ export default function PlatformAdmins() {
           </div>
         )}
       </div>
+      </>
+      )}
+
+      {activeTab === 'announce' && (
+        <div className="dm-card p-5 space-y-4">
+          <div>
+            <h3 className="dm-h3 flex items-center gap-1.5">
+              <Megaphone style={{ width: 15, height: 15 }} /> Send an announcement
+            </h3>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-low)', marginTop: 2 }}>
+              Emails every tenant's owner at once — e.g. a new feature launch or planned downtime.
+            </p>
+          </div>
+          <form onSubmit={handleSendAnnouncement} className="space-y-3">
+            <div className="space-y-1.5">
+              <label className="dm-label" style={{ padding: 0 }}>Subject</label>
+              <input type="text" required className="dm-input" placeholder="e.g. Smart Invoice is now available" value={announceSubject} onChange={e => setAnnounceSubject(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <label className="dm-label" style={{ padding: 0 }}>Message</label>
+              <textarea
+                required rows={6} className="dm-input" style={{ resize: 'vertical', minHeight: 120 }}
+                placeholder="Blank lines start a new paragraph."
+                value={announceMessage} onChange={e => setAnnounceMessage(e.target.value)}
+              />
+            </div>
+            {announceError && (
+              <div className="dm-badge dm-badge-danger" style={{ width: '100%', padding: '0.6rem 0.9rem', whiteSpace: 'normal' }}>
+                <AlertTriangle style={{ width: 14, height: 14, flexShrink: 0 }} />
+                <span>{announceError}</span>
+              </div>
+            )}
+            {announceResult && (
+              <div
+                className={`dm-badge ${announceResult.errors.length ? 'dm-badge-warning' : 'dm-badge-success'}`}
+                style={{ width: '100%', padding: '0.6rem 0.9rem', whiteSpace: 'normal' }}
+              >
+                {announceResult.errors.length ? <AlertTriangle style={{ width: 14, height: 14, flexShrink: 0 }} /> : <Check style={{ width: 14, height: 14, flexShrink: 0 }} />}
+                <span>
+                  Sent to {announceResult.sent} owner{announceResult.sent === 1 ? '' : 's'}.
+                  {announceResult.errors.length > 0 && ` ${announceResult.errors.length} failed — check Resend's dashboard for details.`}
+                </span>
+              </div>
+            )}
+            <button type="submit" className="dm-btn dm-btn-primary" disabled={announceSending}>
+              <Send style={{ width: 14, height: 14 }} />
+              <span>{announceSending ? 'Sending…' : 'Send to every tenant owner'}</span>
+            </button>
+          </form>
+        </div>
+      )}
+
+      {activeTab === 'audit-log' && (
+        <div className="dm-card p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="dm-h3 flex items-center gap-1.5">
+              <History style={{ width: 15, height: 15 }} /> Platform admin audit log
+            </h3>
+            <button onClick={loadAuditLog} className="dm-icon-btn" title="Reload">
+              <RefreshCw className={auditLoading ? 'dm-spin' : ''} style={{ width: 15, height: 15 }} />
+            </button>
+          </div>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-low)', marginTop: -8 }}>
+            Grants/revokes, tenant billing or module edits, tenant deletions, and announcement sends — most recent 150.
+          </p>
+          {auditError && (
+            <div className="dm-badge dm-badge-danger" style={{ width: '100%', padding: '0.6rem 0.9rem', whiteSpace: 'normal' }}>
+              <AlertTriangle style={{ width: 14, height: 14, flexShrink: 0 }} />
+              <span>{auditError}</span>
+            </div>
+          )}
+          <DataTable
+            data={auditLog}
+            columns={auditColumns}
+            searchPlaceholder="Search by actor or tenant…"
+            filterFunction={(e, q) => (e.actor_email || '').toLowerCase().includes(q.toLowerCase()) || (e.target_org_name || '').toLowerCase().includes(q.toLowerCase())}
+            emptyMessage="No platform-admin actions recorded yet."
+            loading={auditLoading}
+          />
+        </div>
+      )}
 
       {/* Invite new person modal */}
       {isInviting && (
