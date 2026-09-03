@@ -36,8 +36,10 @@ export default function ImpersonationBanner({ isPlatformAdmin }: { isPlatformAdm
         // Expired server-side mid-session — current_org_ids() has already
         // stopped honoring it, so bounce out to a clean reload rather than
         // let the rest of the app keep querying data it can no longer see.
+        // Only touch the hash (not .href, which would race reload() —
+        // see handleViewAsTenant in TenantsAdmin.tsx for the same fix).
         clearOrganizationCache();
-        window.location.href = '/';
+        window.location.hash = '/tenants';
         window.location.reload();
         return;
       }
@@ -57,7 +59,7 @@ export default function ImpersonationBanner({ isPlatformAdmin }: { isPlatformAdm
       // Even if the call fails (e.g. it already expired), still leave locally.
     }
     clearOrganizationCache();
-    window.location.href = '/';
+    window.location.hash = '/tenants';
     window.location.reload();
   };
 
