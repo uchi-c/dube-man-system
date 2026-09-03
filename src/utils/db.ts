@@ -159,9 +159,9 @@ export const getSales = (): Sale[] => {
 };
 
 export const createSale = (
-  customerId: string | null, 
+  customerId: string | null,
   items: { product_id: string; quantity: number; unit_price: number }[],
-  paymentMethod: 'Cash' | 'Mobile Money' | 'Bank'
+  paymentMethod: 'Cash' | 'Mobile Money' | 'Bank' | 'Credit'
 ): Sale | string => {
   const products = getProducts();
   const sales = getSales();
@@ -205,6 +205,8 @@ export const createSale = (
     customer_name: targetCustomer ? targetCustomer.name : 'Walk-in Customer',
     total_amount: totalAmount,
     payment_method: paymentMethod,
+    amount_paid: paymentMethod === 'Credit' ? 0 : totalAmount,
+    payment_status: paymentMethod === 'Credit' ? 'unpaid' : 'paid',
     created_by: currentUser.id,
     created_at: new Date().toISOString(),
     items: saleItems

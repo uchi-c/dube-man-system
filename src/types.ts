@@ -172,15 +172,38 @@ export interface InventoryTransaction {
   created_at: string;
 }
 
+export type SalePaymentStatus = 'paid' | 'partial' | 'unpaid';
+
 export interface Sale {
   id: string;
   customer_id: string | null;
   customer_name?: string;
   total_amount: number;
-  payment_method: 'Cash' | 'Mobile Money' | 'Bank';
+  payment_method: 'Cash' | 'Mobile Money' | 'Bank' | 'Credit';
+  amount_paid: number;
+  payment_status: SalePaymentStatus;
   created_by: string;
   created_at: string;
   items: SaleItem[];
+}
+
+export interface DebtPayment {
+  id: string;
+  amount: number;
+  payment_method: 'Cash' | 'Mobile Money' | 'Bank';
+  note: string | null;
+  created_by_name: string | null;
+  created_at: string;
+}
+
+/** Per-customer rollup of unpaid/partial Credit sale balances (list_outstanding_debts()). */
+export interface OutstandingDebt {
+  customer_id: string;
+  customer_name: string;
+  customer_phone: string | null;
+  total_owed: number;
+  open_sale_count: number;
+  oldest_sale_at: string;
 }
 
 export interface SaleItem {
