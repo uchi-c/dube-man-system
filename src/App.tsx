@@ -29,6 +29,7 @@ const Pharmacy       = lazy(() => import('./pages/Pharmacy'));
 const PCAgentConsole = lazy(() => import('./components/PCAgentConsole'));
 const ActivityLogs   = lazy(() => import('./components/ActivityLogs'));
 const Team           = lazy(() => import('./pages/Team'));
+const SmartInvoice   = lazy(() => import('./pages/SmartInvoice'));
 const TenantsAdmin   = lazy(() => import('./pages/TenantsAdmin'));
 const PlatformFinance = lazy(() => import('./pages/PlatformFinance'));
 
@@ -41,7 +42,7 @@ const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 import {
   LayoutDashboard, Package, ShoppingCart, Printer, Monitor,
   Wifi, History, Users, Shield, LogOut, Menu, X,
-  RefreshCw, PrinterIcon, ChevronRight, Bell, Pill, UserPlus, Building2, Lock, LineChart,
+  RefreshCw, PrinterIcon, ChevronRight, Bell, Pill, UserPlus, Building2, Lock, LineChart, Receipt,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Analytics } from '@vercel/analytics/react';
@@ -79,6 +80,7 @@ const TABS: TabDef[] = [
   { id: 'pc-agent',      label: 'PC Agent Hub',     icon: Shield,          group: 'System',     path: '/pc-agent',      roles: ['ADMIN'] },
   { id: 'logs',          label: 'Security Logs',    icon: History,         group: 'System',     path: '/logs',          roles: ['ADMIN'] },
   { id: 'team',          label: 'Team',             icon: UserPlus,        group: 'System',     path: '/team',          roles: ['ADMIN'] },
+  { id: 'smart-invoice', label: 'Smart Invoice',   icon: Receipt,         group: 'System',     path: '/smart-invoice', roles: ['ADMIN'] },
   // Platform (platform admins only — see TabDef.platformOnly)
   { id: 'tenants',       label: 'Tenants',          icon: Building2,       group: 'Platform',   path: '/tenants',       roles: [], platformOnly: true },
   { id: 'finance',       label: 'Finance',          icon: LineChart,       group: 'Platform',   path: '/finance',       roles: [], platformOnly: true },
@@ -98,10 +100,10 @@ const GROUP_ORDER = ['Home','Operations','Printing','Connectivity','System','Pla
 // so any tab added later is included for 'general' automatically.
 const BUSINESS_TYPE_MODULES: Record<BusinessType, string[] | null> = {
   general:  TABS.map(t => t.id).filter(id => id !== 'pharmacy'),
-  pharmacy: ['dashboard', 'pos', 'inventory', 'customers', 'pharmacy', 'team'],
-  cafe:     ['dashboard', 'print-manager', 'printing', 'team'],
-  printing: ['dashboard', 'print-manager', 'printing', 'team'],
-  retail:   ['dashboard', 'pos', 'inventory', 'customers', 'team'],
+  pharmacy: ['dashboard', 'pos', 'inventory', 'customers', 'pharmacy', 'team', 'smart-invoice'],
+  cafe:     ['dashboard', 'print-manager', 'printing', 'team', 'smart-invoice'],
+  printing: ['dashboard', 'print-manager', 'printing', 'team', 'smart-invoice'],
+  retail:   ['dashboard', 'pos', 'inventory', 'customers', 'team', 'smart-invoice'],
 };
 
 // Role-based landing paths.
@@ -558,6 +560,7 @@ function renderPage(id: string, role: string, businessType: BusinessType) {
     case 'pc-agent':      return <PCAgentConsole userRole={role} />;
     case 'logs':          return <ActivityLogs userRole={role} />;
     case 'team':          return <Team />;
+    case 'smart-invoice': return <SmartInvoice />;
     case 'tenants':       return <TenantsAdmin />;
     case 'finance':       return <PlatformFinance />;
     default:              return null;
