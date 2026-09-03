@@ -32,6 +32,7 @@ const Team           = lazy(() => import('./pages/Team'));
 const SmartInvoice   = lazy(() => import('./pages/SmartInvoice'));
 const TenantsAdmin   = lazy(() => import('./pages/TenantsAdmin'));
 const PlatformFinance = lazy(() => import('./pages/PlatformFinance'));
+const PlatformAdmins = lazy(() => import('./pages/PlatformAdmins'));
 
 // Legal pages -- pre-auth but not needed for first paint in the common case
 // (only reached via a direct /privacy or /terms link, or the landing-page
@@ -42,7 +43,7 @@ const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 import {
   LayoutDashboard, Package, ShoppingCart, Printer, Monitor,
   Wifi, History, Users, Shield, LogOut, Menu, X,
-  RefreshCw, PrinterIcon, ChevronRight, Bell, Pill, UserPlus, Building2, Lock, LineChart, Receipt,
+  RefreshCw, PrinterIcon, ChevronRight, Bell, Pill, UserPlus, Building2, Lock, LineChart, Receipt, ShieldCheck,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Analytics } from '@vercel/analytics/react';
@@ -84,6 +85,7 @@ const TABS: TabDef[] = [
   // Platform (platform admins only — see TabDef.platformOnly)
   { id: 'tenants',       label: 'Tenants',          icon: Building2,       group: 'Platform',   path: '/tenants',       roles: [], platformOnly: true },
   { id: 'finance',       label: 'Finance',          icon: LineChart,       group: 'Platform',   path: '/finance',       roles: [], platformOnly: true },
+  { id: 'platform-admins', label: 'Platform Admins', icon: ShieldCheck,    group: 'Platform',   path: '/platform-admins', roles: [], platformOnly: true },
 ];
 
 const PATH_TO_TAB: Record<string, string> = Object.fromEntries(
@@ -563,6 +565,7 @@ function renderPage(id: string, role: string, businessType: BusinessType) {
     case 'smart-invoice': return <SmartInvoice />;
     case 'tenants':       return <TenantsAdmin />;
     case 'finance':       return <PlatformFinance />;
+    case 'platform-admins': return <PlatformAdmins />;
     default:              return null;
   }
 }

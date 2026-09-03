@@ -681,3 +681,43 @@ export async function fetchAllTenantPayments(limit = 50): Promise<PlatformPaymen
   if (error) throw error;
   return (data ?? []) as PlatformPayment[];
 }
+
+// ---------------------------------------------------------------------------
+// Platform admin management (migration 026) — who has cross-tenant access,
+// and granting/revoking/inviting it. Platform-admin-only, enforced server
+// side by every RPC/edge function below, not just by hiding the nav tab.
+// ---------------------------------------------------------------------------
+
+export interface PlatformAdmin {
+  id: string;
+  name: string;
+  email: string;
+  created_at: string;
+}
+
+export async function fetchPlatformAdmins(): Promise<PlatformAdmin[]> {
+  const { data, error } = await supabase.rpc('list_platform_admins');
+  if (error) throw error;
+  return (data ?? []) as PlatformAdmin[];
+}
+
+export async function findUserByEmail(email: string): Promise<{ id: string; name: string; email: string; is_platform_admin: boolean } | null> {
+  const { data, error } = await supabase.rpc('find_user_by_email', { p_email: email });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  return row ?? null;
+}
+
+export async function setPlatformAdmin(userId: string, isAdmin: boolean): Promise<void> {
+  const { error } = await supabase.rpc('set_platform_admin', { p_user_id: userId, p_is_admin: isAdmin });
+  if (error) throw error;
+}
+
+/** For someone with no existing Uruu OS account at all — creates their login and grants platform admin in one step. */
+export async function inviteNewPlatformAdmin(email: string, name?: string): Promise<{ email: string; tempPassword: string }> {
+  const { data, error } = await supabase.functions.invoke('admin-invite-platform-admin', { body: { email, name } });
+  if (error) throw new Error(await resolveEdgeFunctionError(error, "Couldn't create that account."));
+  if (data?.error) throw new Error(data.error);
+  if (!data?.tempPassword) throw new Error('Account creation did not return a temporary password.');
+  return { email: data.email, tempPassword: data.tempPassword };
+}
