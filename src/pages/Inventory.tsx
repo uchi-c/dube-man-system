@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatCurrency } from '../utils/format';
+import ExportButtons from '../components/ExportButtons';
 
 interface InventoryProps {
   userRole: string;
@@ -211,6 +212,23 @@ export default function Inventory({ userRole }: InventoryProps) {
           <p style={{ color: 'var(--text-mid)', fontSize: '0.875rem', marginTop: 4 }}>Track stock, suppliers and pricing. Low stock surfaces first.</p>
         </div>
         <div className="flex items-center gap-2">
+          <ExportButtons
+            filename="inventory"
+            title="Inventory"
+            subtitle={`${filteredProducts.length} item${filteredProducts.length === 1 ? '' : 's'}`}
+            columns={[
+              { header: 'Name', key: 'name', width: 28 },
+              { header: 'Category', key: 'category', width: 16 },
+              { header: 'Quantity', key: 'quantity', width: 12 },
+              { header: 'Buying Price', key: 'buying_price', width: 14 },
+              { header: 'Selling Price', key: 'selling_price', width: 14 },
+              { header: 'Supplier', key: 'supplier', width: 22 },
+            ]}
+            rows={filteredProducts.map(p => ({
+              name: p.name, category: p.category, quantity: p.quantity,
+              buying_price: p.buying_price, selling_price: p.selling_price, supplier: p.supplier,
+            }))}
+          />
           <button onClick={pullProductsFromDb} className="dm-icon-btn" title="Refresh catalog">
             <RefreshCw style={{ width: 16, height: 16 }} className={loading ? 'dm-spin' : ''} />
           </button>

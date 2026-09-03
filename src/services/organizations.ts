@@ -30,6 +30,17 @@ let cachedBusinessType: BusinessType | null = null;
  * 2. localStorage (survives refresh)
  * 3. The user's first organization membership (fetched from Supabase)
  */
+/** The current org's display name — for headers, receipts, exports. Falls back to empty string on any failure so it never blocks rendering. */
+export async function getCurrentOrganizationName(): Promise<string> {
+  try {
+    const orgId = await getCurrentOrganizationId();
+    const { data } = await supabase.from('organizations').select('name').eq('id', orgId).maybeSingle();
+    return data?.name ?? '';
+  } catch {
+    return '';
+  }
+}
+
 export async function getCurrentOrganizationId(): Promise<string> {
   if (cachedOrgId) return cachedOrgId;
 

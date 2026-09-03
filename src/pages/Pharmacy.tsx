@@ -16,6 +16,7 @@ import {
   MedicineDosageForm,
 } from '../types';
 import { formatCurrency } from '../utils/format';
+import ExportButtons from '../components/ExportButtons';
 
 interface PharmacyProps {
   userRole: string;
@@ -147,6 +148,30 @@ export default function Pharmacy({ userRole }: PharmacyProps) {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {activeTab === 'catalog' && (
+            <ExportButtons
+              filename="medicines"
+              title="Pharmacy Catalog"
+              subtitle={`${medicines.length} medicine${medicines.length === 1 ? '' : 's'}`}
+              columns={[
+                { header: 'Name', key: 'name', width: 26 },
+                { header: 'Generic Name', key: 'generic_name', width: 24 },
+                { header: 'Dosage Form', key: 'dosage_form', width: 14 },
+                { header: 'Strength', key: 'strength', width: 12 },
+                { header: 'Category', key: 'category', width: 18 },
+                { header: 'Stock', key: 'total_quantity', width: 10 },
+                { header: 'Buying Price', key: 'buying_price', width: 14 },
+                { header: 'Selling Price', key: 'selling_price', width: 14 },
+                { header: 'Rx Required', key: 'requires_prescription', width: 12 },
+              ]}
+              rows={medicines.map(m => ({
+                name: m.name, generic_name: m.generic_name || '', dosage_form: m.dosage_form,
+                strength: m.strength || '', category: m.category || '', total_quantity: m.total_quantity ?? 0,
+                buying_price: m.buying_price, selling_price: m.selling_price,
+                requires_prescription: m.requires_prescription ? 'Yes' : 'No',
+              }))}
+            />
+          )}
           <button onClick={loadAll} className="dm-icon-btn" title="Refresh">
             <RefreshCw style={{ width: 16, height: 16 }} className={loading ? 'dm-spin' : ''} />
           </button>
