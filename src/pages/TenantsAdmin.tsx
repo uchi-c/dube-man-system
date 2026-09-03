@@ -12,7 +12,7 @@ import {
   listTenantsBilling, createTenant, updateTenantBilling, deleteTenant,
   recordTenantPayment, listTenantPayments,
   getPlatformPaymentInstructions, updatePlatformPaymentInstructions,
-  updateTenantExtraModules,
+  updateTenantExtraModules, fetchTenantLastActive,
 } from '../services/organizations';
 import { BusinessType, SubscriptionStatus, TenantBilling, TenantPayment, BillingCycle } from '../types';
 
@@ -82,6 +82,17 @@ function daysUntilDue(t: TenantBilling): number | null {
   return Math.round(ms / (24 * 60 * 60 * 1000));
 }
 
+// Days since the most recent login across an org's members before it counts
+// as gone quiet — the one churn signal billing status alone can't show.
+const INACTIVE_DAYS = 14;
+
+function formatLastActive(iso: string | null | undefined): { label: string; stale: boolean } {
+  if (!iso) return { label: 'Never logged in', stale: true };
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / (24 * 60 * 60 * 1000));
+  const label = days <= 0 ? 'Today' : days === 1 ? 'Yesterday' : `${days}d ago`;
+  return { label, stale: days >= INACTIVE_DAYS };
+}
+
 function isOverdue(t: TenantBilling): boolean {
   if (t.subscription_status === 'cancelled') return false;
   const days = daysUntilDue(t);
@@ -129,6 +140,7 @@ function totalOutstandingLabel(tenants: TenantBilling[]): string {
 
 export default function TenantsAdmin() {
   const [tenants, setTenants] = useState<TenantBilling[]>([]);
+  const [lastActive, setLastActive] = useState<Record<string, string | null>>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
@@ -151,6 +163,11 @@ export default function TenantsAdmin() {
     setLoadError('');
     try {
       setTenants(await listTenantsBilling());
+      try {
+        setLastActive(await fetchTenantLastActive());
+      } catch {
+        // Non-critical — the "Last active" column just shows nothing.
+      }
     } catch (err: any) {
       setLoadError(err?.message || "Couldn't load tenants.");
     } finally {
@@ -186,6 +203,13 @@ export default function TenantsAdmin() {
 
   const pendingTenants = [...tenants.filter(hasPendingPayment)].sort((a, b) => severityRank(a) - severityRank(b));
   const activeCount = tenants.filter(t => t.subscription_status === 'active').length;
+
+  // Paid up and not otherwise flagged, but nobody's actually logged in for
+  // a while -- the churn signal billing status alone can't show.
+  const quietTenants = tenants.filter(t =>
+    (t.subscription_status === 'active' || t.subscription_status === 'trialing') &&
+    formatLastActive(lastActive[t.organization_id]).stale
+  );
 
   // ---- Add tenant ----
   const [isAdding, setIsAdding] = useState(false);
@@ -501,6 +525,13 @@ export default function TenantsAdmin() {
       ),
     },
     {
+      header: 'Last active',
+      accessor: (t: TenantBilling) => {
+        const { label, stale } = formatLastActive(lastActive[t.organization_id]);
+        return <span style={{ color: stale ? 'var(--warning)' : 'var(--text-mid)', fontWeight: stale ? 600 : 400 }}>{label}</span>;
+      },
+    },
+    {
       header: 'Owner',
       accessor: (t: TenantBilling) => <span className="dm-truncate" style={{ maxWidth: 220, display: 'inline-block', color: 'var(--text-mid)' }}>{t.admin_emails || '—'}</span>,
     },
@@ -586,6 +617,30 @@ export default function TenantsAdmin() {
                 <div className="min-w-0 flex-1 pr-3">
                   <div className="dm-truncate" style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-hi)' }}>{t.name}</div>
                   <div style={{ fontSize: '0.72rem', color: isOverdue(t) ? 'var(--danger)' : 'var(--warning)', fontWeight: 600 }}>{pendingPaymentNote(t)}</div>
+                </div>
+                <button onClick={() => openManage(t)} className="dm-btn dm-btn-ghost" style={{ minHeight: 32, padding: '0.3rem 0.7rem', fontSize: '0.75rem', flexShrink: 0 }}>
+                  Manage
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!loading && quietTenants.length > 0 && (
+        <div className="dm-card p-5 space-y-3">
+          <h3 className="flex items-center gap-1.5" style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-hi)' }}>
+            <HistoryIcon style={{ width: 15, height: 15, color: 'var(--warning)' }} /> Going quiet
+          </h3>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-low)', marginTop: -6 }}>
+            Paid up and not otherwise flagged, but nobody's signed in for a while — worth a check-in call.
+          </p>
+          <div className="space-y-2">
+            {quietTenants.map(t => (
+              <div key={t.organization_id} className="flex items-center justify-between py-2.5 px-3 rounded-xl" style={{ background: 'var(--panel-2)', border: '1px solid var(--panel-line)' }}>
+                <div className="min-w-0 flex-1 pr-3">
+                  <div className="dm-truncate" style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-hi)' }}>{t.name}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--warning)', fontWeight: 600 }}>{formatLastActive(lastActive[t.organization_id]).label} · {t.admin_emails || 'no owner email on file'}</div>
                 </div>
                 <button onClick={() => openManage(t)} className="dm-btn dm-btn-ghost" style={{ minHeight: 32, padding: '0.3rem 0.7rem', fontSize: '0.75rem', flexShrink: 0 }}>
                   Manage
