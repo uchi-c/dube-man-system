@@ -1,17 +1,39 @@
-import { useEffect, useState } from 'react';
-import { TrendingUp, Wallet, CalendarClock, Landmark, RefreshCw, AlertCircle, History, Building2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { TrendingUp, Wallet, CalendarClock, Landmark, RefreshCw, AlertCircle, History, Building2, Users } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import DashboardCard from '../components/DashboardCard';
 import DataTable from '../components/DataTable';
-import { fetchPlatformFinancialSummary, fetchAllTenantPayments } from '../services/organizations';
-import { PlatformFinancialSummary, PlatformPayment } from '../types';
+import {
+  fetchPlatformFinancialSummary, fetchAllTenantPayments,
+  fetchPlatformRevenueTrend, fetchPlatformSignupCohorts,
+} from '../services/organizations';
+import { PlatformFinancialSummary, PlatformPayment, PlatformRevenuePoint, PlatformSignupCohort } from '../types';
 
 function formatMoney(amount: number, currency: string): string {
   return `${currency} ${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+function monthLabel(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
+}
+
+function ChartTooltip({ active, payload, label, currency }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{ background: 'var(--panel)', border: '1px solid var(--panel-line-strong)', color: 'var(--text-hi)', borderRadius: 10, padding: '8px 12px', fontSize: 12, boxShadow: 'var(--shadow-card)' }}>
+      <div style={{ color: 'var(--text-low)', marginBottom: 4, fontSize: 11 }}>{label}</div>
+      <div className="dm-nums" style={{ fontWeight: 700, color: 'var(--blue-400)' }}>{formatMoney(payload[0].value, currency)}</div>
+    </div>
+  );
+}
+
+const TREND_MONTHS = 6;
+
 export default function PlatformFinance() {
   const [summary, setSummary] = useState<PlatformFinancialSummary[]>([]);
   const [payments, setPayments] = useState<PlatformPayment[]>([]);
+  const [revenueTrend, setRevenueTrend] = useState<PlatformRevenuePoint[]>([]);
+  const [cohorts, setCohorts] = useState<PlatformSignupCohort[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
@@ -19,12 +41,16 @@ export default function PlatformFinance() {
     setLoading(true);
     setLoadError('');
     try {
-      const [s, p] = await Promise.all([
+      const [s, p, trend, coh] = await Promise.all([
         fetchPlatformFinancialSummary(),
         fetchAllTenantPayments(50),
+        fetchPlatformRevenueTrend(TREND_MONTHS),
+        fetchPlatformSignupCohorts(TREND_MONTHS),
       ]);
       setSummary(s);
       setPayments(p);
+      setRevenueTrend(trend);
+      setCohorts(coh);
     } catch (err: any) {
       setLoadError(err?.message || "Couldn't load financial data.");
     } finally {
@@ -33,6 +59,41 @@ export default function PlatformFinance() {
   };
 
   useEffect(() => { load(); }, []);
+
+  // One trend series per currency — same "map over currencies" shape the
+  // stat cards above already use, since a platform with mixed-currency
+  // tenants can't sensibly sum revenue across currencies into one line.
+  const trendByCurrency = useMemo(() => {
+    const byCurrency = new Map<string, { month: string; amount: number }[]>();
+    for (const point of revenueTrend) {
+      if (!byCurrency.has(point.currency)) byCurrency.set(point.currency, []);
+      byCurrency.get(point.currency)!.push({ month: monthLabel(point.month), amount: point.collected });
+    }
+    return [...byCurrency.entries()];
+  }, [revenueTrend]);
+
+  const cohortColumns = [
+    {
+      header: 'Cohort',
+      accessor: (c: PlatformSignupCohort) => <strong style={{ color: 'var(--text-hi)', fontWeight: 600 }}>{monthLabel(c.cohort_month)}</strong>,
+    },
+    {
+      header: 'Signed up',
+      accessor: (c: PlatformSignupCohort) => <span className="dm-nums" style={{ color: 'var(--text-mid)' }}>{c.tenant_count}</span>,
+    },
+    {
+      header: 'Still active',
+      accessor: (c: PlatformSignupCohort) => (
+        <span className="dm-nums" style={{ color: c.active_count === c.tenant_count ? 'var(--success)' : 'var(--warning)', fontWeight: 600 }}>
+          {c.active_count} / {c.tenant_count}
+        </span>
+      ),
+    },
+    {
+      header: 'Current MRR',
+      accessor: (c: PlatformSignupCohort) => <strong className="dm-nums" style={{ color: 'var(--blue-400)' }}>{formatMoney(c.current_mrr, c.currency)}</strong>,
+    },
+  ];
 
   const columns = [
     {
@@ -141,6 +202,51 @@ export default function PlatformFinance() {
           ))}
         </div>
       )}
+
+      {!loading && trendByCurrency.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {trendByCurrency.map(([currency, points]) => (
+            <div key={currency} className="dm-card p-6">
+              <div className="mb-4">
+                <h2 className="dm-h2">Revenue trend</h2>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-low)', marginTop: 2 }}>{currency} collected per month, last {TREND_MONTHS} months</p>
+              </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <AreaChart data={points} margin={{ top: 4, right: 8, left: -12, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id={`revTrendGrad-${currency}`} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#4C6FFF" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#4C6FFF" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#8A93BE' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: '#8A93BE' }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<ChartTooltip currency={currency} />} cursor={{ stroke: 'rgba(255,255,255,0.12)' }} />
+                  <Area type="monotone" dataKey="amount" stroke="#4C6FFF" strokeWidth={2.5} fill={`url(#revTrendGrad-${currency})`} dot={false} activeDot={{ r: 5, strokeWidth: 0, fill: '#7DD3FC' }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="dm-card p-5">
+        <h3 className="dm-h3 flex items-center gap-1.5" style={{ marginBottom: 14 }}>
+          <Users style={{ width: 15, height: 15 }} /> Signup cohorts
+        </h3>
+        <p style={{ fontSize: '0.78rem', color: 'var(--text-mid)', marginTop: -8, marginBottom: 14 }}>
+          Tenants grouped by the month they signed up — how many are still active, and what they're worth today.
+        </p>
+        <DataTable
+          data={cohorts}
+          columns={cohortColumns}
+          searchPlaceholder="Search by month…"
+          filterFunction={(c, query) => monthLabel(c.cohort_month).toLowerCase().includes(query.toLowerCase())}
+          emptyMessage="No signups in the last few months yet."
+          loading={loading}
+        />
+      </div>
 
       <div className="dm-card p-5">
         <h3 className="dm-h3 flex items-center gap-1.5" style={{ marginBottom: 14 }}>

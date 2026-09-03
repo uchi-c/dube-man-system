@@ -112,6 +112,22 @@ export interface PlatformFinancialSummary {
   tenant_count: number;
 }
 
+/** One month's collected revenue for one currency — platform-admin only (see get_platform_revenue_trend()). */
+export interface PlatformRevenuePoint {
+  month: string;
+  currency: string;
+  collected: number;
+}
+
+/** Tenants that signed up in one calendar month, and where they stand now — platform-admin only (see get_platform_signup_cohorts()). */
+export interface PlatformSignupCohort {
+  cohort_month: string;
+  currency: string;
+  tenant_count: number;
+  active_count: number;
+  current_mrr: number;
+}
+
 /** One payment against any tenant, for the platform-wide feed — platform-admin only (see list_all_tenant_payments()). */
 export interface PlatformPayment {
   id: string;
