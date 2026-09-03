@@ -147,6 +147,20 @@ export interface Product {
   updated_at: string;
 }
 
+export interface SmartInvoiceSettings {
+  id: string;
+  environment: 'sandbox' | 'production';
+  tpin: string | null;
+  branch_id: string;
+  device_serial_no: string | null;
+  vsdc_base_url: string | null;
+  is_enabled: boolean;
+  is_initialized: boolean;
+  last_init_result: unknown;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface InventoryTransaction {
   id: string;
   product_id: string;
