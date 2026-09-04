@@ -179,6 +179,10 @@ Deno.serve(async (req: Request) => {
     });
     return json({ reply: result.text });
   } catch (e) {
+    // Logged server-side (not just returned in the response) so a real
+    // failure is actually diagnosable from Supabase's function logs rather
+    // than only visible to whoever was looking at the browser at the time.
+    console.error('ai-chat failed:', e instanceof Error ? (e.stack ?? e.message) : String(e));
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }
 });
