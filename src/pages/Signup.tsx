@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Building2, User as UserIcon, Mail, Lock, ArrowRight, Loader2, AlertCircle, MailCheck, Pill, Coffee, Printer, ShoppingBag, LayoutGrid, UsersRound, ShieldCheck, Shirt, Wrench } from 'lucide-react';
+import { Building2, User as UserIcon, Mail, Lock, ArrowRight, Loader2, AlertCircle, MailCheck, CheckCircle2, Pill, Coffee, Printer, ShoppingBag, LayoutGrid, UsersRound, ShieldCheck, Shirt, Wrench } from 'lucide-react';
 import { motion } from 'motion/react';
 import { isSupabaseConfigured, getAuthenticatedUser, signInWithGoogle } from '../services/supabase';
 import {
   signUpNewOrganization, getInviteInfo, acceptInviteSignup,
   stashPendingGoogleSignup, stashPendingInviteToken,
 } from '../services/organizations';
+import { checkEmailDomain, describeEmailDomainReason } from '../services/emailVerification';
 import TurnstileWidget, { isTurnstileEnabled } from '../components/TurnstileWidget';
 import { User, BusinessType, UserRole, BillingCycle } from '../types';
 
@@ -133,6 +134,28 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin, initialBusine
   const [inviteChecked, setInviteChecked] = useState(false);
   const isInviteMode = !!inviteToken;
 
+  // Domain-level email check (does the domain even accept mail — catches
+  // typos like "gmial.com" before an account is created) — skipped in
+  // invite mode since that email is pre-filled and already vetted by
+  // whoever sent the invite. Debounced so it doesn't fire on every
+  // keystroke; fails open (see checkEmailDomain) so a network hiccup here
+  // never blocks a real signup.
+  const [emailDomainStatus, setEmailDomainStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
+  const [emailDomainReason, setEmailDomainReason] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (isInviteMode) return;
+    const trimmed = email.trim();
+    if (!trimmed || !trimmed.includes('@')) { setEmailDomainStatus('idle'); return; }
+    setEmailDomainStatus('checking');
+    const timer = setTimeout(async () => {
+      const result = await checkEmailDomain(trimmed);
+      setEmailDomainStatus(result.valid ? 'valid' : 'invalid');
+      setEmailDomainReason(result.reason);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [email, isInviteMode]);
+
   useEffect(() => {
     if (!inviteToken) { setInviteChecked(true); return; }
     let cancelled = false;
@@ -156,6 +179,7 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin, initialBusine
     if (isInviteMode && !inviteInfo) { setError('This invite link is invalid or has expired. Ask your admin to send a new one.'); return; }
     if (!isInviteMode && !orgName.trim()) { setError('Enter your business or organization name.'); return; }
     if (!email.trim() || !password) { setError('Enter your email and a password.'); return; }
+    if (!isInviteMode && emailDomainStatus === 'invalid') { setError(describeEmailDomainReason(emailDomainReason)); return; }
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
     if (password !== confirmPassword) { setError("Passwords don't match."); return; }
     if (isTurnstileEnabled && !captchaToken) { setError('Please complete the verification challenge below.'); return; }
@@ -451,6 +475,21 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin, initialBusine
                         onFocus={onFocus} onBlur={onBlur}
                       />
                     </div>
+                    {!isInviteMode && emailDomainStatus === 'checking' && (
+                      <p className="flex items-center gap-1.5" style={{ fontSize: '0.72rem', color: 'var(--text-low)' }}>
+                        <Loader2 style={{ width: 12, height: 12 }} className="dm-spin" /> Checking that address…
+                      </p>
+                    )}
+                    {!isInviteMode && emailDomainStatus === 'invalid' && (
+                      <p className="flex items-center gap-1.5" style={{ fontSize: '0.72rem', color: 'var(--danger)' }}>
+                        <AlertCircle style={{ width: 12, height: 12 }} /> {describeEmailDomainReason(emailDomainReason)}
+                      </p>
+                    )}
+                    {!isInviteMode && emailDomainStatus === 'valid' && (
+                      <p className="flex items-center gap-1.5" style={{ fontSize: '0.72rem', color: 'var(--success)' }}>
+                        <CheckCircle2 style={{ width: 12, height: 12 }} /> Looks good
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
