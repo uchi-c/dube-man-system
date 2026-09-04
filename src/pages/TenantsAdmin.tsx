@@ -440,12 +440,15 @@ export default function TenantsAdmin() {
     try {
       await startTenantImpersonation(t.organization_id, 20);
       setActiveOrganizationId(t.organization_id);
-      // Only the hash changes here (no navigation to race reload() against —
-      // assigning .href instead raced the two, and reload() usually won,
-      // leaving stale businessType/extraModules/hasOrg from the old org and
-      // producing a spurious "Access restricted"). Landing straight on
-      // /dashboard also skips an extra client-side redirect hop.
-      window.location.hash = '/dashboard';
+      // Only the URL bar changes here (no navigation to race reload()
+      // against — assigning .href instead raced the two, and reload()
+      // usually won, leaving stale businessType/extraModules/hasOrg from
+      // the old org and producing a spurious "Access restricted"). Landing
+      // straight on /dashboard also skips an extra client-side redirect
+      // hop. history.replaceState is BrowserRouter's equivalent of the old
+      // HashRouter-era "assign the hash" trick -- it changes the address
+      // bar without triggering a page load, then reload() does that once.
+      window.history.replaceState(null, '', '/dashboard');
       window.location.reload();
     } catch (err: any) {
       setImpersonateError(err?.message || "Couldn't start viewing that tenant.");

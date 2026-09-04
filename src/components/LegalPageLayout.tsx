@@ -13,7 +13,7 @@ interface LegalPageLayoutProps {
  * link, "last updated" stamp, and prose styling for the actual document
  * body. Both pages are reachable pre-auth (see App.tsx's authView, seeded
  * from location.pathname === '/privacy' | '/terms') so a visitor can open
- * /#/privacy or /#/terms directly, e.g. from a shared link, without signing
+ * /privacy or /terms directly, e.g. from a shared link, without signing
  * in first.
  */
 export default function LegalPageLayout({ title, lastUpdated, onBack, children }: LegalPageLayoutProps) {

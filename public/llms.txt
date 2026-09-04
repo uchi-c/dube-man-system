@@ -6,4 +6,7 @@ Uruu OS is a multi-tenant SaaS product. Each business (tenant) gets its own work
 
 ## Pages
 
-- [Uruu OS](https://uruu.enterprises/): product overview, feature breakdown by business type, pricing, and links to start a free trial or sign in.
+- [Homepage](https://uruu.enterprises/): product overview, feature breakdown by business type, and pricing.
+- [Start a free trial](https://uruu.enterprises/signup): self-service signup.
+- [Privacy Policy](https://uruu.enterprises/privacy)
+- [Terms of Service](https://uruu.enterprises/terms)

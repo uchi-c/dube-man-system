@@ -569,9 +569,9 @@ export default function Signup({ onSignupSuccess, onSwitchToLogin, initialBusine
 
               <p style={{ textAlign: 'center', fontSize: '0.72rem', color: 'var(--text-low)', lineHeight: 1.6 }}>
                 By continuing, you agree to Uruu OS's{' '}
-                <a href="/#/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-mid)', textDecoration: 'underline' }}>Terms of Service</a>{' '}
+                <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-mid)', textDecoration: 'underline' }}>Terms of Service</a>{' '}
                 and{' '}
-                <a href="/#/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-mid)', textDecoration: 'underline' }}>Privacy Policy</a>.
+                <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-mid)', textDecoration: 'underline' }}>Privacy Policy</a>.
               </p>
 
               <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-low)' }}>
