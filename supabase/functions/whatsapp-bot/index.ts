@@ -41,6 +41,7 @@ Deno.serve(async (req: Request) => {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (e) {
+    console.error('whatsapp-bot failed:', e instanceof Error ? (e.stack ?? e.message) : String(e));
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }), { status: 500 });
   }
 });

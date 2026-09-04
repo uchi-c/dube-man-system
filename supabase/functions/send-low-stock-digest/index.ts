@@ -70,6 +70,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: rows, error } = await admin.rpc('get_pending_low_stock_digests');
   if (error) {
+    console.error('send-low-stock-digest: get_pending_low_stock_digests failed:', error.message);
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 
@@ -96,7 +97,9 @@ Deno.serve(async (req: Request) => {
       });
 
       if (!res.ok) {
-        errors.push(`${row.org_id}: Resend ${res.status} ${await res.text()}`);
+        const msg = `${row.org_id}: Resend ${res.status} ${await res.text()}`;
+        console.error('send-low-stock-digest row failed:', msg);
+        errors.push(msg);
         continue;
       }
 
@@ -108,7 +111,9 @@ Deno.serve(async (req: Request) => {
 
       sent += 1;
     } catch (e) {
-      errors.push(`${row.org_id}: ${e instanceof Error ? e.message : String(e)}`);
+      const msg = `${row.org_id}: ${e instanceof Error ? e.message : String(e)}`;
+      console.error('send-low-stock-digest row failed:', msg);
+      errors.push(msg);
     }
   }
 

@@ -85,6 +85,7 @@ Deno.serve(async (req: Request) => {
 
   const { data: rows, error } = await admin.rpc('get_pending_billing_emails');
   if (error) {
+    console.error('send-billing-emails: get_pending_billing_emails failed:', error.message);
     return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 
@@ -112,7 +113,9 @@ Deno.serve(async (req: Request) => {
       });
 
       if (!res.ok) {
-        errors.push(`${row.kind}/${row.org_id}: Resend ${res.status} ${await res.text()}`);
+        const msg = `${row.kind}/${row.org_id}: Resend ${res.status} ${await res.text()}`;
+        console.error('send-billing-emails row failed:', msg);
+        errors.push(msg);
         continue;
       }
 
@@ -128,7 +131,12 @@ Deno.serve(async (req: Request) => {
 
       sent += 1;
     } catch (e) {
-      errors.push(`${row.kind}/${row.org_id}: ${e instanceof Error ? e.message : String(e)}`);
+      const msg = `${row.kind}/${row.org_id}: ${e instanceof Error ? e.message : String(e)}`;
+      // This runs on an hourly cron tick with nobody reading the response
+      // body -- console.error is the only way a per-row failure is ever
+      // actually seen.
+      console.error('send-billing-emails row failed:', msg);
+      errors.push(msg);
     }
   }
 

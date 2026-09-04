@@ -99,12 +99,16 @@ Deno.serve(async (req: Request) => {
         }),
       });
       if (!res.ok) {
-        errors.push(`${row.org_id}: Resend ${res.status} ${await res.text()}`);
+        const msg = `${row.org_id}: Resend ${res.status} ${await res.text()}`;
+        console.error('send-platform-announcement row failed:', msg);
+        errors.push(msg);
         continue;
       }
       sent += 1;
     } catch (e) {
-      errors.push(`${row.org_id}: ${e instanceof Error ? e.message : String(e)}`);
+      const msg = `${row.org_id}: ${e instanceof Error ? e.message : String(e)}`;
+      console.error('send-platform-announcement row failed:', msg);
+      errors.push(msg);
     }
   }
 
