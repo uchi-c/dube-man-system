@@ -5,6 +5,7 @@ import { initializeStore } from './utils/db';
 import { getAuthenticatedUser, logoutUser, supabase } from './services/supabase';
 import { getCurrentOrganizationBusinessType, getCurrentOrganizationExtraModules, getCurrentOrganizationCurrency, fetchUserOrganizations, getCurrentOrganizationId, isOrgLocked, getPlatformPaymentInstructions, resolveEffectiveUser } from './services/organizations';
 import { setCurrency } from './utils/format';
+import { setPageMeta } from './utils/pageMeta';
 import ErrorBoundary from './components/ErrorBoundary';
 import InstallAppButton from './components/InstallAppButton';
 import ImpersonationBanner from './components/ImpersonationBanner';
@@ -687,6 +688,28 @@ export default function App() {
     if (new URLSearchParams(location.search).get('invite')) setAuthView('signup');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authenticated, location.pathname, location.search]);
+
+  // Distinct <title>/meta description per public view -- see pageMeta.ts's
+  // header comment for why this was needed at all. Only covers the
+  // unauthenticated views; everything past login is disallowed in
+  // robots.txt anyway, so it isn't worth a title per app tab.
+  useEffect(() => {
+    if (authenticated) return;
+    if (authView === 'privacy') {
+      setPageMeta('Privacy Policy - Uruu OS', 'How Uruu OS collects, uses, and protects your business and customer data.');
+    } else if (authView === 'terms') {
+      setPageMeta('Terms of Service - Uruu OS', 'The terms governing use of the Uruu OS business management platform.');
+    } else if (authView === 'signup') {
+      setPageMeta('Start Your Free Trial - Uruu OS', 'Create your Uruu OS account and start a free 7-day trial — no credit card required.');
+    } else if (authView === 'login') {
+      setPageMeta('Sign In - Uruu OS', 'Sign in to your Uruu OS account.');
+    } else {
+      setPageMeta(
+        'Uruu OS - Business Management Platform for Pharmacies, Retail, Cafés & Print Shops',
+        'Uruu OS is an all-in-one business management platform: point of sale, inventory, pharmacy dispensing, café & WiFi sessions, and printing orders. Start a free 7-day trial.'
+      );
+    }
+  }, [authenticated, authView]);
 
   // The URL is the source of truth; derive the active tab from the path.
   const activeTab = PATH_TO_TAB[location.pathname] ?? '';

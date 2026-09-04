@@ -34,10 +34,10 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
         <div className="flex flex-col items-center gap-3">
           <img src="/logo-mark.png" alt="Uruu OS" style={{ width: 56, height: 56, objectFit: 'contain' }} />
           <div>
-            <div style={{ color: 'var(--text-hi)', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '22px', letterSpacing: '-0.02em' }}>
+            <h1 style={{ margin: 0, color: 'var(--text-hi)', fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '22px', letterSpacing: '-0.02em' }}>
               Uruu OS
-            </div>
-            <div className="dm-label" style={{ padding: 0, marginTop: 2 }}>Run your business on one platform</div>
+            </h1>
+            <p className="dm-label" style={{ padding: 0, margin: 0, marginTop: 2 }}>Run your business on one platform</p>
           </div>
         </div>
 
