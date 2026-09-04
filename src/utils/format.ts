@@ -5,11 +5,19 @@
    ============================================================ */
 
 /**
- * Currency symbol/code shown before monetary amounts.
- * Change this ONE value to re-label money across the whole app
- * (e.g. 'MWK' or 'K' for Malawian Kwacha, 'ZMW' for Zambian Kwacha).
+ * Currency symbol/code shown before monetary amounts. Defaults to 'ZMW'
+ * and is switched to the active organization's own choice by
+ * setCurrency() (see services/organizations.ts's getCurrentOrganization
+ * Currency, called from App.tsx on session restore/login) — a plain `let`
+ * rather than a `const` so every existing `import { CURRENCY }` site picks
+ * up the change automatically via ES modules' live bindings.
  */
-export const CURRENCY = 'ZMW';
+export let CURRENCY = 'ZMW';
+
+/** Sets the app-wide currency label. Falls back to 'ZMW' for anything but the two currencies tenants can choose. */
+export function setCurrency(currency: string): void {
+  CURRENCY = currency === 'USD' ? 'USD' : 'ZMW';
+}
 
 /**
  * Format a monetary amount with the shared currency label and

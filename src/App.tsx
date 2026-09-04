@@ -3,7 +3,8 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import { User, UserRole, BusinessType, BillingCycle } from './types';
 import { initializeStore } from './utils/db';
 import { getAuthenticatedUser, logoutUser, supabase } from './services/supabase';
-import { getCurrentOrganizationBusinessType, getCurrentOrganizationExtraModules, fetchUserOrganizations, getCurrentOrganizationId, isOrgLocked, getPlatformPaymentInstructions, resolveEffectiveUser } from './services/organizations';
+import { getCurrentOrganizationBusinessType, getCurrentOrganizationExtraModules, getCurrentOrganizationCurrency, fetchUserOrganizations, getCurrentOrganizationId, isOrgLocked, getPlatformPaymentInstructions, resolveEffectiveUser } from './services/organizations';
+import { setCurrency } from './utils/format';
 import ErrorBoundary from './components/ErrorBoundary';
 import InstallAppButton from './components/InstallAppButton';
 import ImpersonationBanner from './components/ImpersonationBanner';
@@ -703,6 +704,7 @@ export default function App() {
         setMustChangePassword(!!u.must_change_password);
         getCurrentOrganizationBusinessType().then(bt => { if (!cancelled) setBusinessType(bt); });
         getCurrentOrganizationExtraModules().then(mods => { if (!cancelled) setExtraModules(mods); });
+        getCurrentOrganizationCurrency().then(cur => { if (!cancelled) setCurrency(cur); });
         fetchUserOrganizations().then(orgs => { if (!cancelled) setHasOrg(orgs.length > 0); });
         if (!u.is_platform_admin) {
           getCurrentOrganizationId()
@@ -739,9 +741,10 @@ export default function App() {
     setChecking(false);
     setMustChangePassword(!!u.must_change_password);
     setOrgLocked(false);
-    Promise.all([getCurrentOrganizationBusinessType(), getCurrentOrganizationExtraModules(), fetchUserOrganizations()]).then(([bt, mods, orgs]) => {
+    Promise.all([getCurrentOrganizationBusinessType(), getCurrentOrganizationExtraModules(), getCurrentOrganizationCurrency(), fetchUserOrganizations()]).then(([bt, mods, cur, orgs]) => {
       setBusinessType(bt);
       setExtraModules(mods);
+      setCurrency(cur);
       const orgMembership = orgs.length > 0;
       setHasOrg(orgMembership);
       navigate(defaultPathFor(u.role, bt, orgMembership, !!u.is_platform_admin, mods), { replace: true });
@@ -773,6 +776,7 @@ export default function App() {
     setAuthenticated(false);
     setBusinessType('general');
     setExtraModules([]);
+    setCurrency('ZMW');
     setHasOrg(true);
     setOrgLocked(false);
     setMustChangePassword(false);
