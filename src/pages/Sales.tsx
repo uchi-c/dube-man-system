@@ -655,7 +655,7 @@ export default function Sales({ userRole }: SalesPageProps) {
                     <p className="flex items-center gap-1.5" style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-hi)' }}>
                       <Smartphone style={{ width: 14, height: 14 }} /> Send a payment request to their phone?
                     </p>
-                    <div className="flex items-center gap-2">
+                    <div className="space-y-2">
                       <input
                         type="tel"
                         className="dm-input"
@@ -663,28 +663,30 @@ export default function Sales({ userRole }: SalesPageProps) {
                         value={pushPhone}
                         onChange={e => setPushPhone(e.target.value)}
                         disabled={pushState === 'sending'}
-                        style={{ fontSize: '0.8rem', flex: 1 }}
+                        style={{ fontSize: '0.8rem', width: '100%' }}
                       />
-                      <select
-                        className="dm-select"
-                        value={pushNetwork}
-                        onChange={e => setPushNetwork(e.target.value as MobileMoneyNetwork)}
-                        disabled={pushState === 'sending'}
-                        style={{ fontSize: '0.8rem', minHeight: 38 }}
-                      >
-                        <option value="MTN">MTN</option>
-                        <option value="AIRTEL">Airtel</option>
-                        <option value="ZAMTEL">Zamtel</option>
-                      </select>
-                      <button
-                        type="button"
-                        onClick={handleSendPushCharge}
-                        disabled={pushState === 'sending' || !pushPhone.trim()}
-                        className="dm-btn dm-btn-primary"
-                        style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}
-                      >
-                        {pushState === 'sending' ? 'Sending…' : 'Send request'}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <select
+                          className="dm-select"
+                          value={pushNetwork}
+                          onChange={e => setPushNetwork(e.target.value as MobileMoneyNetwork)}
+                          disabled={pushState === 'sending'}
+                          style={{ fontSize: '0.8rem', flex: 1 }}
+                        >
+                          <option value="MTN">MTN</option>
+                          <option value="AIRTEL">Airtel</option>
+                          <option value="ZAMTEL">Zamtel</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={handleSendPushCharge}
+                          disabled={pushState === 'sending' || !pushPhone.trim()}
+                          className="dm-btn dm-btn-primary"
+                          style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                        >
+                          {pushState === 'sending' ? 'Sending…' : 'Send request'}
+                        </button>
+                      </div>
                     </div>
                     {pushError && <p style={{ fontSize: '0.72rem', color: 'var(--danger)' }}>{pushError}</p>}
                   </div>
