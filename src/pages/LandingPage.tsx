@@ -1,5 +1,6 @@
 import { ArrowRight, ShieldCheck, MessageCircle } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
 import InstallAppButton from '../components/InstallAppButton';
 import ProductPreview from '../components/ProductPreview';
 import PricingSection from '../components/PricingSection';
@@ -19,6 +20,18 @@ interface LandingPageProps {
  * trial -- see create_tenant_org) or "Sign in" for existing customers/staff.
  */
 export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps) {
+  const navigate = useNavigate();
+  // Real href (crawlable, right-click/open-in-new-tab-able) plus client-side
+  // navigation on a plain left-click, so visiting Privacy/Terms from the
+  // footer doesn't cost a full page reload -- it's still App.tsx's own
+  // authView effect (keyed on location.pathname) that actually renders the
+  // right view once the URL changes.
+  const openLegal = (path: '/privacy' | '/terms') => (e: React.MouseEvent) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    navigate(path);
+  };
+
   return (
     <div className="dm-app-bg dm-glow min-h-screen flex flex-col items-center p-6" style={{ fontFamily: "'Inter',sans-serif" }} id="landing-page">
       <div className="dm-glow-orb" style={{ top: '12%', right: '-6%', width: 320, height: 320, background: 'rgba(76,111,255,0.24)' }} />
@@ -85,9 +98,9 @@ export default function LandingPage({ onSignIn, onGetStarted }: LandingPageProps
 
       <footer className="relative z-10 flex flex-col items-center gap-2" style={{ marginTop: 'auto', paddingTop: '1rem', paddingBottom: '0.5rem' }}>
         <div className="flex items-center gap-4" style={{ fontSize: '0.75rem' }}>
-          <a href="/#/privacy" style={{ color: 'var(--text-low)' }}>Privacy Policy</a>
+          <a href="/privacy" onClick={openLegal('/privacy')} style={{ color: 'var(--text-low)' }}>Privacy Policy</a>
           <span style={{ color: 'var(--panel-line)' }}>·</span>
-          <a href="/#/terms" style={{ color: 'var(--text-low)' }}>Terms of Service</a>
+          <a href="/terms" onClick={openLegal('/terms')} style={{ color: 'var(--text-low)' }}>Terms of Service</a>
         </div>
         <p style={{ color: 'var(--text-low)', fontSize: '0.72rem' }}>&copy; {new Date().getFullYear()} Shadow Root Security Technologies</p>
       </footer>

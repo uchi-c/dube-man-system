@@ -654,11 +654,11 @@ export default function App() {
   // Reported live: an invite link opened by someone not already signed in
   // just showed the sign-in screen, silently dropping the ?invite= token.
   // Root cause -- authView always defaulted to 'login' with no regard for
-  // the URL, so a fresh, unauthenticated page load at #/signup?invite=...
+  // the URL, so a fresh, unauthenticated page load at /signup?invite=...
   // never rendered Signup at all. Deriving the initial view from the URL
   // (evaluated once, at mount, which is exactly when a link like this is
   // opened) fixes the common case; the effect below also catches an invite
-  // link reached via in-app hash navigation without a full reload.
+  // link reached via in-app client-side navigation without a full reload.
   //
   // 'landing' is the default for everyone else -- it pitches the product
   // and shows a scrollable preview + pricing before "Get started" leads
@@ -696,17 +696,18 @@ export default function App() {
   useEffect(() => {
     if (authenticated) return;
     if (authView === 'privacy') {
-      setPageMeta('Privacy Policy - Uruu OS', 'How Uruu OS collects, uses, and protects your business and customer data.');
+      setPageMeta('Privacy Policy - Uruu OS', 'How Uruu OS collects, uses, and protects your business and customer data.', '/privacy');
     } else if (authView === 'terms') {
-      setPageMeta('Terms of Service - Uruu OS', 'The terms governing use of the Uruu OS business management platform.');
+      setPageMeta('Terms of Service - Uruu OS', 'The terms governing use of the Uruu OS business management platform.', '/terms');
     } else if (authView === 'signup') {
-      setPageMeta('Start Your Free Trial - Uruu OS', 'Create your Uruu OS account and start a free 7-day trial — no credit card required.');
+      setPageMeta('Start Your Free Trial - Uruu OS', 'Create your Uruu OS account and start a free 7-day trial — no credit card required.', '/signup');
     } else if (authView === 'login') {
-      setPageMeta('Sign In - Uruu OS', 'Sign in to your Uruu OS account.');
+      setPageMeta('Sign In - Uruu OS', 'Sign in to your Uruu OS account.', '/login');
     } else {
       setPageMeta(
         'Uruu OS - Business Management Platform for Pharmacies, Retail, Cafés & Print Shops',
-        'Uruu OS is an all-in-one business management platform: point of sale, inventory, pharmacy dispensing, café & WiFi sessions, and printing orders. Start a free 7-day trial.'
+        'Uruu OS is an all-in-one business management platform: point of sale, inventory, pharmacy dispensing, café & WiFi sessions, and printing orders. Start a free 7-day trial.',
+        '/'
       );
     }
   }, [authenticated, authView]);

@@ -312,7 +312,10 @@ export async function signUpNewOrganization(
 /**
  * Admin-only: invite a teammate into the caller's own organization with a
  * chosen role. Returns the shareable token — the caller builds the actual
- * link (e.g. `${origin}/#/signup?invite=${token}`).
+ * link (e.g. `${origin}/signup?invite=${token}`). Not currently wired to
+ * any UI -- Team.tsx uses adminInviteUserWithTempPassword() instead (see
+ * that edge function's header comment for why the link-based flow was
+ * dropped); this stays available for a future link-based path.
  */
 export async function createInvite(
   email: string,
