@@ -20,14 +20,14 @@
 // Flutterwave recognized -- not just a wrong field. The General Flow below
 // is the one Flutterwave's docs actually specify field-by-field: three
 // calls (create customer -> create payment method -> create charge), each
-// with a real documented request/response shape. Two concrete bugs in the
-// old guess this fixes:
-//   1. Wrong endpoint entirely (/orchestration/direct-charges vs the real
-//      /customers, /payment-methods, /charges).
-//   2. Phone numbers were sent with their local leading "0" still on
-//      (e.g. "0979501830") -- the docs' own example pairs country_code
-//      "233" with number "9012345678", no leading 0. stripLeadingZero()
-//      below fixes this.
+// with a real documented request/response shape.
+//
+// Two more real bugs found from live charge attempts against this rewrite
+// (see normalizeLocalPhoneNumber() and the reference comment below for
+// each fix): phone numbers typed with a "+260"/"260" prefix or spaces
+// weren't normalized to Flutterwave's expected bare local number, and the
+// charge `reference` (sale UUID + timestamp) exceeded Flutterwave's
+// 42-character limit.
 // ============================================================================
 //
 // Required Supabase Edge Function secrets:
@@ -86,10 +86,19 @@ async function getAccessToken(): Promise<string> {
 }
 
 // Flutterwave's mobile_money.phone_number pairs with country_code and
-// expects no leading "0" (docs example: country_code "233" + number
-// "9012345678", not "09012345678").
-function stripLeadingZero(localNumber: string): string {
-  return localNumber.replace(/^0+/, '');
+// expects the bare local subscriber number: no leading "0" (docs example:
+// country_code "233" + number "9012345678", not "09012345678"), and no
+// spaces/dashes/"+"/repeated country code. A real charge attempt with the
+// old strip-leading-zero-only version got "phone.number must be a valid 7
+// to 10 digit phone number" -- almost certainly because a cashier can type
+// a number as "+260977123456" or "260 977 123456" just as easily as
+// "0977123456", and only the last of those was ever handled. This strips
+// everything but digits, then drops a leading country code if the cashier
+// included it, then drops a leading local "0".
+function normalizeLocalPhoneNumber(raw: string): string {
+  let digits = raw.replace(/\D/g, '');
+  if (digits.startsWith('260')) digits = digits.slice(3);
+  return digits.replace(/^0+/, '');
 }
 
 function splitName(fullName: string): { first: string; last: string } {
@@ -100,7 +109,7 @@ function splitName(fullName: string): { first: string; last: string } {
 }
 
 class FlutterwaveApiError extends Error {
-  constructor(public step: string, public status: number, public body: unknown) {
+  constructor(public step: string, public status: number, public sent: unknown, public body: unknown) {
     super(`Flutterwave ${step} failed (${status}): ${JSON.stringify(body)}`);
   }
 }
@@ -117,7 +126,7 @@ async function flutterwavePost(token: string, path: string, body: unknown, step:
     body: JSON.stringify(body),
   });
   const responseBody = await res.json().catch(() => ({}));
-  if (!res.ok) throw new FlutterwaveApiError(step, res.status, responseBody);
+  if (!res.ok) throw new FlutterwaveApiError(step, res.status, body, responseBody);
   return responseBody?.data ?? responseBody;
 }
 
@@ -177,8 +186,13 @@ Deno.serve(async (req: Request) => {
     if (customer?.email) customerEmail = customer.email;
   }
 
-  const reference = `sale-${sale_id}-${Date.now()}`;
-  const localPhoneNumber = stripLeadingZero(phone_number);
+  // Flutterwave rejects references over 42 chars -- a real attempt with
+  // "sale-<uuid>-<ms timestamp>" (~55 chars) came back "reference: size
+  // must be between 6 and 42". The first 8 hex chars of the sale's own
+  // UUID plus a base36 timestamp is short (under 20 chars), unique enough
+  // for this purpose, and still traceable back to the sale by eye.
+  const reference = `sale-${sale_id.slice(0, 8)}-${Date.now().toString(36)}`;
+  const localPhoneNumber = normalizeLocalPhoneNumber(phone_number);
   const { first, last } = splitName(customerName);
 
   try {
@@ -231,11 +245,11 @@ Deno.serve(async (req: Request) => {
     return json({ status: 'pending', reference, flutterwave: charge });
   } catch (e) {
     if (e instanceof FlutterwaveApiError) {
-      // Logged server-side with which step failed and exactly what
-      // Flutterwave rejected -- the fastest way to diagnose a future
-      // schema mismatch is comparing this against Flutterwave's own docs,
-      // not guessing again.
-      console.error(`Flutterwave charge rejected at "${e.step}":`, e.status, JSON.stringify(e.body));
+      // Logged server-side with which step failed, exactly what we sent,
+      // and exactly what Flutterwave rejected -- the fastest way to
+      // diagnose a future schema mismatch is comparing sent vs. received
+      // against Flutterwave's own docs, not guessing again.
+      console.error(`Flutterwave charge rejected at "${e.step}":`, e.status, 'sent:', JSON.stringify(e.sent), 'received:', JSON.stringify(e.body));
       return json({ error: `Flutterwave declined the charge (${e.step}, ${e.status}): ${JSON.stringify(e.body)}` }, 502);
     }
     console.error('flutterwave-charge failed:', e instanceof Error ? (e.stack ?? e.message) : String(e));
