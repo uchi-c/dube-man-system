@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { User, UserRole, OrganizationInvite } from '../types';
+import { User, UserRole, OrganizationInvite, BusinessType } from '../types';
 import { fetchAllUsers, updateUserRole, removeStaffMember } from '../services/supabase';
 import {
   adminInviteUserWithTempPassword, fetchInvites, revokeInvite,
   getCurrentOrganizationCurrency, updateOrganizationCurrency,
   getCurrentOrganizationExtraModules, updateOwnPcAgentModule,
+  getCurrentOrganizationBusinessType,
 } from '../services/organizations';
 import { setCurrency as setActiveCurrency } from '../utils/format';
 import {
@@ -51,17 +52,24 @@ export default function Team() {
   const [pcAgentEnabled, setPcAgentEnabled] = useState(false);
   const [savingPcAgent, setSavingPcAgent] = useState(false);
   const [pcAgentError, setPcAgentError] = useState('');
+  // PC Agent Hub is bundled in automatically for 'general' and 'cafe' business
+  // types (see App.tsx's BUSINESS_TYPE_MODULES) -- for those the toggle below
+  // would be misleading (it can't actually turn a business-type default off),
+  // so it only renders for business types where it's a real opt-in.
+  const [businessType, setBusinessType] = useState<BusinessType>('general');
+  const showPcAgentToggle = businessType !== 'general' && businessType !== 'cafe';
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [users, pendingInvites, cur, mods] = await Promise.all([
-        fetchAllUsers(), fetchInvites(), getCurrentOrganizationCurrency(), getCurrentOrganizationExtraModules(),
+      const [users, pendingInvites, cur, mods, bt] = await Promise.all([
+        fetchAllUsers(), fetchInvites(), getCurrentOrganizationCurrency(), getCurrentOrganizationExtraModules(), getCurrentOrganizationBusinessType(),
       ]);
       setMembers(users);
       setInvites(pendingInvites);
       setCurrency(cur);
       setPcAgentEnabled(mods.includes('pc-agent'));
+      setBusinessType(bt);
     } catch (err) {
       console.error('Error loading team:', err);
     } finally {
@@ -271,34 +279,37 @@ export default function Team() {
         )}
       </div>
 
-      {/* PC Agent Hub — the one module left as a tenant opt-in; WiFi and Internet Café
-          management are always on for every tenant now. */}
-      <div className="dm-card p-4">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-2.5">
-            <Monitor style={{ width: 18, height: 18, color: 'var(--text-mid)' }} />
-            <div>
-              <h3 className="dm-h2" style={{ marginBottom: 2 }}>PC Agent Hub</h3>
-              <p style={{ color: 'var(--text-mid)', fontSize: '0.78rem' }}>
-                Remote PC monitoring &amp; session time-billing — turn on only if you use it.
-              </p>
+      {/* PC Agent Hub — a tenant opt-in for business types where it isn't already
+          bundled in (see showPcAgentToggle). WiFi and Internet Café management
+          are always on for every tenant now, so there's nothing to toggle there. */}
+      {showPcAgentToggle && (
+        <div className="dm-card p-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2.5">
+              <Monitor style={{ width: 18, height: 18, color: 'var(--text-mid)' }} />
+              <div>
+                <h3 className="dm-h2" style={{ marginBottom: 2 }}>PC Agent Hub</h3>
+                <p style={{ color: 'var(--text-mid)', fontSize: '0.78rem' }}>
+                  Remote PC monitoring &amp; session time-billing — turn on only if you use it.
+                </p>
+              </div>
             </div>
+            <button
+              onClick={handlePcAgentToggle}
+              disabled={savingPcAgent}
+              className={pcAgentEnabled ? 'dm-btn dm-btn-primary' : 'dm-btn'}
+              style={{ minWidth: 88 }}
+            >
+              {savingPcAgent ? 'Saving…' : pcAgentEnabled ? 'On' : 'Off'}
+            </button>
           </div>
-          <button
-            onClick={handlePcAgentToggle}
-            disabled={savingPcAgent}
-            className={pcAgentEnabled ? 'dm-btn dm-btn-primary' : 'dm-btn'}
-            style={{ minWidth: 88 }}
-          >
-            {savingPcAgent ? 'Saving…' : pcAgentEnabled ? 'On' : 'Off'}
-          </button>
+          {pcAgentError && (
+            <p className="flex items-center gap-1.5" style={{ color: 'var(--danger)', fontSize: '0.78rem', marginTop: 10 }}>
+              <AlertCircle style={{ width: 13, height: 13 }} /> {pcAgentError}
+            </p>
+          )}
         </div>
-        {pcAgentError && (
-          <p className="flex items-center gap-1.5" style={{ color: 'var(--danger)', fontSize: '0.78rem', marginTop: 10 }}>
-            <AlertCircle style={{ width: 13, height: 13 }} /> {pcAgentError}
-          </p>
-        )}
-      </div>
+      )}
 
       {roleError && (
         <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: 'var(--danger-bg)', border: '1px solid rgba(255,107,107,0.3)', fontSize: '0.78rem', color: 'var(--danger)' }} role="alert">
