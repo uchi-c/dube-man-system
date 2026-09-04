@@ -179,6 +179,31 @@ export async function updateOrganizationCurrency(currency: 'ZMW' | 'USD'): Promi
   cachedCurrency = currency;
 }
 
+/**
+ * Org-admin self-service: turn the PC Agent Hub module on/off for this org
+ * (the only extra_modules entry left as a per-tenant opt-in — wifi/cafe
+ * are on for everyone by default, see App.tsx's BUSINESS_TYPE_MODULES).
+ * Same RLS trust model as updateOrganizationCurrency: an ADMIN can already
+ * update their own org row, so this is a plain read-modify-write rather
+ * than a new RPC. The caller is responsible for reloading afterward so
+ * App.tsx's nav picks up the change (extraModules isn't re-fetched live).
+ */
+export async function updateOwnPcAgentModule(enabled: boolean): Promise<void> {
+  const orgId = await getCurrentOrganizationId();
+  const { data, error: fetchErr } = await supabase
+    .from('organizations')
+    .select('extra_modules')
+    .eq('id', orgId)
+    .maybeSingle();
+  if (fetchErr) throw new Error(fetchErr.message || "Couldn't read current modules.");
+
+  const current = (data?.extra_modules as string[] | null) ?? [];
+  const next = enabled ? Array.from(new Set([...current, 'pc-agent'])) : current.filter(m => m !== 'pc-agent');
+
+  const { error } = await supabase.from('organizations').update({ extra_modules: next }).eq('id', orgId);
+  if (error) throw new Error(error.message || "Couldn't update PC Agent Hub.");
+}
+
 /** Every organization the signed-in user belongs to (for an org switcher UI). */
 export async function fetchUserOrganizations(): Promise<Organization[]> {
   if (!isSupabaseConfigured) return [];

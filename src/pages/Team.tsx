@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { User, UserRole, OrganizationInvite } from '../types';
 import { fetchAllUsers, updateUserRole, removeStaffMember } from '../services/supabase';
-import { adminInviteUserWithTempPassword, fetchInvites, revokeInvite, getCurrentOrganizationCurrency, updateOrganizationCurrency } from '../services/organizations';
+import {
+  adminInviteUserWithTempPassword, fetchInvites, revokeInvite,
+  getCurrentOrganizationCurrency, updateOrganizationCurrency,
+  getCurrentOrganizationExtraModules, updateOwnPcAgentModule,
+} from '../services/organizations';
 import { setCurrency as setActiveCurrency } from '../utils/format';
 import {
   UserPlus, Mail, Calendar, AlertCircle, RefreshCw, Check, X,
-  Copy, Ban, Clock, ShieldCheck, Users as UsersIcon, KeyRound, Trash2, Coins,
+  Copy, Ban, Clock, ShieldCheck, Users as UsersIcon, KeyRound, Trash2, Coins, Monitor,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import DataTable from '../components/DataTable';
@@ -44,14 +48,20 @@ export default function Team() {
   const [currency, setCurrency] = useState('ZMW');
   const [savingCurrency, setSavingCurrency] = useState(false);
   const [currencyError, setCurrencyError] = useState('');
+  const [pcAgentEnabled, setPcAgentEnabled] = useState(false);
+  const [savingPcAgent, setSavingPcAgent] = useState(false);
+  const [pcAgentError, setPcAgentError] = useState('');
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [users, pendingInvites, cur] = await Promise.all([fetchAllUsers(), fetchInvites(), getCurrentOrganizationCurrency()]);
+      const [users, pendingInvites, cur, mods] = await Promise.all([
+        fetchAllUsers(), fetchInvites(), getCurrentOrganizationCurrency(), getCurrentOrganizationExtraModules(),
+      ]);
       setMembers(users);
       setInvites(pendingInvites);
       setCurrency(cur);
+      setPcAgentEnabled(mods.includes('pc-agent'));
     } catch (err) {
       console.error('Error loading team:', err);
     } finally {
@@ -75,6 +85,23 @@ export default function Team() {
       setCurrencyError(err?.message || "Couldn't update currency.");
     } finally {
       setSavingCurrency(false);
+    }
+  };
+
+  const handlePcAgentToggle = async () => {
+    setPcAgentError('');
+    setSavingPcAgent(true);
+    const next = !pcAgentEnabled;
+    try {
+      await updateOwnPcAgentModule(next);
+      // The nav's allowed-modules list lives in App.tsx state, resolved
+      // once on session load -- a reload is the simplest way to make the
+      // new PC Agent Hub tab (or its removal) show up immediately, same
+      // approach used elsewhere in the app for org-level state changes.
+      window.location.reload();
+    } catch (err: any) {
+      setPcAgentError(err?.message || "Couldn't update PC Agent Hub.");
+      setSavingPcAgent(false);
     }
   };
 
@@ -240,6 +267,35 @@ export default function Team() {
         {currencyError && (
           <p className="flex items-center gap-1.5" style={{ color: 'var(--danger)', fontSize: '0.78rem', marginTop: 10 }}>
             <AlertCircle style={{ width: 13, height: 13 }} /> {currencyError}
+          </p>
+        )}
+      </div>
+
+      {/* PC Agent Hub — the one module left as a tenant opt-in; WiFi and Internet Café
+          management are always on for every tenant now. */}
+      <div className="dm-card p-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-2.5">
+            <Monitor style={{ width: 18, height: 18, color: 'var(--text-mid)' }} />
+            <div>
+              <h3 className="dm-h2" style={{ marginBottom: 2 }}>PC Agent Hub</h3>
+              <p style={{ color: 'var(--text-mid)', fontSize: '0.78rem' }}>
+                Remote PC monitoring &amp; session time-billing — turn on only if you use it.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handlePcAgentToggle}
+            disabled={savingPcAgent}
+            className={pcAgentEnabled ? 'dm-btn dm-btn-primary' : 'dm-btn'}
+            style={{ minWidth: 88 }}
+          >
+            {savingPcAgent ? 'Saving…' : pcAgentEnabled ? 'On' : 'Off'}
+          </button>
+        </div>
+        {pcAgentError && (
+          <p className="flex items-center gap-1.5" style={{ color: 'var(--danger)', fontSize: '0.78rem', marginTop: 10 }}>
+            <AlertCircle style={{ width: 13, height: 13 }} /> {pcAgentError}
           </p>
         )}
       </div>
