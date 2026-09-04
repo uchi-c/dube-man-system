@@ -85,7 +85,7 @@ function buildChargeBody(params: {
   amount: number;
   currency: string;
   phoneNumber: string;
-  network?: string;
+  network: string;
   customerName: string;
   customerEmail: string;
 }) {
@@ -101,7 +101,13 @@ function buildChargeBody(params: {
     payment_method: {
       type: 'mobile_money',
       mobile_money: {
-        country_code: 'ZM',
+        // Flutterwave's v4 mobile_money object wants the phone dialing
+        // code ("260" for Zambia), not an ISO country code ("ZM") -- the
+        // first real Flutterwave response we got back ("Malformed
+        // request", REQUEST_NOT_VALID) came from getting this wrong AND
+        // from network being silently omitted below (it's now required,
+        // not optional -- see the caller in Deno.serve()).
+        country_code: '260',
         network: params.network,
         phone_number: params.phoneNumber,
       },
@@ -125,6 +131,11 @@ Deno.serve(async (req: Request) => {
 
   const { sale_id, phone_number, network } = body;
   if (!sale_id || !phone_number) return json({ error: 'sale_id and phone_number are required' }, 400);
+  const VALID_NETWORKS = new Set(['MTN', 'AIRTEL', 'ZAMTEL']);
+  const normalizedNetwork = (network ?? '').toUpperCase();
+  if (!VALID_NETWORKS.has(normalizedNetwork)) {
+    return json({ error: 'network is required and must be one of MTN, AIRTEL, ZAMTEL' }, 400);
+  }
 
   const caller = createClient(SUPABASE_URL, ANON_KEY, { global: { headers: { Authorization: authHeader } } });
 
@@ -169,7 +180,7 @@ Deno.serve(async (req: Request) => {
       amount: Number(sale.total_amount),
       currency,
       phoneNumber: phone_number,
-      network,
+      network: normalizedNetwork,
       customerName,
       customerEmail,
     });
@@ -187,6 +198,11 @@ Deno.serve(async (req: Request) => {
     const flwBody = await res.json().catch(() => ({}));
 
     if (!res.ok) {
+      // Logged server-side with the exact request body sent, not just the
+      // response -- if Flutterwave still rejects this, the fastest way to
+      // fix it is comparing what we sent against a real Flutterwave
+      // dashboard example, not guessing again.
+      console.error('Flutterwave charge rejected:', res.status, 'sent:', JSON.stringify(chargeBody), 'received:', JSON.stringify(flwBody));
       return json({ error: `Flutterwave declined the charge (${res.status}): ${JSON.stringify(flwBody)}` }, 502);
     }
 
@@ -198,6 +214,7 @@ Deno.serve(async (req: Request) => {
 
     return json({ status: 'pending', reference, flutterwave: flwBody?.data ?? flwBody });
   } catch (e) {
+    console.error('flutterwave-charge failed:', e instanceof Error ? (e.stack ?? e.message) : String(e));
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }
 });

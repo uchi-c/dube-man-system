@@ -16,7 +16,7 @@ import { formatCurrency } from '../utils/format';
 import { cartTotal } from '../utils/billing';
 import ExportButtons from '../components/ExportButtons';
 import ReceiptPrint from '../components/ReceiptPrint';
-import { sendMobileMoneyPushCharge } from '../services/flutterwave';
+import { sendMobileMoneyPushCharge, MobileMoneyNetwork } from '../services/flutterwave';
 
 interface SalesPageProps {
   userRole: string;
@@ -62,6 +62,7 @@ export default function Sales({ userRole }: SalesPageProps) {
   // once the cart resets for the next sale.
   const [lastMobileMoneySale, setLastMobileMoneySale] = useState<Sale | null>(null);
   const [pushPhone, setPushPhone] = useState('');
+  const [pushNetwork, setPushNetwork] = useState<MobileMoneyNetwork>('MTN');
   const [pushState, setPushState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
   const [pushError, setPushError] = useState('');
 
@@ -278,6 +279,7 @@ export default function Sales({ userRole }: SalesPageProps) {
     if (paymentMethod === 'Mobile Money') {
       setLastMobileMoneySale(result);
       setPushPhone(customers.find(c => c.id === selectedCustomerId)?.phone || '');
+      setPushNetwork('MTN');
       setPushState('idle');
       setPushError('');
     } else {
@@ -297,7 +299,7 @@ export default function Sales({ userRole }: SalesPageProps) {
     setPushState('sending');
     setPushError('');
     try {
-      await sendMobileMoneyPushCharge(lastMobileMoneySale.id, pushPhone.trim());
+      await sendMobileMoneyPushCharge(lastMobileMoneySale.id, pushPhone.trim(), pushNetwork);
       setPushState('sent');
     } catch (err: any) {
       setPushState('error');
@@ -663,6 +665,17 @@ export default function Sales({ userRole }: SalesPageProps) {
                         disabled={pushState === 'sending'}
                         style={{ fontSize: '0.8rem', flex: 1 }}
                       />
+                      <select
+                        className="dm-select"
+                        value={pushNetwork}
+                        onChange={e => setPushNetwork(e.target.value as MobileMoneyNetwork)}
+                        disabled={pushState === 'sending'}
+                        style={{ fontSize: '0.8rem', minHeight: 38 }}
+                      >
+                        <option value="MTN">MTN</option>
+                        <option value="AIRTEL">Airtel</option>
+                        <option value="ZAMTEL">Zamtel</option>
+                      </select>
                       <button
                         type="button"
                         onClick={handleSendPushCharge}
