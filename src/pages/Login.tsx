@@ -174,13 +174,26 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
   const handleResendConfirmation = async () => {
     if (!email.trim() || !isSupabaseConfigured) return;
+    if (isTurnstileEnabled && !captchaToken) {
+      setResendState('error');
+      return;
+    }
     setResendState('sending');
     try {
-      const { error: resendError } = await supabase.auth.resend({ type: 'signup', email: email.trim() });
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email: email.trim(),
+        options: { captchaToken: captchaToken || undefined },
+      });
       if (resendError) throw resendError;
       setResendState('sent');
     } catch {
       setResendState('error');
+    } finally {
+      // Turnstile tokens are single-use -- force a fresh widget/token before
+      // the next attempt (same as handleSubmit's catch block).
+      setCaptchaToken(null);
+      setCaptchaResetKey(k => k + 1);
     }
   };
 
@@ -195,16 +208,27 @@ export default function Login({ onLoginSuccess }: LoginProps) {
       setForgotMessage('Enter your email address above first, then click "Forgot password?".');
       return;
     }
+    if (isTurnstileEnabled && !captchaToken) {
+      setForgotState('error');
+      setForgotMessage('Please complete the verification challenge below first.');
+      return;
+    }
     setForgotState('sending');
     try {
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo: window.location.origin + window.location.pathname,
+        captchaToken: captchaToken || undefined,
       });
       if (resetError) throw resetError;
       setForgotState('sent');
     } catch (err: any) {
       setForgotState('error');
       setForgotMessage(err?.message || "Couldn't send the reset link. Check the email address above and try again.");
+    } finally {
+      // Turnstile tokens are single-use -- force a fresh widget/token before
+      // the next attempt (same as handleSubmit's catch block).
+      setCaptchaToken(null);
+      setCaptchaResetKey(k => k + 1);
     }
   };
 
