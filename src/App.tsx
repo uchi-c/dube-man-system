@@ -97,32 +97,33 @@ PATH_TO_TAB['/users'] = 'logs'; // legacy alias
 
 const GROUP_ORDER = ['Home','Operations','Printing','Connectivity','System','Platform'];
 
-// Which nav modules each business type sees by default. 'general' shows
-// everything except Pharmacy and the three opt-in-only modules below — a
-// general dealer has no use for prescription/dispensing tracking, and
-// most general dealers don't run a café or need remote PC monitoring
-// either, so those stay out of the default nav the same way niche types
-// hide modules irrelevant to them. Computed from TABS (rather than
-// hardcoded) so any tab added later is included for 'general' automatically.
+// Which nav modules each business type sees by default. 'general' is the
+// all-in-one dealer type and shows literally everything except Pharmacy
+// (prescription/dispensing tracking makes no sense for a shop that isn't
+// one) -- computed from TABS rather than hardcoded, so any tab added
+// later is included for 'general' automatically.
 //
-// 'wifi', 'pc-agent', and 'cafe' (internet café management) are
-// deliberately excluded from every business type's default list here —
-// they only ever show for a tenant that specifically asked for one, via
-// organizations.extra_modules (migration 027) and OPT_IN_MODULES below,
-// unioned in by reachableModules() rather than baked into a business
-// type. A café-type tenant still needs a platform admin to switch it on
-// for them, same as any other type — the business type alone no longer
-// implies it.
-const OPT_IN_MODULES = ['wifi', 'pc-agent', 'cafe'];
+// 'wifi' and 'cafe' (internet café management) are baked into every
+// business type's default list below -- every tenant always has both,
+// regardless of business type or any per-org toggle.
+//
+// 'pc-agent' (remote PC monitoring) is bundled in automatically only for
+// 'general' and 'cafe' -- an all-in-one dealer or an actual internet café
+// obviously runs PCs worth monitoring. Every other business type leaves
+// it as an opt-in via OPT_IN_MODULES: the *tenant's own* choice (Team
+// page, self-service via organizations.updateOwnPcAgentModule) rather
+// than a platform-admin setting, unioned in by reachableModules() from
+// organizations.extra_modules (migration 027) same as before.
+const OPT_IN_MODULES = ['pc-agent'];
 
 const BUSINESS_TYPE_MODULES: Record<BusinessType, string[] | null> = {
-  general:    TABS.map(t => t.id).filter(id => id !== 'pharmacy' && !OPT_IN_MODULES.includes(id)),
-  pharmacy:   ['dashboard', 'pos', 'inventory', 'customers', 'pharmacy', 'team', 'smart-invoice'],
-  cafe:       ['dashboard', 'print-manager', 'printing', 'team', 'smart-invoice'],
-  printing:   ['dashboard', 'print-manager', 'printing', 'team', 'smart-invoice'],
-  retail:     ['dashboard', 'pos', 'inventory', 'customers', 'team', 'smart-invoice'],
-  clothing:   ['dashboard', 'pos', 'inventory', 'customers', 'team', 'smart-invoice'],
-  mechanics:  ['dashboard', 'pos', 'inventory', 'customers', 'team', 'smart-invoice'],
+  general:    TABS.map(t => t.id).filter(id => id !== 'pharmacy'),
+  pharmacy:   ['dashboard', 'pos', 'inventory', 'customers', 'pharmacy', 'team', 'smart-invoice', 'wifi', 'cafe'],
+  cafe:       ['dashboard', 'print-manager', 'printing', 'team', 'smart-invoice', 'wifi', 'cafe', 'pc-agent'],
+  printing:   ['dashboard', 'print-manager', 'printing', 'team', 'smart-invoice', 'wifi', 'cafe'],
+  retail:     ['dashboard', 'pos', 'inventory', 'customers', 'team', 'smart-invoice', 'wifi', 'cafe'],
+  clothing:   ['dashboard', 'pos', 'inventory', 'customers', 'team', 'smart-invoice', 'wifi', 'cafe'],
+  mechanics:  ['dashboard', 'pos', 'inventory', 'customers', 'team', 'smart-invoice', 'wifi', 'cafe'],
 };
 
 /** A business type's default modules, unioned with whatever opt-in extras (migration 027) this specific tenant has been given. */

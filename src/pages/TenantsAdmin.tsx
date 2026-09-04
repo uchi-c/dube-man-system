@@ -3,7 +3,7 @@ import {
   Building2, RefreshCw, Plus, X, Check, Copy, AlertCircle,
   KeyRound, Wallet, History as HistoryIcon, Users as UsersIcon,
   BellRing, Phone, Pencil, CircleCheck, Lock, LockOpen, Trash2,
-  Wifi, Shield, Monitor, UserCog,
+  Shield, UserCog,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import DataTable from '../components/DataTable';
@@ -855,31 +855,43 @@ export default function TenantsAdmin() {
               </div>
 
               <div className="space-y-6">
-                {/* Enabled modules — opt-in extras beyond the business type default */}
+                {/* Enabled modules — opt-in extras beyond the business type default. WiFi and
+                    Internet Café management are always on for every tenant now (see App.tsx's
+                    BUSINESS_TYPE_MODULES), so PC Agent Hub is the only one left here — and
+                    tenants can also flip it themselves from their own Team page. For 'general'
+                    (all-in-one) and 'cafe' business types, PC Agent Hub is itself bundled into
+                    the business-type default, so there's nothing to toggle -- a business-type
+                    default can't be switched back off via extra_modules. */}
                 <div className="dm-card-inset p-4 space-y-3">
                   <h4 className="flex items-center gap-1.5" style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-hi)' }}>
                     <CircleCheck style={{ width: 14, height: 14 }} /> Enabled modules
                   </h4>
-                  <p style={{ fontSize: '0.72rem', color: 'var(--text-low)' }}>
-                    These don't show by default for {managing.business_type} — only turn them on if this tenant specifically asked for one.
-                  </p>
-                  <div className="space-y-1.5">
-                    {[
-                      { id: 'wifi', label: 'WiFi Management', icon: Wifi },
-                      { id: 'pc-agent', label: 'PC Agent Hub', icon: Shield },
-                      { id: 'cafe', label: 'Internet Café management', icon: Monitor },
-                    ].map(mod => (
-                      <label key={mod.id} className="flex items-center gap-2" style={{ fontSize: '0.78rem', color: 'var(--text-hi)', cursor: 'pointer' }}>
-                        <input type="checkbox" checked={extraModulesDraft.includes(mod.id)} onChange={() => toggleExtraModule(mod.id)} />
-                        <mod.icon style={{ width: 13, height: 13, color: 'var(--text-low)' }} />
-                        {mod.label}
-                      </label>
-                    ))}
-                  </div>
-                  {modulesError && <p style={{ fontSize: '0.75rem', color: 'var(--danger)' }}>{modulesError}</p>}
-                  <button type="button" onClick={handleSaveModules} disabled={modulesSaving} className="dm-btn dm-btn-ghost" style={{ fontSize: '0.75rem' }}>
-                    {modulesSaving ? 'Saving…' : 'Save modules'}
-                  </button>
+                  {managing.business_type === 'general' || managing.business_type === 'cafe' ? (
+                    <p style={{ fontSize: '0.72rem', color: 'var(--text-low)' }}>
+                      PC Agent Hub is included automatically for {managing.business_type} businesses — nothing to enable here.
+                    </p>
+                  ) : (
+                    <>
+                      <p style={{ fontSize: '0.72rem', color: 'var(--text-low)' }}>
+                        Doesn't show by default for {managing.business_type} — only turn it on if this tenant specifically asked for it (they can also do this themselves).
+                      </p>
+                      <div className="space-y-1.5">
+                        {[
+                          { id: 'pc-agent', label: 'PC Agent Hub', icon: Shield },
+                        ].map(mod => (
+                          <label key={mod.id} className="flex items-center gap-2" style={{ fontSize: '0.78rem', color: 'var(--text-hi)', cursor: 'pointer' }}>
+                            <input type="checkbox" checked={extraModulesDraft.includes(mod.id)} onChange={() => toggleExtraModule(mod.id)} />
+                            <mod.icon style={{ width: 13, height: 13, color: 'var(--text-low)' }} />
+                            {mod.label}
+                          </label>
+                        ))}
+                      </div>
+                      {modulesError && <p style={{ fontSize: '0.75rem', color: 'var(--danger)' }}>{modulesError}</p>}
+                      <button type="button" onClick={handleSaveModules} disabled={modulesSaving} className="dm-btn dm-btn-ghost" style={{ fontSize: '0.75rem' }}>
+                        {modulesSaving ? 'Saving…' : 'Save modules'}
+                      </button>
+                    </>
+                  )}
                 </div>
 
                 {/* Record a payment */}
