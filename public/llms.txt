@@ -1,0 +1,9 @@
+# Uruu OS
+
+> All-in-one business management platform for pharmacies, retail shops, internet cafés, and printing & branding businesses in Zambia: point of sale, inventory, pharmacy dispensing, café & WiFi sessions, and printing orders.
+
+Uruu OS is a multi-tenant SaaS product. Each business (tenant) gets its own workspace with point-of-sale, inventory, and business-type-specific modules (pharmacy dispensing, café/WiFi session billing, printing order management). New businesses can start a free 7-day trial with no credit card required.
+
+## Pages
+
+- [Uruu OS](https://uruu.enterprises/): product overview, feature breakdown by business type, pricing, and links to start a free trial or sign in.
