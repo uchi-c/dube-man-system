@@ -20,10 +20,12 @@ async function resolveEdgeFunctionError(error: unknown, fallback: string): Promi
   return (error as any)?.message || fallback;
 }
 
+export type MobileMoneyNetwork = 'MTN' | 'AIRTEL' | 'ZAMTEL';
+
 export async function sendMobileMoneyPushCharge(
   saleId: string,
   phoneNumber: string,
-  network?: string
+  network: MobileMoneyNetwork
 ): Promise<{ status: string; reference: string }> {
   const { data, error } = await supabase.functions.invoke('flutterwave-charge', {
     body: { sale_id: saleId, phone_number: phoneNumber, network },
