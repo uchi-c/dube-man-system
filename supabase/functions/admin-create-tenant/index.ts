@@ -89,68 +89,76 @@ Deno.serve(async (req: Request) => {
     return json({ error: 'Monthly price must be a non-negative number' }, 400);
   }
 
-  // Caller-scoped client — create_tenant_org enforces "must be a platform
-  // admin" itself; this function never decides authorization on its own.
-  const callerClient = createClient(SUPABASE_URL, ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-  });
+  try {
+    // Caller-scoped client — create_tenant_org enforces "must be a platform
+    // admin" itself; this function never decides authorization on its own.
+    const callerClient = createClient(SUPABASE_URL, ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
-  const { data: orgId, error: orgErr } = await callerClient.rpc('create_tenant_org', {
-    p_name: orgName,
-    p_business_type: businessType,
-    p_monthly_price: monthlyPrice,
-    p_currency: currency,
-    p_payment_method: paymentMethod || null,
-    p_billing_cycle: billingCycle,
-  });
-  if (orgErr) return json({ error: orgErr.message }, 400);
-  if (!orgId) return json({ error: 'Tenant creation did not return an id' }, 500);
+    const { data: orgId, error: orgErr } = await callerClient.rpc('create_tenant_org', {
+      p_name: orgName,
+      p_business_type: businessType,
+      p_monthly_price: monthlyPrice,
+      p_currency: currency,
+      p_payment_method: paymentMethod || null,
+      p_billing_cycle: billingCycle,
+    });
+    if (orgErr) return json({ error: orgErr.message }, 400);
+    if (!orgId) return json({ error: 'Tenant creation did not return an id' }, 500);
 
-  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-  const tempPassword = randomTempPassword();
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+    const tempPassword = randomTempPassword();
 
-  const { data: created, error: createErr } = await admin.auth.admin.createUser({
-    email: ownerEmail,
-    password: tempPassword,
-    email_confirm: true,
-    user_metadata: { invited_role: 'ADMIN' },
-  });
-  if (createErr || !created?.user) {
-    await admin.from('organizations').delete().eq('id', orgId);
-    const alreadyExists = /already.*(registered|exists)/i.test(createErr?.message || '');
-    return json(
-      {
-        error: alreadyExists
-          ? "This email already has an account. Use a different owner email, or add them to an existing tenant from Team instead."
-          : createErr?.message || "Could not create the owner's account",
-      },
-      400,
-    );
+    const { data: created, error: createErr } = await admin.auth.admin.createUser({
+      email: ownerEmail,
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: { invited_role: 'ADMIN' },
+    });
+    if (createErr || !created?.user) {
+      await admin.from('organizations').delete().eq('id', orgId);
+      const alreadyExists = /already.*(registered|exists)/i.test(createErr?.message || '');
+      return json(
+        {
+          error: alreadyExists
+            ? "This email already has an account. Use a different owner email, or add them to an existing tenant from Team instead."
+            : createErr?.message || "Could not create the owner's account",
+        },
+        400,
+      );
+    }
+
+    const { error: profileErr } = await admin.from('users').insert({
+      id: created.user.id,
+      name: ownerName || ownerEmail.split('@')[0],
+      email: ownerEmail,
+      role: 'ADMIN',
+      must_change_password: true,
+    });
+    if (profileErr) {
+      await admin.auth.admin.deleteUser(created.user.id);
+      await admin.from('organizations').delete().eq('id', orgId);
+      return json({ error: profileErr.message }, 500);
+    }
+
+    const { error: memberErr } = await admin.from('user_organization_memberships').insert({
+      user_id: created.user.id,
+      org_id: orgId,
+    });
+    if (memberErr) {
+      await admin.from('users').delete().eq('id', created.user.id);
+      await admin.auth.admin.deleteUser(created.user.id);
+      await admin.from('organizations').delete().eq('id', orgId);
+      return json({ error: memberErr.message }, 500);
+    }
+
+    return json({ organizationId: orgId, orgName, email: ownerEmail, tempPassword });
+  } catch (e) {
+    // Logged server-side so an unexpected failure mid-provisioning (e.g. a
+    // dropped connection) is diagnosable from Supabase's function logs,
+    // not just an opaque 500 to whoever was watching the browser.
+    console.error('admin-create-tenant failed:', e instanceof Error ? (e.stack ?? e.message) : String(e));
+    return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }
-
-  const { error: profileErr } = await admin.from('users').insert({
-    id: created.user.id,
-    name: ownerName || ownerEmail.split('@')[0],
-    email: ownerEmail,
-    role: 'ADMIN',
-    must_change_password: true,
-  });
-  if (profileErr) {
-    await admin.auth.admin.deleteUser(created.user.id);
-    await admin.from('organizations').delete().eq('id', orgId);
-    return json({ error: profileErr.message }, 500);
-  }
-
-  const { error: memberErr } = await admin.from('user_organization_memberships').insert({
-    user_id: created.user.id,
-    org_id: orgId,
-  });
-  if (memberErr) {
-    await admin.from('users').delete().eq('id', created.user.id);
-    await admin.auth.admin.deleteUser(created.user.id);
-    await admin.from('organizations').delete().eq('id', orgId);
-    return json({ error: memberErr.message }, 500);
-  }
-
-  return json({ organizationId: orgId, orgName, email: ownerEmail, tempPassword });
 });

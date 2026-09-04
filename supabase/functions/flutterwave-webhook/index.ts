@@ -69,7 +69,10 @@ function extractEventInfo(payload: any): EventInfo {
 
   const rawStatus: string = (data?.status ?? '').toString().toLowerCase();
   let status: EventInfo['status'] = null;
-  if (['successful', 'completed', 'success'].includes(rawStatus)) status = 'successful';
+  // "succeeded" is the real v4 charge status (confirmed against
+  // Flutterwave's own webhook payload example); the others are kept as a
+  // safety net in case a different event type spells it differently.
+  if (['succeeded', 'successful', 'completed', 'success'].includes(rawStatus)) status = 'successful';
   else if (['failed', 'cancelled', 'declined'].includes(rawStatus)) status = 'failed';
   else if (rawStatus) status = 'pending';
 
@@ -113,6 +116,12 @@ Deno.serve(async (req: Request) => {
     .update({ flw_charge_status: status, flw_transaction_id: transactionId })
     .eq('flw_tx_ref', reference);
 
-  if (error) return json({ error: error.message }, 500);
+  if (error) {
+    // Flutterwave, not a human, calls this endpoint -- nobody reads this
+    // response body, so console.error is the only way a failed status
+    // update is ever noticed.
+    console.error('flutterwave-webhook: sales update failed:', error.message, 'reference:', reference);
+    return json({ error: error.message }, 500);
+  }
   return json({ received: true });
 });

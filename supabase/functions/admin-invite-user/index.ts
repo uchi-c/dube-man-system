@@ -87,77 +87,82 @@ Deno.serve(async (req: Request) => {
 
   if (!email) return json({ error: 'Email is required' }, 400);
 
-  // Caller-scoped client — reuses create_organization_invite's own
-  // "must be ADMIN" + "resolve the caller's own org" checks rather than
-  // duplicating that logic (and its risk of drifting out of sync) here.
-  const callerClient = createClient(SUPABASE_URL, ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-  });
+  try {
+    // Caller-scoped client — reuses create_organization_invite's own
+    // "must be ADMIN" + "resolve the caller's own org" checks rather than
+    // duplicating that logic (and its risk of drifting out of sync) here.
+    const callerClient = createClient(SUPABASE_URL, ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
-  const { data: inviteRows, error: inviteErr } = await callerClient.rpc('create_organization_invite', {
-    p_email: email,
-    p_role: role,
-  });
-  if (inviteErr) return json({ error: inviteErr.message }, 400);
-  const invite = Array.isArray(inviteRows) ? inviteRows[0] : inviteRows;
-  if (!invite) return json({ error: 'Invite creation did not return a result' }, 500);
+    const { data: inviteRows, error: inviteErr } = await callerClient.rpc('create_organization_invite', {
+      p_email: email,
+      p_role: role,
+    });
+    if (inviteErr) return json({ error: inviteErr.message }, 400);
+    const invite = Array.isArray(inviteRows) ? inviteRows[0] : inviteRows;
+    if (!invite) return json({ error: 'Invite creation did not return a result' }, 500);
 
-  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-  const { data: inviteRow, error: inviteRowErr } = await admin
-    .from('organization_invites')
-    .select('org_id, organizations(name)')
-    .eq('id', invite.id)
-    .single();
-  if (inviteRowErr || !inviteRow) {
-    return json({ error: "Could not resolve the new invite's organization" }, 500);
+    const { data: inviteRow, error: inviteRowErr } = await admin
+      .from('organization_invites')
+      .select('org_id, organizations(name)')
+      .eq('id', invite.id)
+      .single();
+    if (inviteRowErr || !inviteRow) {
+      return json({ error: "Could not resolve the new invite's organization" }, 500);
+    }
+    const orgId = (inviteRow as any).org_id as string;
+    const orgName = (inviteRow as any).organizations?.name as string | undefined;
+
+    const tempPassword = randomTempPassword();
+
+    const { data: created, error: createErr } = await admin.auth.admin.createUser({
+      email,
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: { invited_role: invite.role },
+    });
+    if (createErr || !created?.user) {
+      const alreadyExists = /already.*(registered|exists)/i.test(createErr?.message || '');
+      return json(
+        {
+          error: alreadyExists
+            ? "This email already has an account. Ask them to sign in normally, or use 'Forgot password' on the sign-in page to reset it."
+            : createErr?.message || 'Could not create the account',
+        },
+        400,
+      );
+    }
+
+    const { error: profileErr } = await admin.from('users').insert({
+      id: created.user.id,
+      name: name || email.split('@')[0],
+      email,
+      role: invite.role,
+      must_change_password: true,
+    });
+    if (profileErr) {
+      await admin.auth.admin.deleteUser(created.user.id);
+      return json({ error: profileErr.message }, 500);
+    }
+
+    const { error: memberErr } = await admin.from('user_organization_memberships').insert({
+      user_id: created.user.id,
+      org_id: orgId,
+    });
+    if (memberErr) {
+      await admin.from('users').delete().eq('id', created.user.id);
+      await admin.auth.admin.deleteUser(created.user.id);
+      return json({ error: memberErr.message }, 500);
+    }
+
+    await admin.from('organization_invites').update({ accepted_at: new Date().toISOString() }).eq('id', invite.id);
+
+    return json({ email, role: invite.role, tempPassword, orgName });
+  } catch (e) {
+    console.error('admin-invite-user failed:', e instanceof Error ? (e.stack ?? e.message) : String(e));
+    return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }
-  const orgId = (inviteRow as any).org_id as string;
-  const orgName = (inviteRow as any).organizations?.name as string | undefined;
-
-  const tempPassword = randomTempPassword();
-
-  const { data: created, error: createErr } = await admin.auth.admin.createUser({
-    email,
-    password: tempPassword,
-    email_confirm: true,
-    user_metadata: { invited_role: invite.role },
-  });
-  if (createErr || !created?.user) {
-    const alreadyExists = /already.*(registered|exists)/i.test(createErr?.message || '');
-    return json(
-      {
-        error: alreadyExists
-          ? "This email already has an account. Ask them to sign in normally, or use 'Forgot password' on the sign-in page to reset it."
-          : createErr?.message || 'Could not create the account',
-      },
-      400,
-    );
-  }
-
-  const { error: profileErr } = await admin.from('users').insert({
-    id: created.user.id,
-    name: name || email.split('@')[0],
-    email,
-    role: invite.role,
-    must_change_password: true,
-  });
-  if (profileErr) {
-    await admin.auth.admin.deleteUser(created.user.id);
-    return json({ error: profileErr.message }, 500);
-  }
-
-  const { error: memberErr } = await admin.from('user_organization_memberships').insert({
-    user_id: created.user.id,
-    org_id: orgId,
-  });
-  if (memberErr) {
-    await admin.from('users').delete().eq('id', created.user.id);
-    await admin.auth.admin.deleteUser(created.user.id);
-    return json({ error: memberErr.message }, 500);
-  }
-
-  await admin.from('organization_invites').update({ accepted_at: new Date().toISOString() }).eq('id', invite.id);
-
-  return json({ email, role: invite.role, tempPassword, orgName });
 });

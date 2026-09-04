@@ -11,18 +11,23 @@
 // reconciliation, not a gate on the ledger.
 //
 // ============================================================================
-// HONEST CAVEAT: built against best-effort research into Flutterwave's v4
-// API (OAuth2 client-credentials + the "direct-charges" orchestration
-// endpoint), not a fetched copy of Flutterwave's own docs -- this sandbox
-// cannot reach developer.flutterwave.com to verify field names/shapes
-// directly. The OAuth token flow (endpoint, form-urlencoded body, `data.
-// access_token`/`data.expires_in` response) is corroborated by multiple
-// independent sources and should be solid. The charge request body shape
-// below (customer/payment_method nesting) is the best available approximation
-// and MAY need correcting against a real sandbox call -- if Flutterwave
-// rejects the payload, check the error message this function returns
-// verbatim, compare against your Flutterwave dashboard's own API
-// reference, and adjust buildChargeBody() below accordingly.
+// Built against Flutterwave's own v4 "Mobile Money" doc (General Flow),
+// pasted in directly -- not the orchestrator's single-call "direct-charges"
+// endpoint this function used before, which was guessed (best-effort, no
+// docs access) and never worked: every real charge attempt against it came
+// back "REQUEST_NOT_VALID (10400): Malformed request" with an empty
+// validation_errors array, meaning the request never matched *any* schema
+// Flutterwave recognized -- not just a wrong field. The General Flow below
+// is the one Flutterwave's docs actually specify field-by-field: three
+// calls (create customer -> create payment method -> create charge), each
+// with a real documented request/response shape. Two concrete bugs in the
+// old guess this fixes:
+//   1. Wrong endpoint entirely (/orchestration/direct-charges vs the real
+//      /customers, /payment-methods, /charges).
+//   2. Phone numbers were sent with their local leading "0" still on
+//      (e.g. "0979501830") -- the docs' own example pairs country_code
+//      "233" with number "9012345678", no leading 0. stripLeadingZero()
+//      below fixes this.
 // ============================================================================
 //
 // Required Supabase Edge Function secrets:
@@ -80,39 +85,40 @@ async function getAccessToken(): Promise<string> {
   return accessToken;
 }
 
-function buildChargeBody(params: {
-  reference: string;
-  amount: number;
-  currency: string;
-  phoneNumber: string;
-  network: string;
-  customerName: string;
-  customerEmail: string;
-}) {
-  return {
-    amount: params.amount,
-    currency: params.currency,
-    reference: params.reference,
-    customer: {
-      email: params.customerEmail,
-      name: params.customerName,
-      phone: params.phoneNumber,
+// Flutterwave's mobile_money.phone_number pairs with country_code and
+// expects no leading "0" (docs example: country_code "233" + number
+// "9012345678", not "09012345678").
+function stripLeadingZero(localNumber: string): string {
+  return localNumber.replace(/^0+/, '');
+}
+
+function splitName(fullName: string): { first: string; last: string } {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return { first: 'Customer', last: 'Customer' };
+  if (parts.length === 1) return { first: parts[0], last: parts[0] };
+  return { first: parts[0], last: parts.slice(1).join(' ') };
+}
+
+class FlutterwaveApiError extends Error {
+  constructor(public step: string, public status: number, public body: unknown) {
+    super(`Flutterwave ${step} failed (${status}): ${JSON.stringify(body)}`);
+  }
+}
+
+async function flutterwavePost(token: string, path: string, body: unknown, step: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      'X-Trace-Id': crypto.randomUUID(),
+      'X-Idempotency-Key': crypto.randomUUID(),
     },
-    payment_method: {
-      type: 'mobile_money',
-      mobile_money: {
-        // Flutterwave's v4 mobile_money object wants the phone dialing
-        // code ("260" for Zambia), not an ISO country code ("ZM") -- the
-        // first real Flutterwave response we got back ("Malformed
-        // request", REQUEST_NOT_VALID) came from getting this wrong AND
-        // from network being silently omitted below (it's now required,
-        // not optional -- see the caller in Deno.serve()).
-        country_code: '260',
-        network: params.network,
-        phone_number: params.phoneNumber,
-      },
-    },
-  };
+    body: JSON.stringify(body),
+  });
+  const responseBody = await res.json().catch(() => ({}));
+  if (!res.ok) throw new FlutterwaveApiError(step, res.status, responseBody);
+  return responseBody?.data ?? responseBody;
 }
 
 Deno.serve(async (req: Request) => {
@@ -172,39 +178,49 @@ Deno.serve(async (req: Request) => {
   }
 
   const reference = `sale-${sale_id}-${Date.now()}`;
+  const localPhoneNumber = stripLeadingZero(phone_number);
+  const { first, last } = splitName(customerName);
 
   try {
     const token = await getAccessToken();
-    const chargeBody = buildChargeBody({
-      reference,
-      amount: Number(sale.total_amount),
-      currency,
-      phoneNumber: phone_number,
-      network: normalizedNetwork,
-      customerName,
-      customerEmail,
-    });
 
-    const res = await fetch(`${API_BASE_URL}/orchestration/direct-charges`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        'X-Trace-Id': crypto.randomUUID(),
-        'X-Idempotency-Key': reference,
+    const customer = await flutterwavePost(
+      token,
+      '/customers',
+      {
+        email: customerEmail,
+        name: { first, last },
+        phone: { country_code: '260', number: localPhoneNumber },
       },
-      body: JSON.stringify(chargeBody),
-    });
-    const flwBody = await res.json().catch(() => ({}));
+      'create customer',
+    );
 
-    if (!res.ok) {
-      // Logged server-side with the exact request body sent, not just the
-      // response -- if Flutterwave still rejects this, the fastest way to
-      // fix it is comparing what we sent against a real Flutterwave
-      // dashboard example, not guessing again.
-      console.error('Flutterwave charge rejected:', res.status, 'sent:', JSON.stringify(chargeBody), 'received:', JSON.stringify(flwBody));
-      return json({ error: `Flutterwave declined the charge (${res.status}): ${JSON.stringify(flwBody)}` }, 502);
-    }
+    const paymentMethod = await flutterwavePost(
+      token,
+      '/payment-methods',
+      {
+        type: 'mobile_money',
+        mobile_money: {
+          country_code: '260',
+          network: normalizedNetwork,
+          phone_number: localPhoneNumber,
+        },
+      },
+      'create payment method',
+    );
+
+    const charge = await flutterwavePost(
+      token,
+      '/charges',
+      {
+        currency,
+        customer_id: customer.id,
+        payment_method_id: paymentMethod.id,
+        amount: Number(sale.total_amount),
+        reference,
+      },
+      'create charge',
+    );
 
     const { error: updateErr } = await caller
       .from('sales')
@@ -212,8 +228,16 @@ Deno.serve(async (req: Request) => {
       .eq('id', sale_id);
     if (updateErr) return json({ error: updateErr.message }, 500);
 
-    return json({ status: 'pending', reference, flutterwave: flwBody?.data ?? flwBody });
+    return json({ status: 'pending', reference, flutterwave: charge });
   } catch (e) {
+    if (e instanceof FlutterwaveApiError) {
+      // Logged server-side with which step failed and exactly what
+      // Flutterwave rejected -- the fastest way to diagnose a future
+      // schema mismatch is comparing this against Flutterwave's own docs,
+      // not guessing again.
+      console.error(`Flutterwave charge rejected at "${e.step}":`, e.status, JSON.stringify(e.body));
+      return json({ error: `Flutterwave declined the charge (${e.step}, ${e.status}): ${JSON.stringify(e.body)}` }, 502);
+    }
     console.error('flutterwave-charge failed:', e instanceof Error ? (e.stack ?? e.message) : String(e));
     return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }

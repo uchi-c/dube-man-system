@@ -69,49 +69,54 @@ Deno.serve(async (req: Request) => {
   const name = typeof body?.name === 'string' ? body.name.trim() : '';
   if (!email) return json({ error: 'Email is required' }, 400);
 
-  // Caller-scoped: only ever proceeds if the caller is themselves a
-  // platform admin — this RPC is the single source of truth for that,
-  // never re-decided here.
-  const callerClient = createClient(SUPABASE_URL, ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const { data: isAdmin, error: authCheckErr } = await callerClient.rpc('is_platform_admin');
-  if (authCheckErr) return json({ error: authCheckErr.message }, 400);
-  if (!isAdmin) return json({ error: 'Only a platform admin can add another platform admin' }, 403);
+  try {
+    // Caller-scoped: only ever proceeds if the caller is themselves a
+    // platform admin — this RPC is the single source of truth for that,
+    // never re-decided here.
+    const callerClient = createClient(SUPABASE_URL, ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: isAdmin, error: authCheckErr } = await callerClient.rpc('is_platform_admin');
+    if (authCheckErr) return json({ error: authCheckErr.message }, 400);
+    if (!isAdmin) return json({ error: 'Only a platform admin can add another platform admin' }, 403);
 
-  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-  const tempPassword = randomTempPassword();
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+    const tempPassword = randomTempPassword();
 
-  const { data: created, error: createErr } = await admin.auth.admin.createUser({
-    email,
-    password: tempPassword,
-    email_confirm: true,
-    user_metadata: { invited_as: 'platform_admin' },
-  });
-  if (createErr || !created?.user) {
-    const alreadyExists = /already.*(registered|exists)/i.test(createErr?.message || '');
-    return json(
-      {
-        error: alreadyExists
-          ? 'This email already has an account. Use "Promote existing user" instead.'
-          : createErr?.message || 'Could not create the account',
-      },
-      400,
-    );
+    const { data: created, error: createErr } = await admin.auth.admin.createUser({
+      email,
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: { invited_as: 'platform_admin' },
+    });
+    if (createErr || !created?.user) {
+      const alreadyExists = /already.*(registered|exists)/i.test(createErr?.message || '');
+      return json(
+        {
+          error: alreadyExists
+            ? 'This email already has an account. Use "Promote existing user" instead.'
+            : createErr?.message || 'Could not create the account',
+        },
+        400,
+      );
+    }
+
+    const { error: profileErr } = await admin.from('users').insert({
+      id: created.user.id,
+      name: name || email.split('@')[0],
+      email,
+      role: 'ADMIN',
+      is_platform_admin: true,
+      must_change_password: true,
+    });
+    if (profileErr) {
+      await admin.auth.admin.deleteUser(created.user.id);
+      return json({ error: profileErr.message }, 500);
+    }
+
+    return json({ email, tempPassword });
+  } catch (e) {
+    console.error('admin-invite-platform-admin failed:', e instanceof Error ? (e.stack ?? e.message) : String(e));
+    return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }
-
-  const { error: profileErr } = await admin.from('users').insert({
-    id: created.user.id,
-    name: name || email.split('@')[0],
-    email,
-    role: 'ADMIN',
-    is_platform_admin: true,
-    must_change_password: true,
-  });
-  if (profileErr) {
-    await admin.auth.admin.deleteUser(created.user.id);
-    return json({ error: profileErr.message }, 500);
-  }
-
-  return json({ email, tempPassword });
 });

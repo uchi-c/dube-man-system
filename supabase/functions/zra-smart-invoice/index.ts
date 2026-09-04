@@ -82,6 +82,7 @@ async function initDevice(caller: ReturnType<typeof createClient>) {
       body: JSON.stringify(payload),
     });
   } catch (e) {
+    console.error('zra-smart-invoice initDevice: could not reach VSDC server:', e instanceof Error ? (e.stack ?? e.message) : String(e));
     return json({ error: `Could not reach VSDC server: ${e instanceof Error ? e.message : String(e)}` }, 502);
   }
 
@@ -201,6 +202,7 @@ async function submitSale(caller: ReturnType<typeof createClient>, saleId: strin
       body: JSON.stringify(payload),
     });
   } catch (e) {
+    console.error('zra-smart-invoice submitSale: could not reach VSDC server:', e instanceof Error ? (e.stack ?? e.message) : String(e));
     return json({ error: `Could not reach VSDC server: ${e instanceof Error ? e.message : String(e)}` }, 502);
   }
 
@@ -242,10 +244,15 @@ Deno.serve(async (req: Request) => {
     global: { headers: { Authorization: authHeader } },
   });
 
-  if (body?.action === 'init') return initDevice(caller);
-  if (body?.action === 'submit-sale') {
-    if (typeof body.saleId !== 'string') return json({ error: 'saleId is required' }, 400);
-    return submitSale(caller, body.saleId);
+  try {
+    if (body?.action === 'init') return await initDevice(caller);
+    if (body?.action === 'submit-sale') {
+      if (typeof body.saleId !== 'string') return json({ error: 'saleId is required' }, 400);
+      return await submitSale(caller, body.saleId);
+    }
+    return json({ error: 'Unknown action. Use "init" or "submit-sale".' }, 400);
+  } catch (e) {
+    console.error('zra-smart-invoice failed:', e instanceof Error ? (e.stack ?? e.message) : String(e));
+    return json({ error: e instanceof Error ? e.message : String(e) }, 500);
   }
-  return json({ error: 'Unknown action. Use "init" or "submit-sale".' }, 400);
 });
