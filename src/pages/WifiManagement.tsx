@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   fetchWifiPackages, fetchWifiSessions, fetchWifiCustomers, fetchWifiUsageLogs,
   fetchRouterSettings, startWifiSession, updateWifiSessionStatus, saveRouterSettings,
-  isSupabaseConfigured, supabase
+  createWifiPackage, isSupabaseConfigured, supabase
 } from '../services/supabase';
 import { connectRouter, applyAccessRule, removeAccessRule } from '../services/routerService';
 import { getCurrentUser } from '../utils/db';
@@ -69,6 +69,14 @@ export default function WifiManagement() {
   const [deviceModel, setDeviceModel] = useState('');
   const [macAddress, setMacAddress] = useState('');
   const [selectedPackageId, setSelectedPackageId] = useState('');
+
+  // Form state for adding a new rate package (ADMIN only -- see handleAddPackage)
+  const [showAddPackage, setShowAddPackage] = useState(false);
+  const [newPkgName, setNewPkgName] = useState('');
+  const [newPkgDuration, setNewPkgDuration] = useState('');
+  const [newPkgPrice, setNewPkgPrice] = useState('');
+  const [addPkgLoading, setAddPkgLoading] = useState(false);
+  const [addPkgError, setAddPkgError] = useState<string | null>(null);
 
   // Form states for Router Settings
   const [routerName, setRouterName] = useState('');
@@ -231,6 +239,45 @@ export default function WifiManagement() {
       setFormError(err?.message || 'Error occurred while creating voucher');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleAddPackage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddPkgError(null);
+
+    const duration = Number(newPkgDuration);
+    const price = Number(newPkgPrice);
+    if (!newPkgName.trim()) {
+      setAddPkgError('Package name is required');
+      return;
+    }
+    if (!Number.isFinite(duration) || duration <= 0) {
+      setAddPkgError('Duration must be a positive number of minutes');
+      return;
+    }
+    if (!Number.isFinite(price) || price < 0) {
+      setAddPkgError('Price must be a non-negative number');
+      return;
+    }
+
+    setAddPkgLoading(true);
+    try {
+      const created = await createWifiPackage(newPkgName.trim(), duration, price);
+      if (created) {
+        setSelectedPackageId(created.id);
+        setNewPkgName('');
+        setNewPkgDuration('');
+        setNewPkgPrice('');
+        setShowAddPackage(false);
+        await loadWifiData(true);
+      } else {
+        setAddPkgError('Could not create the package. Please check Supabase logs.');
+      }
+    } catch (err: any) {
+      setAddPkgError(err?.message || 'Error occurred while creating the package');
+    } finally {
+      setAddPkgLoading(false);
     }
   };
 
@@ -504,23 +551,87 @@ export default function WifiManagement() {
 
                     {/* Rates Selector */}
                     <div className="space-y-1">
-                      <label className="dm-label" style={{ padding: 0 }}>Rate Package Plan</label>
-                      <select
-                        value={selectedPackageId}
-                        onChange={(e) => setSelectedPackageId(e.target.value)}
-                        className="dm-select"
-                      >
-                        {packages.map(pkg => (
-                          <option key={pkg.id} value={pkg.id}>
-                            {pkg.name} ({pkg.duration_minutes} Mins) &mdash; {formatCurrency(pkg.price)}
-                          </option>
-                        ))}
-                      </select>
+                      <label className="dm-label flex items-center justify-between" style={{ padding: 0 }}>
+                        <span>Rate Package Plan</span>
+                        {currentUser?.role === 'ADMIN' && (
+                          <button
+                            type="button"
+                            onClick={() => setShowAddPackage(v => !v)}
+                            style={{ color: 'var(--blue-400)', fontWeight: 400, textTransform: 'none', letterSpacing: 0, background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.6875rem' }}
+                          >
+                            {showAddPackage ? 'Cancel' : '+ Add package'}
+                          </button>
+                        )}
+                      </label>
+                      {packages.length > 0 ? (
+                        <select
+                          value={selectedPackageId}
+                          onChange={(e) => setSelectedPackageId(e.target.value)}
+                          className="dm-select"
+                        >
+                          {packages.map(pkg => (
+                            <option key={pkg.id} value={pkg.id}>
+                              {pkg.name} ({pkg.duration_minutes} Mins) &mdash; {formatCurrency(pkg.price)}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="dm-badge dm-badge-warning" style={{ width: '100%', padding: '0.6rem 0.75rem', fontSize: '0.6875rem', lineHeight: 1.5, whiteSpace: 'normal', textAlign: 'left' }}>
+                          {currentUser?.role === 'ADMIN'
+                            ? 'No rate packages yet — add one below to start issuing vouchers.'
+                            : 'No rate packages set up yet. Ask an admin to add one.'}
+                        </div>
+                      )}
                     </div>
+
+                    {showAddPackage && currentUser?.role === 'ADMIN' && (
+                      <div className="dm-card-inset space-y-2" style={{ padding: '0.75rem' }}>
+                        {addPkgError && (
+                          <div className="dm-badge dm-badge-danger" style={{ width: '100%', padding: '0.5rem 0.65rem', fontSize: '0.6875rem', lineHeight: 1.5, whiteSpace: 'normal', textAlign: 'left' }}>
+                            {addPkgError}
+                          </div>
+                        )}
+                        <input
+                          type="text"
+                          placeholder="Package name, e.g. 1 Hour Basic"
+                          value={newPkgName}
+                          onChange={(e) => setNewPkgName(e.target.value)}
+                          className="dm-input"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            placeholder="Duration (mins)"
+                            value={newPkgDuration}
+                            onChange={(e) => setNewPkgDuration(e.target.value)}
+                            className="dm-input"
+                          />
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="Price"
+                            value={newPkgPrice}
+                            onChange={(e) => setNewPkgPrice(e.target.value)}
+                            className="dm-input"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleAddPackage}
+                          disabled={addPkgLoading}
+                          className="dm-btn dm-btn-ghost w-full"
+                        >
+                          <PlusCircle style={{ width: 14, height: 14 }} />
+                          <span>{addPkgLoading ? 'Saving...' : 'Save package'}</span>
+                        </button>
+                      </div>
+                    )}
 
                     <button
                       type="submit"
-                      disabled={actionLoading}
+                      disabled={actionLoading || packages.length === 0}
                       className="dm-btn dm-btn-primary w-full"
                       style={{ marginTop: 8 }}
                     >
