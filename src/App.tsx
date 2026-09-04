@@ -8,6 +8,7 @@ import { setCurrency } from './utils/format';
 import ErrorBoundary from './components/ErrorBoundary';
 import InstallAppButton from './components/InstallAppButton';
 import ImpersonationBanner from './components/ImpersonationBanner';
+import AiChatWidget from './components/AiChatWidget';
 
 // LandingPage, Login, Signup and ResetPassword are needed for first paint
 // (pre-auth), so keep them eager.
@@ -918,6 +919,7 @@ export default function App() {
       {/* ---- Main content area ---- */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         {user.is_platform_admin && <ImpersonationBanner isPlatformAdmin />}
+        {(hasOrg || user.is_platform_admin) && <AiChatWidget isPlatformAdmin={!!user.is_platform_admin} />}
         <Topbar
           user={user}
           activeTab={activeTab}
