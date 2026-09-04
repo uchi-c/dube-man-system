@@ -8,7 +8,7 @@ import {
   ShoppingCart, Search, Plus, Minus, Trash2,
   CreditCard, Check, UserPlus, X,
   AlertCircle, RefreshCw, FileText, Package, Printer,
-  HandCoins, History, Wallet,
+  HandCoins, History, Wallet, Smartphone,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import DataTable from '../components/DataTable';
@@ -16,6 +16,7 @@ import { formatCurrency } from '../utils/format';
 import { cartTotal } from '../utils/billing';
 import ExportButtons from '../components/ExportButtons';
 import ReceiptPrint from '../components/ReceiptPrint';
+import { sendMobileMoneyPushCharge } from '../services/flutterwave';
 
 interface SalesPageProps {
   userRole: string;
@@ -53,6 +54,16 @@ export default function Sales({ userRole }: SalesPageProps) {
   const [newCustEmail, setNewCustEmail] = useState('');
   const [regError, setRegError] = useState('');
   const [printingSale, setPrintingSale] = useState<Sale | null>(null);
+
+  // Mobile money push-payment collection — an optional follow-up after a
+  // 'Mobile Money' checkout that actually sends a payment prompt to the
+  // customer's phone (via Flutterwave), rather than just trusting they
+  // already paid. lastMobileMoneySale is the sale it'd apply to; cleared
+  // once the cart resets for the next sale.
+  const [lastMobileMoneySale, setLastMobileMoneySale] = useState<Sale | null>(null);
+  const [pushPhone, setPushPhone] = useState('');
+  const [pushState, setPushState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [pushError, setPushError] = useState('');
 
   // Debt repayment
   const [payingSale, setPayingSale] = useState<Sale | null>(null);
@@ -264,6 +275,14 @@ export default function Sales({ userRole }: SalesPageProps) {
     setPhase('done');
     setSuccessText(`Checked out — receipt ${result.id.slice(0, 8)} saved.`);
     setPrintingSale(result);
+    if (paymentMethod === 'Mobile Money') {
+      setLastMobileMoneySale(result);
+      setPushPhone(customers.find(c => c.id === selectedCustomerId)?.phone || '');
+      setPushState('idle');
+      setPushError('');
+    } else {
+      setLastMobileMoneySale(null);
+    }
     setCart([]);
     setSelectedCustomerId('');
     setPaymentMethod('Cash');
@@ -272,6 +291,19 @@ export default function Sales({ userRole }: SalesPageProps) {
   };
 
   const payLabel = phase === 'processing' ? 'Processing…' : phase === 'done' ? 'Checkout complete' : 'Record checkout';
+
+  const handleSendPushCharge = async () => {
+    if (!lastMobileMoneySale || !pushPhone.trim()) return;
+    setPushState('sending');
+    setPushError('');
+    try {
+      await sendMobileMoneyPushCharge(lastMobileMoneySale.id, pushPhone.trim());
+      setPushState('sent');
+    } catch (err: any) {
+      setPushState('error');
+      setPushError(err?.message || "Couldn't send the payment request.");
+    }
+  };
 
   // Ledger table columns
   const ledgerColumns = [
@@ -610,6 +642,44 @@ export default function Sales({ userRole }: SalesPageProps) {
                   <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: 'var(--success-bg)', border: '1px solid rgba(61,220,151,0.3)', fontSize: '0.78rem', color: 'var(--success)' }}>
                     <Check style={{ width: 15, height: 15, flexShrink: 0 }} strokeWidth={3} />
                     <span>{successText}</span>
+                  </div>
+                )}
+
+                {/* Optional follow-up: actually push a payment prompt to the
+                    customer's phone via Flutterwave, rather than just
+                    trusting the mobile money payment already happened. */}
+                {lastMobileMoneySale && pushState !== 'sent' && (
+                  <div className="dm-card-inset p-3 space-y-2">
+                    <p className="flex items-center gap-1.5" style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-hi)' }}>
+                      <Smartphone style={{ width: 14, height: 14 }} /> Send a payment request to their phone?
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="tel"
+                        className="dm-input"
+                        placeholder="e.g. 0977123456"
+                        value={pushPhone}
+                        onChange={e => setPushPhone(e.target.value)}
+                        disabled={pushState === 'sending'}
+                        style={{ fontSize: '0.8rem', flex: 1 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSendPushCharge}
+                        disabled={pushState === 'sending' || !pushPhone.trim()}
+                        className="dm-btn dm-btn-primary"
+                        style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+                      >
+                        {pushState === 'sending' ? 'Sending…' : 'Send request'}
+                      </button>
+                    </div>
+                    {pushError && <p style={{ fontSize: '0.72rem', color: 'var(--danger)' }}>{pushError}</p>}
+                  </div>
+                )}
+                {lastMobileMoneySale && pushState === 'sent' && (
+                  <div className="flex items-center gap-2 p-2.5 rounded-xl" style={{ background: 'var(--success-bg)', border: '1px solid rgba(61,220,151,0.3)', fontSize: '0.78rem', color: 'var(--success)' }}>
+                    <Smartphone style={{ width: 15, height: 15, flexShrink: 0 }} />
+                    <span>Payment request sent — waiting for the customer to approve it on their phone.</span>
                   </div>
                 )}
 
