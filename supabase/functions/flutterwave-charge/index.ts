@@ -22,12 +22,15 @@
 // calls (create customer -> create payment method -> create charge), each
 // with a real documented request/response shape.
 //
-// Two more real bugs found from live charge attempts against this rewrite
-// (see normalizeLocalPhoneNumber() and the reference comment below for
-// each fix): phone numbers typed with a "+260"/"260" prefix or spaces
-// weren't normalized to Flutterwave's expected bare local number, and the
-// charge `reference` (sale UUID + timestamp) exceeded Flutterwave's
-// 42-character limit.
+// Three more real bugs found from live charge attempts against this rewrite
+// (see normalizeLocalPhoneNumber(), the reference comment, and the
+// get-or-create customer handling below for each fix): phone numbers typed
+// with a "+260"/"260" prefix or spaces weren't normalized to Flutterwave's
+// expected bare local number; the charge `reference` (sale UUID +
+// timestamp) exceeded Flutterwave's 42-character limit; and re-charging
+// with an email already used for a prior customer (e.g. the cashier's own
+// email, the fallback for walk-in sales with no linked customer record)
+// got rejected 409 "Customer already exists" instead of reusing it.
 // ============================================================================
 //
 // Required Supabase Edge Function secrets:
@@ -130,6 +133,31 @@ async function flutterwavePost(token: string, path: string, body: unknown, step:
   return responseBody?.data ?? responseBody;
 }
 
+async function flutterwaveGet(token: string, path: string, step: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    headers: { Authorization: `Bearer ${token}`, 'X-Trace-Id': crypto.randomUUID() },
+  });
+  const responseBody = await res.json().catch(() => ({}));
+  if (!res.ok) throw new FlutterwaveApiError(step, res.status, { path }, responseBody);
+  return responseBody;
+}
+
+// A walk-in sale with no linked customer record falls back to the
+// cashier's own login email (see customerEmail below) -- so the same
+// email hits "create customer" on every such charge. Flutterwave's
+// /customers is a merchant-wide directory keyed by email, not a
+// per-charge object: the second attempt with that email always gets
+// rejected 409 "Customer already exists" (real error, seen live). The
+// fix is the standard get-or-create pattern -- reuse the existing
+// customer instead of treating the conflict as a hard failure.
+function extractCustomerId(body: any): string | undefined {
+  const candidates = Array.isArray(body) ? body
+    : Array.isArray(body?.data) ? body.data
+    : Array.isArray(body?.customers) ? body.customers
+    : body?.data ? [body.data] : [];
+  return candidates[0]?.id;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS_HEADERS });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
@@ -198,16 +226,28 @@ Deno.serve(async (req: Request) => {
   try {
     const token = await getAccessToken();
 
-    const customer = await flutterwavePost(
-      token,
-      '/customers',
-      {
-        email: customerEmail,
-        name: { first, last },
-        phone: { country_code: '260', number: localPhoneNumber },
-      },
-      'create customer',
-    );
+    let customer: any;
+    try {
+      customer = await flutterwavePost(
+        token,
+        '/customers',
+        {
+          email: customerEmail,
+          name: { first, last },
+          phone: { country_code: '260', number: localPhoneNumber },
+        },
+        'create customer',
+      );
+    } catch (e) {
+      if (!(e instanceof FlutterwaveApiError) || e.step !== 'create customer' || e.status !== 409) throw e;
+      const lookup = await flutterwaveGet(token, `/customers?email=${encodeURIComponent(customerEmail)}`, 'lookup existing customer');
+      const existingId = extractCustomerId(lookup);
+      if (!existingId) {
+        console.error('Customer conflict but lookup found no reusable id -- raw response:', JSON.stringify(lookup));
+        throw e;
+      }
+      customer = { id: existingId };
+    }
 
     const paymentMethod = await flutterwavePost(
       token,
