@@ -4,6 +4,21 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm install",
+  "redirects": [
+    { "source": "/.env(.*)", "destination": "/", "statusCode": 404 },
+    { "source": "/.git(/.*)?", "destination": "/", "statusCode": 404 },
+    { "source": "/.aws(/.*)?", "destination": "/", "statusCode": 404 },
+    { "source": "/.DS_Store", "destination": "/", "statusCode": 404 },
+    { "source": "/.htpasswd", "destination": "/", "statusCode": 404 },
+    { "source": "/wp-config.php.bak", "destination": "/", "statusCode": 404 },
+    { "source": "/wp-config.php~", "destination": "/", "statusCode": 404 },
+    { "source": "/config.php.bak", "destination": "/", "statusCode": 404 },
+    { "source": "/backup.zip", "destination": "/", "statusCode": 404 },
+    { "source": "/server-status", "destination": "/", "statusCode": 404 },
+    { "source": "/phpinfo.php", "destination": "/", "statusCode": 404 },
+    { "source": "/id_rsa", "destination": "/", "statusCode": 404 },
+    { "source": "/debug", "destination": "/", "statusCode": 404 }
+  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],
