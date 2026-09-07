@@ -5,7 +5,10 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/:path((?!\\.env|\\.git|\\.aws|\\.DS_Store|\\.htpasswd|wp-config\\.php\\.bak|wp-config\\.php~|config\\.php\\.bak|backup\\.zip|server-status|phpinfo\\.php|id_rsa|debug).*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {
